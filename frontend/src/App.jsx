@@ -1,0 +1,39 @@
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import Landing from './pages/Landing'
+import Login from './pages/Login'
+import Register from './pages/Register'
+import Home from './pages/Home'
+import SearchResults from './pages/SearchResults'
+import MedicineDetail from './pages/MedicineDetail'
+import AIChat from './pages/AIChat'
+
+const ProtectedRoute = ({ children }) => {
+  const token = localStorage.getItem('token')
+  return token ? children : <Navigate to="/login" />
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/home" element={
+          <ProtectedRoute><Home /></ProtectedRoute>
+        } />
+        <Route path="/search" element={
+          <ProtectedRoute><SearchResults /></ProtectedRoute>
+        } />
+        <Route path="/medicine/:id" element={
+          <ProtectedRoute><MedicineDetail /></ProtectedRoute>
+        } />
+        <Route path="/ai-chat" element={
+          <ProtectedRoute><AIChat /></ProtectedRoute>
+        } />
+      </Routes>
+    </BrowserRouter>
+  )
+}
+
+export default App
