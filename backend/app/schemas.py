@@ -1,5 +1,5 @@
-from pydantic import BaseModel, EmailStr
-from typing import Optional, List
+from pydantic import BaseModel, field_validator
+from typing import Optional, List, Any
 from datetime import date, datetime
 from uuid import UUID
 
@@ -18,6 +18,20 @@ class MedicineResponse(MedicineBase):
     prescription_required: bool
     is_otc: bool
     storage_instructions: Optional[str] = None
+
+    @field_validator('available_forms', 'available_strengths', mode='before')
+    @classmethod
+    def parse_array(cls, v: Any) -> Optional[List[str]]:
+        if v is None:
+            return None
+        if isinstance(v, list):
+            return v
+        if isinstance(v, str):
+            v = v.strip('{}')
+            if not v:
+                return []
+            return [item.strip().strip('"') for item in v.split(',')]
+        return v
 
     class Config:
         from_attributes = True
