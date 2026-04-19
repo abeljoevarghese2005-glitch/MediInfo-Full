@@ -28,6 +28,9 @@ function Navbar() {
             <Link to="/ai-chat" className="text-gray-600 hover:text-cyan-500 flex items-center gap-1">
               🤖 AI Chat
             </Link>
+            <Link to="/reminders" className="text-gray-600 hover:text-cyan-500 flex items-center gap-1">
+              ⏰ Reminders
+            </Link>
             <button
               onClick={handleLogout}
               className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600"

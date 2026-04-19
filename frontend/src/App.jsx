@@ -6,6 +6,7 @@ import Home from './pages/Home'
 import SearchResults from './pages/SearchResults'
 import MedicineDetail from './pages/MedicineDetail'
 import AIChat from './pages/AIChat'
+import Reminders from './pages/Reminders'
 
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem('token')
@@ -30,6 +31,9 @@ function App() {
         } />
         <Route path="/ai-chat" element={
           <ProtectedRoute><AIChat /></ProtectedRoute>
+        } />
+        <Route path="/reminders" element={
+          <ProtectedRoute><Reminders /></ProtectedRoute>
         } />
       </Routes>
     </BrowserRouter>
