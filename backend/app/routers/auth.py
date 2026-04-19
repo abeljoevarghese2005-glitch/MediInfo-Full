@@ -49,10 +49,19 @@ def register(user: UserRegister, db: Session = Depends(get_db)):
     db.refresh(new_user)
     return new_user
 
-@router.post("/login", response_model=Token)
+@router.post("/login")
 def login(user: UserLogin, db: Session = Depends(get_db)):
     db_user = db.query(User).filter(User.phone == user.phone).first()
     if not db_user or not verify_password(user.password, db_user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid phone or password")
     token = create_token({"sub": str(db_user.id), "role": db_user.role})
-    return {"access_token": token, "token_type": "bearer"}
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "user": {
+            "id": str(db_user.id),
+            "phone": db_user.phone,
+            "full_name": db_user.full_name,
+            "role": db_user.role
+        }
+    }
