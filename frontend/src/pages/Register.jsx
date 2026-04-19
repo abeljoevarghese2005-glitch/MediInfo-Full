@@ -10,17 +10,24 @@ function Register() {
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
+  const handleSubmit = async () => {
+    if (!form.medicine_name || !form.start_date) return
     try {
-      await registerUser(form)
-      navigate('/login')
+      const user = JSON.parse(localStorage.getItem('user') || '{}')
+      const reminderData = {
+        ...form,
+        user_id: user.id,
+        end_date: form.end_date || null,
+        notes: form.notes || null,
+        dosage: form.dosage || null,
+      }
+      await createReminder(reminderData)
+      setForm({ medicine_name: '', dosage: '', frequency: 'daily', start_date: '', end_date: '', notes: '' })
+      setShowForm(false)
+      fetchReminders()
     } catch (err) {
-      setError('Registration failed. Phone may already be registered.')
+      console.error('Error creating reminder:', err.response?.data)
     }
-    setLoading(false)
   }
 
   return (
