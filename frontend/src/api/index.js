@@ -20,9 +20,10 @@ export const getMedicineLeaflet = (id) => API.get(`/medicines/${id}/leaflet`)
 export const loginUser = (data) => API.post('/auth/login', data)
 export const registerUser = (data) => API.post('/auth/register', data)
 
-export const getReminders = (userId) => API.get(`/reminders/user/${userId}`)
-export const createReminder = (data) => API.post('/reminders/', data)
-export const deleteReminder = (id) => API.delete(`/reminders/${id}`)
+export const createReminder = (data) => {
+  const { user_id, ...body } = data
+  return API.post(`/reminders/?user_id=${user_id}`, body)
+}
 
 export const askAI = (question, medicineNames = []) =>
   API.post('/ai/ask', { question, medicine_names: medicineNames })
