@@ -42,6 +42,7 @@ class UserRegister(BaseModel):
     password: str
     full_name: str
     role: Optional[str] = "patient"
+    specialization: Optional[str] = None  # NEW — for doctors
 
 class UserLogin(BaseModel):
     phone: str
@@ -52,6 +53,7 @@ class UserResponse(BaseModel):
     phone: str
     full_name: str
     role: str
+    specialization: Optional[str] = None  # NEW
     preferred_language: str
 
     class Config:
@@ -74,6 +76,24 @@ class ReminderResponse(ReminderCreate):
     id: UUID
     user_id: UUID
     is_active: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+# ── Appointment schemas ────────────────────────────────────
+class AppointmentCreate(BaseModel):
+    doctor_id: UUID
+    appointment_date: date
+    appointment_time: str  # "10:30"
+
+class AppointmentResponse(BaseModel):
+    id: UUID
+    patient_id: UUID
+    doctor_id: UUID
+    appointment_date: date
+    appointment_time: str
+    status: str
     created_at: datetime
 
     class Config:

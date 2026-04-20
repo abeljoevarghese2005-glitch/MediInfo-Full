@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Boolean, Text, Date, TIMESTAMP, ARRAY
+from sqlalchemy import Column, String, Boolean, Text, Date, TIMESTAMP, ARRAY, DateTime
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from .database import Base
@@ -35,6 +35,7 @@ class User(Base):
     password_hash = Column(Text, nullable=False)
     full_name = Column(String(255), nullable=False)
     role = Column(String(20), default="patient")
+    specialization = Column(String(255))  # NEW — for doctors
     preferred_language = Column(String(5), default="en")
     is_active = Column(Boolean, default=True)
     is_phone_verified = Column(Boolean, default=False)
@@ -56,10 +57,10 @@ class MedicationReminder(Base):
     notes = Column(Text)
     is_active = Column(Boolean, default=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
-    
+
 class MedicineLeaflet(Base):
     __tablename__ = "medicine_leaflets"
-    
+
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     medicine_id = Column(UUID(as_uuid=True), nullable=False)
 
@@ -87,3 +88,15 @@ class MedicineLeaflet(Base):
 
     created_at = Column(TIMESTAMP, server_default=func.now())
     updated_at = Column(TIMESTAMP, server_default=func.now())
+
+
+class Appointment(Base):  # NEW
+    __tablename__ = "appointments"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    patient_id = Column(UUID(as_uuid=True), nullable=False)
+    doctor_id = Column(UUID(as_uuid=True), nullable=False)
+    appointment_date = Column(Date, nullable=False)
+    appointment_time = Column(String(10), nullable=False)  # e.g. "10:30"
+    status = Column(String(20), default="pending")  # pending, confirmed, cancelled
+    created_at = Column(TIMESTAMP, server_default=func.now())

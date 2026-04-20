@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .routers import medicines, auth, reminders, ai
+from .routers import medicines, auth, reminders, ai, appointments
 
 app = FastAPI(
     title="MediInfo API",
@@ -20,6 +20,7 @@ app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
 app.include_router(medicines.router, prefix="/medicines", tags=["Medicines"])
 app.include_router(reminders.router, prefix="/reminders", tags=["Reminders"])
 app.include_router(ai.router, prefix="/ai", tags=["AI"])
+app.include_router(appointments.router, prefix="/appointments", tags=["Appointments"])
 
 @app.get("/")
 def root():
