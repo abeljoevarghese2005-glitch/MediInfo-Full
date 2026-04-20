@@ -32,3 +32,13 @@ export const askAI = (question, medicineNames = []) =>
   API.post('/ai/ask', { question, medicine_names: medicineNames })
 export const compareMedicines = (medicine1, medicine2) =>
   API.post(`/ai/compare?medicine1=${medicine1}&medicine2=${medicine2}`)
+
+// Appointments
+export const getDoctors = (specialization = '') =>
+  API.get(`/appointments/doctors${specialization ? `?specialization=${specialization}` : ''}`)
+export const bookAppointment = (patientId, data) =>
+  API.post(`/appointments/book?patient_id=${patientId}`, data)
+export const getMyAppointments = (patientId) =>
+  API.get(`/appointments/my/${patientId}`)
+export const cancelAppointment = (appointmentId) =>
+  API.patch(`/appointments/cancel/${appointmentId}`)
