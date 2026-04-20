@@ -7,6 +7,7 @@ import SearchResults from './pages/SearchResults'
 import MedicineDetail from './pages/MedicineDetail'
 import AIChat from './pages/AIChat'
 import Reminders from './pages/Reminders'
+import Profile from './pages/Profile'
 
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem('token')
@@ -34,6 +35,9 @@ function App() {
         } />
         <Route path="/reminders" element={
           <ProtectedRoute><Reminders /></ProtectedRoute>
+        } />
+        <Route path="/profile" element={
+          <ProtectedRoute><Profile /></ProtectedRoute>
         } />
       </Routes>
     </BrowserRouter>
