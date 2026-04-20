@@ -2,32 +2,44 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { registerUser } from '../api'
 
+const SPECIALIZATIONS = [
+  'General Physician', 'Cardiologist', 'Dermatologist',
+  'Neurologist', 'Orthopedic', 'Pediatrician', 'Psychiatrist', 'ENT'
+]
+
 function Register() {
   const [form, setForm] = useState({
-    full_name: '', phone: '', password: '', role: 'patient'
+    full_name: '', phone: '', password: '', role: 'patient', specialization: ''
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
 
   const handleSubmit = async () => {
-    if (!form.medicine_name || !form.start_date) return
-    try {
-      const user = JSON.parse(localStorage.getItem('user') || '{}')
-      const reminderData = {
-        ...form,
-        user_id: user.id,
-        end_date: form.end_date || null,
-        notes: form.notes || null,
-        dosage: form.dosage || null,
-      }
-      await createReminder(reminderData)
-      setForm({ medicine_name: '', dosage: '', frequency: 'daily', start_date: '', end_date: '', notes: '' })
-      setShowForm(false)
-      fetchReminders()
-    } catch (err) {
-      console.error('Error creating reminder:', err.response?.data)
+    if (!form.full_name || !form.phone || !form.password) {
+      setError('Please fill in all required fields')
+      return
     }
+    if (form.role === 'doctor' && !form.specialization) {
+      setError('Please select your specialization')
+      return
+    }
+    setLoading(true)
+    setError('')
+    try {
+      const payload = {
+        full_name: form.full_name,
+        phone: form.phone,
+        password: form.password,
+        role: form.role,
+        specialization: form.role === 'doctor' ? form.specialization : null
+      }
+      await registerUser(payload)
+      navigate('/login')
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Registration failed')
+    }
+    setLoading(false)
   }
 
   return (
@@ -47,7 +59,7 @@ function Register() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-4">
           <div>
             <label className="text-sm font-medium text-gray-700 block mb-1">Full Name</label>
             <input
@@ -58,6 +70,7 @@ function Register() {
               className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-cyan-400"
             />
           </div>
+
           <div>
             <label className="text-sm font-medium text-gray-700 block mb-1">Phone Number</label>
             <input
@@ -68,6 +81,7 @@ function Register() {
               className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-cyan-400"
             />
           </div>
+
           <div>
             <label className="text-sm font-medium text-gray-700 block mb-1">Password</label>
             <input
@@ -78,11 +92,12 @@ function Register() {
               className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-cyan-400"
             />
           </div>
+
           <div>
-            <label className="text-sm font-medium text-gray-700 block mb-1">Role</label>
+            <label className="text-sm font-medium text-gray-700 block mb-1">I am a</label>
             <select
               value={form.role}
-              onChange={(e) => setForm({ ...form, role: e.target.value })}
+              onChange={(e) => setForm({ ...form, role: e.target.value, specialization: '' })}
               className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-cyan-400"
             >
               <option value="patient">Patient</option>
@@ -90,14 +105,32 @@ function Register() {
               <option value="doctor">Doctor</option>
             </select>
           </div>
+
+          {/* Specialization — only shown when role is doctor */}
+          {form.role === 'doctor' && (
+            <div>
+              <label className="text-sm font-medium text-gray-700 block mb-1">Specialization</label>
+              <select
+                value={form.specialization}
+                onChange={(e) => setForm({ ...form, specialization: e.target.value })}
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+              >
+                <option value="">Select your specialization</option>
+                {SPECIALIZATIONS.map(s => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <button
-            type="submit"
+            onClick={handleSubmit}
             disabled={loading}
             className="w-full bg-cyan-500 text-white py-3 rounded-xl hover:bg-cyan-600 font-medium"
           >
             {loading ? 'Creating account...' : 'Register'}
           </button>
-        </form>
+        </div>
 
         <p className="text-center text-sm text-gray-500 mt-6">
           Already have an account?{' '}
