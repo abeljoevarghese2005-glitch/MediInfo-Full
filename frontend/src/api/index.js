@@ -19,6 +19,7 @@ export const getMedicineLeaflet = (id) => API.get(`/medicines/${id}/leaflet`)
 
 export const loginUser = (data) => API.post('/auth/login', data)
 export const registerUser = (data) => API.post('/auth/register', data)
+export const updateUser = (userId, data) => API.put(`/auth/update/${userId}`, data)
 
 export const getReminders = (userId) => API.get(`/reminders/user/${userId}`)
 export const createReminder = (data) => {

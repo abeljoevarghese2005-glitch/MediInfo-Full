@@ -1,11 +1,17 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
+import { updateUser } from '../api/index'
 
 function Profile() {
   const navigate = useNavigate()
-  const user = JSON.parse(localStorage.getItem('user') || '{}')
+  const [user, setUser] = useState(JSON.parse(localStorage.getItem('user') || '{}'))
   const [activeTab, setActiveTab] = useState('profile')
+  const [editing, setEditing] = useState(false)
+  const [form, setForm] = useState({ full_name: user.full_name, phone: user.phone })
+  const [saving, setSaving] = useState(false)
+  const [success, setSuccess] = useState('')
+  const [error, setError] = useState('')
 
   const tabs = ['profile', 'security']
 
@@ -13,6 +19,24 @@ function Profile() {
     localStorage.removeItem('token')
     localStorage.removeItem('user')
     navigate('/')
+  }
+
+  const handleSave = async () => {
+    setSaving(true)
+    setError('')
+    setSuccess('')
+    try {
+      const res = await updateUser(user.id, form)
+      const updatedUser = { ...user, ...res.data }
+      localStorage.setItem('user', JSON.stringify(updatedUser))
+      setUser(updatedUser)
+      setEditing(false)
+      setSuccess('Profile updated successfully!')
+      setTimeout(() => setSuccess(''), 3000)
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Failed to update profile')
+    }
+    setSaving(false)
   }
 
   const getRoleColor = (role) => {
@@ -49,7 +73,7 @@ function Profile() {
           {tabs.map((tab) => (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab)}
+              onClick={() => { setActiveTab(tab); setEditing(false); setError(''); setSuccess('') }}
               className={`px-4 py-2 rounded-lg text-sm font-medium capitalize ${
                 activeTab === tab
                   ? 'bg-cyan-500 text-white'
@@ -66,16 +90,63 @@ function Profile() {
 
           {activeTab === 'profile' && (
             <div className="space-y-5">
-              <h2 className="font-semibold text-gray-700 text-lg">Account Information</h2>
+              <div className="flex items-center justify-between">
+                <h2 className="font-semibold text-gray-700 text-lg">Account Information</h2>
+                {!editing ? (
+                  <button
+                    onClick={() => setEditing(true)}
+                    className="text-cyan-500 hover:text-cyan-600 text-sm font-medium border border-cyan-300 px-3 py-1 rounded-lg"
+                  >
+                    ✏️ Edit
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => { setEditing(false); setForm({ full_name: user.full_name, phone: user.phone }); setError('') }}
+                    className="text-gray-500 hover:text-gray-600 text-sm font-medium border border-gray-300 px-3 py-1 rounded-lg"
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
+
+              {success && (
+                <div className="bg-green-50 text-green-600 px-4 py-3 rounded-lg text-sm">
+                  ✅ {success}
+                </div>
+              )}
+
+              {error && (
+                <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg text-sm">
+                  ❌ {error}
+                </div>
+              )}
 
               <div className="bg-gray-50 rounded-xl p-4">
                 <p className="text-xs text-gray-500 mb-1">Full Name</p>
-                <p className="font-medium text-gray-800">{user.full_name}</p>
+                {editing ? (
+                  <input
+                    type="text"
+                    value={form.full_name}
+                    onChange={e => setForm({ ...form, full_name: e.target.value })}
+                    className="w-full bg-white px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-gray-800"
+                  />
+                ) : (
+                  <p className="font-medium text-gray-800">{user.full_name}</p>
+                )}
               </div>
 
               <div className="bg-gray-50 rounded-xl p-4">
                 <p className="text-xs text-gray-500 mb-1">Phone Number</p>
-                <p className="font-medium text-gray-800">{user.phone}</p>
+                {editing ? (
+                  <input
+                    type="text"
+                    value={form.phone}
+                    onChange={e => setForm({ ...form, phone: e.target.value })}
+                    className="w-full bg-white px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-gray-800"
+                  />
+                ) : (
+                  <p className="font-medium text-gray-800">{user.phone}</p>
+                )}
               </div>
 
               <div className="bg-gray-50 rounded-xl p-4">
@@ -88,20 +159,32 @@ function Profile() {
                 <p className="font-medium text-gray-800 text-sm">{user.id}</p>
               </div>
 
-              <div className="pt-2 flex gap-3">
+              {editing && (
                 <button
-                  onClick={() => navigate('/reminders')}
-                  className="flex-1 bg-cyan-50 text-cyan-600 py-2 rounded-xl hover:bg-cyan-100 font-medium text-sm"
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="w-full bg-cyan-500 text-white py-3 rounded-xl hover:bg-cyan-600 font-medium"
                 >
-                  ⏰ My Reminders
+                  {saving ? 'Saving...' : 'Save Changes'}
                 </button>
-                <button
-                  onClick={() => navigate('/ai-chat')}
-                  className="flex-1 bg-cyan-50 text-cyan-600 py-2 rounded-xl hover:bg-cyan-100 font-medium text-sm"
-                >
-                  🤖 AI Chat
-                </button>
-              </div>
+              )}
+
+              {!editing && (
+                <div className="pt-2 flex gap-3">
+                  <button
+                    onClick={() => navigate('/reminders')}
+                    className="flex-1 bg-cyan-50 text-cyan-600 py-2 rounded-xl hover:bg-cyan-100 font-medium text-sm"
+                  >
+                    ⏰ My Reminders
+                  </button>
+                  <button
+                    onClick={() => navigate('/ai-chat')}
+                    className="flex-1 bg-cyan-50 text-cyan-600 py-2 rounded-xl hover:bg-cyan-100 font-medium text-sm"
+                  >
+                    🤖 AI Chat
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -112,7 +195,7 @@ function Profile() {
               <div className="bg-gray-50 rounded-xl p-4 flex items-center justify-between">
                 <div>
                   <p className="font-medium text-gray-800">Password</p>
-                  <p className="text-sm text-gray-500">Last changed: unknown</p>
+                  <p className="text-sm text-gray-500">Secured with bcrypt</p>
                 </div>
                 <span className="text-gray-400 text-sm">••••••••</span>
               </div>
