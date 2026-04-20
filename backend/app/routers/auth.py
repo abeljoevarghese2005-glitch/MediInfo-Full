@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 from jose import jwt
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
+from pydantic import BaseModel
+from typing import Optional
 import bcrypt
 import os
 
@@ -17,6 +19,10 @@ router = APIRouter()
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = os.getenv("ALGORITHM")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))
+
+class UserUpdate(BaseModel):
+    full_name: Optional[str] = None
+    phone: Optional[str] = None
 
 def hash_password(password: str) -> str:
     password_bytes = password.encode('utf-8')[:72]
@@ -64,4 +70,25 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
             "full_name": db_user.full_name,
             "role": db_user.role
         }
+    }
+
+@router.put("/update/{user_id}")
+def update_user(user_id: str, update: UserUpdate, db: Session = Depends(get_db)):
+    db_user = db.query(User).filter(User.id == user_id).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if update.full_name:
+        db_user.full_name = update.full_name
+    if update.phone:
+        existing = db.query(User).filter(User.phone == update.phone).first()
+        if existing and str(existing.id) != user_id:
+            raise HTTPException(status_code=400, detail="Phone number already in use")
+        db_user.phone = update.phone
+    db.commit()
+    db.refresh(db_user)
+    return {
+        "id": str(db_user.id),
+        "phone": db_user.phone,
+        "full_name": db_user.full_name,
+        "role": db_user.role
     }
