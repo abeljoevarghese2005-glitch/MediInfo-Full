@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from pydantic import BaseModel
 from ..database import get_db
 from ..models import Medicine, MedicineLeaflet
@@ -15,6 +16,13 @@ client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 class AIQuestion(BaseModel):
     question: str
     medicine_names: list[str] = []
+
+def get_embedding(text_input: str) -> list[float]:
+    response = client.models.embed_content(
+        model="gemini-embedding-001",
+        contents=text_input
+    )
+    return response.embeddings[0].values
 
 def get_medicine_context(db: Session, medicine_names: list[str]) -> str:
     context = ""
@@ -56,22 +64,58 @@ Mechanism of Action: {leaflet.mechanism_of_action}
 """
     return context
 
+def rag_search(db: Session, question: str, top_k: int = 5) -> str:
+    """Search medicines by vector similarity and return context"""
+    try:
+        # Generate embedding for the question
+        question_embedding = get_embedding(question)
+        embedding_str = str(question_embedding)
+
+        # Vector similarity search using pgvector
+        result = db.execute(text("""
+            SELECT medicine_name, brand_name, generic_name, drug_class, composition,
+                   1 - (embedding_vector <=> :embedding::vector) as similarity
+            FROM medicines
+            WHERE embedding_vector IS NOT NULL
+            ORDER BY embedding_vector <=> :embedding::vector
+            LIMIT :top_k
+        """), {"embedding": embedding_str, "top_k": top_k})
+
+        rows = result.fetchall()
+
+        if not rows:
+            return ""
+
+        context = "RELEVANT MEDICINES FROM DATABASE:\n"
+        for row in rows:
+            context += f"""
+Medicine: {row.medicine_name} ({row.brand_name})
+Generic: {row.generic_name}
+Drug Class: {row.drug_class or 'N/A'}
+Composition: {row.composition or 'N/A'}
+Similarity Score: {row.similarity:.2f}
+---"""
+        return context
+
+    except Exception as e:
+        print(f"RAG search error: {e}")
+        return ""
+
 @router.post("/ask")
 def ask_ai(question: AIQuestion, db: Session = Depends(get_db)):
     try:
-        context = get_medicine_context(db, question.medicine_names)
+        context = ""
 
-        if not context:
-            words = question.question.split()
-            for word in words:
-                if len(word) > 4:
-                    med = db.query(Medicine).filter(
-                        Medicine.medicine_name.ilike(f"%{word}%") |
-                        Medicine.brand_name.ilike(f"%{word}%")
-                    ).first()
-                    if med:
-                        context = get_medicine_context(db, [word])
-                        break
+        # If specific medicines mentioned, use direct lookup first
+        if question.medicine_names:
+            context = get_medicine_context(db, question.medicine_names)
+
+        # Always enhance with RAG search
+        rag_context = rag_search(db, question.question, top_k=5)
+
+        # Combine both contexts
+        if rag_context and rag_context not in context:
+            context = context + "\n" + rag_context if context else rag_context
 
         prompt = f"""You are MediInfo AI, a helpful medical information assistant for Indian users.
 You provide accurate, easy-to-understand medicine information based on the provided database.
@@ -120,6 +164,12 @@ def compare_medicines(
 ):
     try:
         context = get_medicine_context(db, [medicine1, medicine2])
+
+        # Enhance with RAG if direct lookup missed anything
+        if not context:
+            rag1 = rag_search(db, medicine1, top_k=2)
+            rag2 = rag_search(db, medicine2, top_k=2)
+            context = rag1 + "\n" + rag2
 
         prompt = f"""You are MediInfo AI. Compare these two medicines clearly and helpfully.
 Always respond in English.
