@@ -133,7 +133,7 @@ USER QUESTION: {question.question}
 Please provide a helpful, accurate answer in the same language as the question above:"""
 
         response = client.models.generate_content(
-            model="gemini-1.5-flash",
+            model="models/gemini-2.5-flash",
             contents=prompt
         )
         return {
@@ -181,7 +181,7 @@ Please compare {medicine1} and {medicine2} covering:
 Keep it clear and easy to understand for a regular person."""
 
         response = client.models.generate_content(
-            model="gemini-1.5-flash",
+            model="models/gemini-2.5-flash",
             contents=prompt
         )
         return {"comparison": response.text}
