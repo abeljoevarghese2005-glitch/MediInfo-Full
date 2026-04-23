@@ -104,7 +104,7 @@ def gemini_generate(prompt: str) -> str:
     for attempt in range(3):
         try:
             response = client.models.generate_content(
-                model="models/gemini-2.5-flash",
+                model="models/gemini-2.0-flash-lite",
                 contents=prompt
             )
             return response.text
