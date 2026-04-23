@@ -7,6 +7,7 @@ from ..models import Medicine, MedicineLeaflet
 from google import genai
 from dotenv import load_dotenv
 import os
+import time as time_module
 
 load_dotenv()
 
@@ -65,7 +66,6 @@ Mechanism of Action: {leaflet.mechanism_of_action}
     return context
 
 def rag_search(db: Session, question: str, top_k: int = 5) -> str:
-    """Search medicines by vector similarity and return context"""
     try:
         question_embedding = get_embedding(question)
         embedding_str = str(question_embedding)
@@ -98,6 +98,21 @@ Similarity Score: {row.similarity:.2f}
     except Exception as e:
         print(f"RAG search error: {e}")
         return ""
+
+def gemini_generate(prompt: str) -> str:
+    last_error = None
+    for attempt in range(3):
+        try:
+            response = client.models.generate_content(
+                model="models/gemini-2.5-flash",
+                contents=prompt
+            )
+            return response.text
+        except Exception as retry_err:
+            last_error = retry_err
+            if attempt < 2:
+                time_module.sleep(2)
+    raise last_error
 
 @router.post("/ask")
 def ask_ai(question: AIQuestion, db: Session = Depends(get_db)):
@@ -132,12 +147,9 @@ USER QUESTION: {question.question}
 
 Please provide a helpful, accurate answer in the same language as the question above:"""
 
-        response = client.models.generate_content(
-            model="models/gemini-2.5-flash",
-            contents=prompt
-        )
+        answer = gemini_generate(prompt)
         return {
-            "answer": response.text,
+            "answer": answer,
             "medicines_used": question.medicine_names
         }
 
@@ -180,11 +192,8 @@ Please compare {medicine1} and {medicine2} covering:
 
 Keep it clear and easy to understand for a regular person."""
 
-        response = client.models.generate_content(
-            model="models/gemini-2.5-flash",
-            contents=prompt
-        )
-        return {"comparison": response.text}
+        comparison = gemini_generate(prompt)
+        return {"comparison": comparison}
 
     except Exception as e:
         err = str(e)
