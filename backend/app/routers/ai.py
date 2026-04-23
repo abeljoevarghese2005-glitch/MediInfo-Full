@@ -67,17 +67,15 @@ Mechanism of Action: {leaflet.mechanism_of_action}
 def rag_search(db: Session, question: str, top_k: int = 5) -> str:
     """Search medicines by vector similarity and return context"""
     try:
-        # Generate embedding for the question
         question_embedding = get_embedding(question)
         embedding_str = str(question_embedding)
 
-        # Vector similarity search using pgvector
         result = db.execute(text("""
             SELECT medicine_name, brand_name, generic_name, drug_class, composition,
-                   1 - (embedding_vector <=> :embedding::vector) as similarity
+                   1 - (embedding_vector <=> CAST(:embedding AS vector)) as similarity
             FROM medicines
             WHERE embedding_vector IS NOT NULL
-            ORDER BY embedding_vector <=> :embedding::vector
+            ORDER BY embedding_vector <=> CAST(:embedding AS vector)
             LIMIT :top_k
         """), {"embedding": embedding_str, "top_k": top_k})
 
@@ -106,14 +104,11 @@ def ask_ai(question: AIQuestion, db: Session = Depends(get_db)):
     try:
         context = ""
 
-        # If specific medicines mentioned, use direct lookup first
         if question.medicine_names:
             context = get_medicine_context(db, question.medicine_names)
 
-        # Always enhance with RAG search
         rag_context = rag_search(db, question.question, top_k=5)
 
-        # Combine both contexts
         if rag_context and rag_context not in context:
             context = context + "\n" + rag_context if context else rag_context
 
@@ -165,7 +160,6 @@ def compare_medicines(
     try:
         context = get_medicine_context(db, [medicine1, medicine2])
 
-        # Enhance with RAG if direct lookup missed anything
         if not context:
             rag1 = rag_search(db, medicine1, top_k=2)
             rag2 = rag_search(db, medicine2, top_k=2)
