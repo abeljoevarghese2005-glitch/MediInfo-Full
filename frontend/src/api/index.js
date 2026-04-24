@@ -42,3 +42,11 @@ export const getMyAppointments = (patientId) =>
   API.get(`/appointments/my/${patientId}`)
 export const cancelAppointment = (appointmentId) =>
   API.patch(`/appointments/cancel/${appointmentId}`)
+
+// Doctor dashboard
+export const getDoctorAppointments = (doctorId) =>
+  API.get(`/appointments/doctor-dashboard/${doctorId}`)
+export const confirmAppointment = (appointmentId) =>
+  API.patch(`/appointments/confirm/${appointmentId}`)
+export const rejectAppointment = (appointmentId) =>
+  API.patch(`/appointments/reject/${appointmentId}`)

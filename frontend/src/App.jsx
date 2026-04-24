@@ -10,6 +10,7 @@ import Reminders from './pages/Reminders'
 import Profile from './pages/Profile'
 import Doctors from './pages/Doctors'
 import MyAppointments from './pages/MyAppointments'
+import DoctorDashboard from './pages/DoctorDashboard'
 
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem('token')
@@ -46,6 +47,9 @@ function App() {
         } />
         <Route path="/my-appointments" element={
           <ProtectedRoute><MyAppointments /></ProtectedRoute>
+        } />
+        <Route path="/doctor-dashboard" element={
+          <ProtectedRoute><DoctorDashboard /></ProtectedRoute>
         } />
       </Routes>
     </BrowserRouter>

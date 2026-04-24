@@ -26,12 +26,26 @@ function Navbar() {
             <Link to="/home" className="text-gray-600 hover:text-cyan-500">
               Home
             </Link>
-            <Link to="/doctors" className="text-gray-600 hover:text-cyan-500 flex items-center gap-1">
-              🩺 Doctors
-            </Link>
-            <Link to="/my-appointments" className="text-gray-600 hover:text-cyan-500 flex items-center gap-1">
-              📅 Appointments
-            </Link>
+
+            {/* Doctor only */}
+            {user.role === 'doctor' && (
+              <Link to="/doctor-dashboard" className="text-gray-600 hover:text-cyan-500 flex items-center gap-1">
+                🏥 Dashboard
+              </Link>
+            )}
+
+            {/* Patient & caretaker only */}
+            {user.role !== 'doctor' && (
+              <>
+                <Link to="/doctors" className="text-gray-600 hover:text-cyan-500 flex items-center gap-1">
+                  🩺 Doctors
+                </Link>
+                <Link to="/my-appointments" className="text-gray-600 hover:text-cyan-500 flex items-center gap-1">
+                  📅 Appointments
+                </Link>
+              </>
+            )}
+
             <Link to="/ai-chat" className="text-gray-600 hover:text-cyan-500 flex items-center gap-1">
               🤖 AI Chat
             </Link>
