@@ -2,12 +2,12 @@ import { Link, useNavigate } from 'react-router-dom'
 
 function Navbar() {
   const navigate = useNavigate()
-  const token = localStorage.getItem('token')
-  const user = JSON.parse(localStorage.getItem('user') || '{}')
+  const token = sessionStorage.getItem('token')
+  const user = JSON.parse(sessionStorage.getItem('user') || '{}')
 
   const handleLogout = () => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
+    sessionStorage.removeItem('token')
+    sessionStorage.removeItem('user')
     navigate('/')
   }
 

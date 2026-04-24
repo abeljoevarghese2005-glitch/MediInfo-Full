@@ -15,7 +15,7 @@ const SPECIALIZATIONS = [
 
 function Doctors() {
   const navigate = useNavigate()
-  const user = JSON.parse(localStorage.getItem('user') || '{}')
+  const user = JSON.parse(sessionStorage.getItem('user') || '{}')
   const [doctors, setDoctors] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('All')

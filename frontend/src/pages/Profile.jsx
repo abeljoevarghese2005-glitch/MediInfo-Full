@@ -5,7 +5,7 @@ import { updateUser } from '../api/index'
 
 function Profile() {
   const navigate = useNavigate()
-  const [user, setUser] = useState(JSON.parse(localStorage.getItem('user') || '{}'))
+  const [user, setUser] = useState(JSON.parse(sessionStorage.getItem('user') || '{}'))
   const [activeTab, setActiveTab] = useState('profile')
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState({ full_name: user.full_name, phone: user.phone })
@@ -16,8 +16,8 @@ function Profile() {
   const tabs = ['profile', 'security']
 
   const handleLogout = () => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
+    sessionStorage.removeItem('token')
+    sessionStorage.removeItem('user')
     navigate('/')
   }
 
@@ -28,7 +28,7 @@ function Profile() {
     try {
       const res = await updateUser(user.id, form)
       const updatedUser = { ...user, ...res.data }
-      localStorage.setItem('user', JSON.stringify(updatedUser))
+      sessionStorage.setItem('user', JSON.stringify(updatedUser))
       setUser(updatedUser)
       setEditing(false)
       setSuccess('Profile updated successfully!')

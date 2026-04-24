@@ -5,7 +5,7 @@ import { getMyAppointments, cancelAppointment } from '../api/index'
 
 function MyAppointments() {
   const navigate = useNavigate()
-  const user = JSON.parse(localStorage.getItem('user') || '{}')
+  const user = JSON.parse(sessionStorage.getItem('user') || '{}')
   const [appointments, setAppointments] = useState([])
   const [loading, setLoading] = useState(true)
   const [cancelling, setCancelling] = useState(null)

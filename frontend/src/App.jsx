@@ -13,7 +13,7 @@ import MyAppointments from './pages/MyAppointments'
 import DoctorDashboard from './pages/DoctorDashboard'
 
 const ProtectedRoute = ({ children }) => {
-  const token = localStorage.getItem('token')
+ const token = sessionStorage.getItem('token')
   return token ? children : <Navigate to="/login" />
 }
 
