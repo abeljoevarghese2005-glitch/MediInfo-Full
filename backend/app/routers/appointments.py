@@ -30,7 +30,6 @@ def book_appointment(data: AppointmentCreate, patient_id: str, db: Session = Dep
     if not doctor:
         raise HTTPException(status_code=404, detail="Doctor not found")
 
-    # Check if slot already taken
     existing = db.query(Appointment).filter(
         Appointment.doctor_id == data.doctor_id,
         Appointment.appointment_date == data.appointment_date,
@@ -78,3 +77,46 @@ def cancel_appointment(appointment_id: str, db: Session = Depends(get_db)):
     appointment.status = "cancelled"
     db.commit()
     return {"message": "Appointment cancelled"}
+
+# ── Doctor Dashboard Endpoints ─────────────────────────────
+
+@router.get("/doctor-dashboard/{doctor_id}")
+def get_doctor_appointments(doctor_id: str, db: Session = Depends(get_db)):
+    doctor = db.query(User).filter(User.id == doctor_id, User.role == "doctor").first()
+    if not doctor:
+        raise HTTPException(status_code=404, detail="Doctor not found")
+
+    appointments = db.query(Appointment).filter(
+        Appointment.doctor_id == doctor_id
+    ).order_by(Appointment.appointment_date, Appointment.appointment_time).all()
+
+    result = []
+    for a in appointments:
+        patient = db.query(User).filter(User.id == a.patient_id).first()
+        result.append({
+            "id": str(a.id),
+            "patient_name": patient.full_name if patient else "Unknown",
+            "patient_phone": patient.phone if patient else "N/A",
+            "appointment_date": str(a.appointment_date),
+            "appointment_time": a.appointment_time,
+            "status": a.status
+        })
+    return result
+
+@router.patch("/confirm/{appointment_id}")
+def confirm_appointment(appointment_id: str, db: Session = Depends(get_db)):
+    appointment = db.query(Appointment).filter(Appointment.id == appointment_id).first()
+    if not appointment:
+        raise HTTPException(status_code=404, detail="Appointment not found")
+    appointment.status = "confirmed"
+    db.commit()
+    return {"message": "Appointment confirmed"}
+
+@router.patch("/reject/{appointment_id}")
+def reject_appointment(appointment_id: str, db: Session = Depends(get_db)):
+    appointment = db.query(Appointment).filter(Appointment.id == appointment_id).first()
+    if not appointment:
+        raise HTTPException(status_code=404, detail="Appointment not found")
+    appointment.status = "cancelled"
+    db.commit()
+    return {"message": "Appointment rejected"}
