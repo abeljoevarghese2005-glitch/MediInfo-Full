@@ -14,8 +14,8 @@ function Login() {
     setError('')
     try {
       const res = await loginUser(form)
-      sessionStorage.setItem('token', res.data.access_token)
-      sessionStorage.setItem('user', JSON.stringify(res.data.user))
+      localStorage.setItem('token', res.data.access_token)
+      localStorage.setItem('user', JSON.stringify(res.data.user))
       navigate('/home')
     } catch (err) {
       setError('Invalid phone or password')
