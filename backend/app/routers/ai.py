@@ -318,23 +318,72 @@ def ask_ai(question: AIQuestion, db: Session = Depends(get_db)):
 
 """ if history_block else ""
 
-        prompt = f"""You are MediInfo AI, a helpful medical information assistant for Indian users.
+        # ── out-of-scope guard ────────────────────────────────────────────────
+        # Catch clearly non-medical questions before hitting the LLM
+        out_of_scope_keywords = [
+            "cricket", "football", "movie", "film", "actor", "actress",
+            "stock", "share price", "weather", "recipe", "cook", "sport",
+            "politics", "election", "news", "celebrity", "song", "music",
+            "game", "travel", "hotel", "flight", "visa",
+        ]
+        q_lower = question.question.lower()
+        if any(kw in q_lower for kw in out_of_scope_keywords) and not context:
+            out_of_scope_answer = (
+                "I'm MediInfo AI and I can only help with medicine and health-related questions. "
+                "Please ask me about medicines, dosages, side effects, drug interactions, or similar topics."
+            )
+            save_to_session(session_id, "user", question.question)
+            save_to_session(session_id, "ai", out_of_scope_answer)
+            return {
+                "answer": out_of_scope_answer,
+                "medicines_used": [],
+                "session_id": session_id,
+            }
+
+        # ── build prompt ──────────────────────────────────────────────────────
+        # Determine language instruction
+        has_hindi = any("\u0900" <= c <= "\u097F" for c in question.question)
+        language_instruction = "Respond in Hindi." if has_hindi else "Respond in English."
+
+        # Confidence level based on how much context we found
+        if exact_context and rag_context:
+            confidence_note = "HIGH confidence — answering from matched database records."
+        elif exact_context or rag_context:
+            confidence_note = "MEDIUM confidence — answering from partially matched records."
+        else:
+            confidence_note = "LOW confidence — no matching records found; using general knowledge."
+
+        prompt = f"""You are MediInfo AI, a trusted medical information assistant for Indian users.
 You provide accurate, easy-to-understand medicine information based on the provided database.
 
-IMPORTANT RULES:
-- Answer based on the provided medicine data; use general knowledge only if no data is found
-- Always recommend consulting a doctor for medical decisions
-- Be clear, simple and helpful
-- If asked about drug interactions, be very specific and warn about dangers
-- CRITICAL: If the current question uses words like "it", "its", "that", or is a short
-  follow-up with no medicine name, look at the CONVERSATION HISTORY to identify which
-  medicine is being referred to. Answer specifically about THAT medicine — do NOT give
-  a generic answer about multiple medicines.
-- ALWAYS respond in English unless the user's question contains Hindi/Devanagari script
-- Keep answers concise but complete
+LANGUAGE: {language_instruction}
+
+CONFIDENCE: {confidence_note}
+
+STRICT RULES:
+1. SCOPE: Only answer medicine and health-related questions. If the question is clearly
+   unrelated to medicine or health (e.g. cricket, movies, cooking, weather), politely
+   decline and ask the user to ask a medicine-related question instead.
+
+2. CITATIONS: When you mention a fact about a specific medicine, cite the medicine name
+   in your answer (e.g. "Ibuprofen is contraindicated in..."). Never make claims about
+   a medicine without naming it.
+
+3. FOLLOW-UPS: If the question uses "it", "its", "that medicine", or has no medicine name,
+   check the CONVERSATION HISTORY to identify which medicine is being discussed.
+   Answer specifically about THAT medicine.
+
+4. SAFETY: Always end with a reminder to consult a doctor for personal medical decisions.
+   For drug interactions or overdose questions, add a clear warning.
+
+5. LOW CONFIDENCE: If no database records were found, say so clearly before answering
+   from general knowledge. Never present general knowledge as database-backed fact.
+
+6. FORMAT: Use clear sections with bold headings where helpful. Keep answers concise.
+   Do not repeat information unnecessarily.
 
 MEDICINE DATABASE CONTEXT:
-{context if context else "No specific medicine data found. Answer based on general knowledge but recommend consulting a doctor."}
+{context if context else "⚠️ No matching medicine records found in database."}
 
 {history_section}CURRENT QUESTION: {question.question}
 
@@ -349,7 +398,12 @@ Answer:"""
         return {
             "answer": answer,
             "medicines_used": question.medicine_names,
-            "session_id": session_id    # return so frontend can send it back next time
+            "session_id": session_id,
+            "confidence": (
+                "high" if exact_context and rag_context else
+                "medium" if exact_context or rag_context else
+                "low"
+            ),
         }
 
     except Exception as e:
