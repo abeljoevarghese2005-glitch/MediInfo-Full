@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import Navbar from '../components/Navbar'
+import Sidebar from '../components/Sidebar'
+import TopBar from '../components/TopBar'
 import { getDoctors, bookAppointment } from '../api/index'
 
 const TIME_SLOTS = [
@@ -76,10 +77,12 @@ function Doctors() {
   ]
   const getColor = (name) => avatarColors[name?.charCodeAt(0) % avatarColors.length]
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
-      <div className="max-w-2xl mx-auto px-6 py-8">
+ return (
+  <div className="min-h-screen bg-gray-50 flex">
+    <Sidebar />
+    <div className="ml-56 flex-1 flex flex-col">
+      <TopBar />
+      <div className="px-10 py-8">
 
         {/* Header */}
         <div className="mb-6">
@@ -87,7 +90,6 @@ function Doctors() {
           <p className="text-gray-500 text-sm mt-1">Browse and book appointments</p>
         </div>
 
-        {/* Success Banner */}
         {success && (
           <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl mb-4 text-sm flex items-center gap-2">
             ✅ {success}
@@ -97,7 +99,6 @@ function Doctors() {
           </div>
         )}
 
-        {/* Specialization Filter */}
         <div className="flex gap-2 overflow-x-auto pb-2 mb-6 scrollbar-hide">
           {SPECIALIZATIONS.map(spec => (
             <button
@@ -114,7 +115,6 @@ function Doctors() {
           ))}
         </div>
 
-        {/* Doctor Cards */}
         {loading ? (
           <div className="text-center py-16 text-gray-400">Loading doctors...</div>
         ) : doctors.length === 0 ? (
@@ -124,7 +124,7 @@ function Doctors() {
             <p className="text-gray-400 text-sm mt-1">Try a different specialization</p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-4 max-w-2xl">
             {doctors.map(doctor => (
               <div key={doctor.id} className="bg-white rounded-2xl shadow-sm p-5">
                 <div className="flex items-center gap-4">
@@ -148,7 +148,6 @@ function Doctors() {
           </div>
         )}
 
-        {/* Booking Modal */}
         {selectedDoctor && (
           <div className="fixed inset-0 bg-black/40 flex items-end justify-center z-50 px-4 pb-6">
             <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
@@ -156,8 +155,6 @@ function Doctors() {
                 <h2 className="font-bold text-gray-800 text-lg">Book Appointment</h2>
                 <button onClick={() => setSelectedDoctor(null)} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
               </div>
-
-              {/* Doctor Info */}
               <div className="flex items-center gap-3 bg-cyan-50 rounded-xl p-3 mb-5">
                 <div className={`w-10 h-10 ${getColor(selectedDoctor.full_name)} rounded-full flex items-center justify-center text-white font-bold`}>
                   {getInitials(selectedDoctor.full_name)}
@@ -167,8 +164,6 @@ function Doctors() {
                   <p className="text-cyan-600 text-sm">{selectedDoctor.specialization || 'General Physician'}</p>
                 </div>
               </div>
-
-              {/* Date Picker */}
               <div className="mb-4">
                 <label className="text-xs text-gray-500 mb-1 block">Select Date</label>
                 <input
@@ -179,8 +174,6 @@ function Doctors() {
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-gray-800"
                 />
               </div>
-
-              {/* Time Slots */}
               <div className="mb-5">
                 <label className="text-xs text-gray-500 mb-2 block">Select Time Slot</label>
                 <div className="grid grid-cols-4 gap-2">
@@ -199,13 +192,9 @@ function Doctors() {
                   ))}
                 </div>
               </div>
-
               {error && (
-                <div className="bg-red-50 text-red-600 px-3 py-2 rounded-lg text-sm mb-4">
-                  ❌ {error}
-                </div>
+                <div className="bg-red-50 text-red-600 px-3 py-2 rounded-lg text-sm mb-4">❌ {error}</div>
               )}
-
               <button
                 onClick={handleBook}
                 disabled={booking}
@@ -218,7 +207,8 @@ function Doctors() {
         )}
       </div>
     </div>
-  )
+  </div>
+)
 }
 
 export default Doctors

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import Navbar from '../components/Navbar'
+import Sidebar from '../components/Sidebar'
+import TopBar from '../components/TopBar'
 import { getMyAppointments, cancelAppointment } from '../api/index'
 
 function MyAppointments() {
@@ -53,103 +54,106 @@ function MyAppointments() {
   const past = appointments.filter(a => a.status === 'cancelled' || new Date(a.appointment_date) < new Date())
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
-      <div className="max-w-2xl mx-auto px-6 py-8">
+    <div className="min-h-screen bg-gray-50 flex">
+      <Sidebar />
+      <div className="ml-56 flex-1 flex flex-col">
+        <TopBar />
+        <div className="px-10 py-8">
 
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800">My Appointments</h1>
-            <p className="text-gray-500 text-sm mt-1">Manage your bookings</p>
-          </div>
-          <button
-            onClick={() => navigate('/doctors')}
-            className="bg-cyan-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-cyan-600"
-          >
-            + Book New
-          </button>
-        </div>
-
-        {loading ? (
-          <div className="text-center py-16 text-gray-400">Loading appointments...</div>
-        ) : appointments.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-2xl shadow-sm">
-            <p className="text-5xl mb-4">📅</p>
-            <p className="text-gray-600 font-medium">No appointments yet</p>
-            <p className="text-gray-400 text-sm mt-1 mb-5">Book your first appointment with a doctor</p>
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-800">My Appointments</h1>
+              <p className="text-gray-500 text-sm mt-1">Manage your bookings</p>
+            </div>
             <button
               onClick={() => navigate('/doctors')}
-              className="bg-cyan-500 text-white px-6 py-2 rounded-xl text-sm font-medium hover:bg-cyan-600"
+              className="bg-cyan-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-cyan-600"
             >
-              Find a Doctor
+              + Book New
             </button>
           </div>
-        ) : (
-          <div className="space-y-6">
 
-            {/* Upcoming */}
-            {upcoming.length > 0 && (
-              <div>
-                <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Upcoming</h2>
-                <div className="space-y-3">
-                  {upcoming.map(appt => (
-                    <div key={appt.id} className="bg-white rounded-2xl shadow-sm p-5">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h3 className="font-semibold text-gray-800">Dr. {appt.doctor_name}</h3>
-                          <p className="text-cyan-600 text-sm">{appt.specialization}</p>
-                          <div className="flex items-center gap-3 mt-2 text-sm text-gray-500">
-                            <span>📅 {formatDate(appt.appointment_date)}</span>
-                            <span>🕐 {appt.appointment_time}</span>
-                          </div>
-                        </div>
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusStyle(appt.status)}`}>
-                          {appt.status}
-                        </span>
-                      </div>
-                      {appt.status !== 'cancelled' && (
-                        <button
-                          onClick={() => handleCancel(appt.id)}
-                          disabled={cancelling === appt.id}
-                          className="mt-4 w-full border border-red-200 text-red-500 py-2 rounded-xl text-sm hover:bg-red-50 disabled:opacity-50"
-                        >
-                          {cancelling === appt.id ? 'Cancelling...' : 'Cancel Appointment'}
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+          {loading ? (
+            <div className="text-center py-16 text-gray-400">Loading appointments...</div>
+          ) : appointments.length === 0 ? (
+            <div className="text-center py-16 bg-white rounded-2xl shadow-sm max-w-2xl">
+              <p className="text-5xl mb-4">📅</p>
+              <p className="text-gray-600 font-medium">No appointments yet</p>
+              <p className="text-gray-400 text-sm mt-1 mb-5">Book your first appointment with a doctor</p>
+              <button
+                onClick={() => navigate('/doctors')}
+                className="bg-cyan-500 text-white px-6 py-2 rounded-xl text-sm font-medium hover:bg-cyan-600"
+              >
+                Find a Doctor
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-6 max-w-2xl">
 
-            {/* Past / Cancelled */}
-            {past.length > 0 && (
-              <div>
-                <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Past & Cancelled</h2>
-                <div className="space-y-3">
-                  {past.map(appt => (
-                    <div key={appt.id} className="bg-white rounded-2xl shadow-sm p-5 opacity-60">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h3 className="font-semibold text-gray-800">Dr. {appt.doctor_name}</h3>
-                          <p className="text-cyan-600 text-sm">{appt.specialization}</p>
-                          <div className="flex items-center gap-3 mt-2 text-sm text-gray-500">
-                            <span>📅 {formatDate(appt.appointment_date)}</span>
-                            <span>🕐 {appt.appointment_time}</span>
+              {/* Upcoming */}
+              {upcoming.length > 0 && (
+                <div>
+                  <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Upcoming</h2>
+                  <div className="space-y-3">
+                    {upcoming.map(appt => (
+                      <div key={appt.id} className="bg-white rounded-2xl shadow-sm p-5">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <h3 className="font-semibold text-gray-800">Dr. {appt.doctor_name}</h3>
+                            <p className="text-cyan-600 text-sm">{appt.specialization}</p>
+                            <div className="flex items-center gap-3 mt-2 text-sm text-gray-500">
+                              <span>📅 {formatDate(appt.appointment_date)}</span>
+                              <span>🕐 {appt.appointment_time}</span>
+                            </div>
                           </div>
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusStyle(appt.status)}`}>
+                            {appt.status}
+                          </span>
                         </div>
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusStyle(appt.status)}`}>
-                          {appt.status}
-                        </span>
+                        {appt.status !== 'cancelled' && (
+                          <button
+                            onClick={() => handleCancel(appt.id)}
+                            disabled={cancelling === appt.id}
+                            className="mt-4 w-full border border-red-200 text-red-500 py-2 rounded-xl text-sm hover:bg-red-50 disabled:opacity-50"
+                          >
+                            {cancelling === appt.id ? 'Cancelling...' : 'Cancel Appointment'}
+                          </button>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
-        )}
+              )}
+
+              {/* Past / Cancelled */}
+              {past.length > 0 && (
+                <div>
+                  <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Past & Cancelled</h2>
+                  <div className="space-y-3">
+                    {past.map(appt => (
+                      <div key={appt.id} className="bg-white rounded-2xl shadow-sm p-5 opacity-60">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <h3 className="font-semibold text-gray-800">Dr. {appt.doctor_name}</h3>
+                            <p className="text-cyan-600 text-sm">{appt.specialization}</p>
+                            <div className="flex items-center gap-3 mt-2 text-sm text-gray-500">
+                              <span>📅 {formatDate(appt.appointment_date)}</span>
+                              <span>🕐 {appt.appointment_time}</span>
+                            </div>
+                          </div>
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusStyle(appt.status)}`}>
+                            {appt.status}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
