@@ -269,13 +269,15 @@ def format_history(chat_history: list[ChatMessage]) -> str:
 
 def extract_last_medicines(chat_history: list[ChatMessage]) -> list[str]:
     """
-    Scans recent user messages backwards to find medicine names mentioned.
-    Returns up to 2 medicine names so follow-up questions like
-    "is it safe during pregnancy?" can be anchored to the right medicine.
+    Scans recent messages (both user AND ai) backwards to find medicine names.
 
-    Strategy: look for capitalised words in user messages that are likely
-    medicine names (not common English words). This is a lightweight
-    heuristic — good enough for the most common follow-up patterns.
+    Key insight: when a user asks "What are the side effects of Ibuprofen?"
+    and then "Is it safe during pregnancy?", the word "Ibuprofen" only appears
+    in the FIRST user message and the AI's response — NOT in the follow-up.
+    So we must scan all messages, not just user ones.
+
+    We scan backwards through the last 6 messages and collect capitalised
+    words that are likely medicine names (not common English words).
     """
     common_words = {
         "what", "which", "how", "does", "is", "are", "can", "its", "it",
@@ -283,23 +285,30 @@ def extract_last_medicines(chat_history: list[ChatMessage]) -> list[str]:
         "this", "with", "about", "safe", "during", "pregnancy", "dosage",
         "side", "effects", "interactions", "warnings", "me", "tell", "give",
         "please", "what's", "should", "i", "take", "use", "used", "also",
+        "here", "some", "information", "based", "provided", "always",
+        "consult", "doctor", "before", "taking", "medicine", "medicines",
+        "common", "serious", "drug", "class", "brand", "generic", "indian",
+        "users", "please", "remember", "general", "understanding", "note",
+        "however", "also", "these", "those", "they", "them", "their",
+        "brufen", # brand names that shouldn't override the generic search
     }
     found = []
-    for msg in reversed(chat_history):
-        if msg.role != "user":
-            continue
+    # Scan last 6 messages (3 turns) in reverse
+    recent = chat_history[-6:]
+    for msg in reversed(recent):
         words = msg.text.split()
         for word in words:
-            clean = word.strip("?.,!:;()")
+            clean = word.strip("?.,!:;()*/\n")
             if (
                 len(clean) > 3
                 and clean[0].isupper()
+                and not clean.isupper()          # skip ALL-CAPS acronyms
                 and clean.lower() not in common_words
                 and clean not in found
             ):
                 found.append(clean)
-        if found:
-            break   # stop at the first user message that has capitalised words
+        if len(found) >= 2:
+            break
     return found[:2]
 
 
@@ -314,11 +323,15 @@ def ask_ai(question: AIQuestion, db: Session = Depends(get_db)):
         # 2. If current question looks like a follow-up (short, no medicine name
         #    mentioned), extract medicines from history and fetch their context too
         q_lower = question.question.lower()
-        followup_indicators = ["it", "its", "that", "this", "the medicine", "the drug"]
+        q_words = set(q_lower.replace("?", "").replace(".", "").split())
+        followup_indicators = {"it", "its", "that", "this"}
         is_followup = (
             not question.medicine_names
-            and any(ind in q_lower for ind in followup_indicators)
-            and len(question.question.split()) < 12
+            and question.chat_history
+            and (
+                bool(q_words & followup_indicators)
+                or len(question.question.split()) < 6
+            )
         )
 
         if is_followup and question.chat_history:
@@ -374,7 +387,7 @@ IMPORTANT RULES:
   about a specific one from the conversation.
 - ALWAYS respond in English unless the user's question contains Hindi/Devanagari script
 - Keep answers concise but complete
-- Never mention  "based on the database" or "according to the provided data" etc. in the answer; just use the data to inform your response without calling attention to it.
+
 MEDICINE DATABASE CONTEXT:
 {context if context else "No specific medicine data found. Answer based on general knowledge but recommend consulting a doctor."}
 
