@@ -317,38 +317,35 @@ def extract_last_medicines(chat_history: list[ChatMessage]) -> list[str]:
 @router.post("/ask")
 def ask_ai(question: AIQuestion, db: Session = Depends(get_db)):
     try:
+        print(f"DEBUG question: {question.question}")
+        print(f"DEBUG history length: {len(question.chat_history)}")
+        for m in question.chat_history:
+            print(f"  [{m.role}]: {m.text[:80]}")
+
         # 1. Exact name match from explicitly provided medicine names
         exact_context, seen_ids = get_medicine_context(db, question.medicine_names)
 
-        # 2. If current question looks like a follow-up (short, no medicine name
-        #    mentioned), extract medicines from history and fetch their context too
-        q_lower = question.question.lower()
-        q_words = set(q_lower.replace("?", "").replace(".", "").split())
-        followup_indicators = {"it", "its", "that", "this"}
-        is_followup = (
-            not question.medicine_names
-            and question.chat_history
-            and (
-                bool(q_words & followup_indicators)
-                or len(question.question.split()) < 6
-            )
-        )
+        # 2. Always try to extract medicines from history for ALL questions
+        #    (not just detected follow-ups) — this ensures context is always
+        #    available when the user asks about something mentioned before
+        history_medicines = extract_last_medicines(question.chat_history)
+        print(f"DEBUG extracted medicines from history: {history_medicines}")
 
-        if is_followup and question.chat_history:
-            history_medicines = extract_last_medicines(question.chat_history)
-            if history_medicines:
-                extra_context, extra_ids = get_medicine_context(db, history_medicines)
+        if history_medicines:
+            extra_context, extra_ids = get_medicine_context(db, history_medicines)
+            # Only add if not already in exact_context
+            for mid in extra_ids:
+                if mid not in seen_ids:
+                    seen_ids.add(mid)
+            if extra_context and extra_context not in exact_context:
                 exact_context += extra_context
-                seen_ids |= extra_ids
 
-        # 3. Hybrid semantic + keyword search (skip already-fetched medicines)
-        #    For follow-ups, search using the resolved medicine name, not the
-        #    vague pronoun-filled question
+        # 3. Hybrid semantic + keyword search
+        #    Prepend extracted medicine names to search query for better results
         search_query = question.question
-        if is_followup and question.chat_history:
-            resolved = extract_last_medicines(question.chat_history)
-            if resolved:
-                search_query = f"{resolved[0]} {question.question}"
+        if history_medicines and not question.medicine_names:
+            search_query = f"{history_medicines[0]} {question.question}"
+        print(f"DEBUG search_query: {search_query}")
 
         rag_context = hybrid_rag_search(
             db,
