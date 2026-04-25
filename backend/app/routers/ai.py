@@ -2,33 +2,36 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from pydantic import BaseModel
-from typing import Optional
+from collections import defaultdict
 from ..database import get_db
 from ..models import Medicine, MedicineLeaflet
 from google import genai
 from dotenv import load_dotenv
 import os
 import time as time_module
+import uuid
 
 load_dotenv()
 
 router = APIRouter()
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
-SIMILARITY_THRESHOLD = 0.55   # minimum cosine similarity to include a result
-MAX_HISTORY_TURNS    = 6      # number of past user+ai pairs to include in prompt
+SIMILARITY_THRESHOLD = 0.55
+MAX_HISTORY_TURNS    = 6      # pairs of (user, ai) messages to keep per session
+
+# ── server-side session store ─────────────────────────────────────────────────
+# Simple in-memory dict: session_id -> list of {"role": str, "text": str}
+# Lives as long as the Railway container is running.
+# On redeploy it resets — acceptable for a chat session.
+_sessions: dict[str, list[dict]] = defaultdict(list)
 
 
 # ── schema ────────────────────────────────────────────────────────────────────
 
-class ChatMessage(BaseModel):
-    role: str   # "user" or "ai"
-    text: str
-
 class AIQuestion(BaseModel):
     question: str
     medicine_names: list[str] = []
-    chat_history: list[ChatMessage] = []   # NEW — frontend passes last N turns
+    session_id: str = ""          # frontend sends this; we generate one if missing
 
 
 # ── embedding ─────────────────────────────────────────────────────────────────
@@ -89,56 +92,24 @@ Mechanism of Action: {leaflet.mechanism_of_action}
     return context, seen_ids
 
 
-# ── hybrid search with RRF reranking ─────────────────────────────────────────
+# ── hybrid search with RRF ────────────────────────────────────────────────────
 
-def hybrid_rag_search(
-    db: Session,
-    question: str,
-    top_k: int = 5,
-    exclude_ids: set = None,
-) -> str:
-    """
-    Combines two retrieval strategies merged with Reciprocal Rank Fusion (RRF).
-
-    Strategy 1 — Vector search (semantic)
-      Converts the question to an embedding and finds closest medicine vectors
-      by cosine similarity. Good at: symptom/indication queries, mechanism
-      questions, clinical intent. Bad at: exact drug name spelling matches.
-
-    Strategy 2 — Keyword search (pg_trgm trigram similarity)
-      Scores every medicine by how closely its name/brand/generic/drug_class
-      matches the raw question text. Good at: exact or near-exact drug names,
-      brand name look-ups. Bad at: paraphrased or symptom-based queries.
-
-    RRF merging:
-      Each strategy produces a ranked list. RRF turns ranks into scores:
-          score = 1 / (rank + K)   where K=60 (standard constant)
-      Scores from both lists are summed per medicine, then re-sorted.
-      A medicine ranking high in both lists beats one appearing in only one.
-    """
+def hybrid_rag_search(db: Session, question: str, top_k: int = 5, exclude_ids: set = None) -> str:
     exclude_ids = exclude_ids or set()
     fetch_k = top_k * 3
     RRF_K = 60
 
     try:
-        # ── 1. vector search ──────────────────────────────────────────────────
         question_embedding = get_embedding(question)
         embedding_str = str(question_embedding)
 
         vector_rows = db.execute(text("""
             SELECT
-                m.id,
-                m.medicine_name,
-                m.brand_name,
-                m.generic_name,
-                m.drug_class,
-                m.composition,
-                l.indications,
-                l.mechanism_of_action,
-                l.side_effects_common,
-                l.side_effects_serious,
-                l.warnings,
-                l.contraindications,
+                m.id, m.medicine_name, m.brand_name, m.generic_name,
+                m.drug_class, m.composition,
+                l.indications, l.mechanism_of_action,
+                l.side_effects_common, l.side_effects_serious,
+                l.warnings, l.contraindications,
                 1 - (m.embedding_vector <=> CAST(:embedding AS vector)) AS similarity
             FROM medicines m
             LEFT JOIN medicine_leaflets l ON l.medicine_id = m.id
@@ -147,21 +118,13 @@ def hybrid_rag_search(
             LIMIT :fetch_k
         """), {"embedding": embedding_str, "fetch_k": fetch_k}).fetchall()
 
-        # ── 2. keyword search (pg_trgm) ───────────────────────────────────────
         keyword_rows = db.execute(text("""
             SELECT
-                m.id,
-                m.medicine_name,
-                m.brand_name,
-                m.generic_name,
-                m.drug_class,
-                m.composition,
-                l.indications,
-                l.mechanism_of_action,
-                l.side_effects_common,
-                l.side_effects_serious,
-                l.warnings,
-                l.contraindications,
+                m.id, m.medicine_name, m.brand_name, m.generic_name,
+                m.drug_class, m.composition,
+                l.indications, l.mechanism_of_action,
+                l.side_effects_common, l.side_effects_serious,
+                l.warnings, l.contraindications,
                 GREATEST(
                     similarity(LOWER(m.medicine_name), LOWER(:q)),
                     similarity(LOWER(m.brand_name),    LOWER(:q)),
@@ -179,7 +142,6 @@ def hybrid_rag_search(
             LIMIT :fetch_k
         """), {"q": question, "fetch_k": fetch_k}).fetchall()
 
-        # ── 3. RRF fusion ─────────────────────────────────────────────────────
         all_rows: dict = {}
         rrf_scores: dict = {}
 
@@ -196,7 +158,6 @@ def hybrid_rag_search(
 
         ranked_ids = sorted(rrf_scores, key=lambda x: rrf_scores[x], reverse=True)
 
-        # ── 4. filter & build context ─────────────────────────────────────────
         kept = []
         for rid in ranked_ids:
             if rid in {str(eid) for eid in exclude_ids}:
@@ -220,7 +181,6 @@ def hybrid_rag_search(
 Medicine: {row.medicine_name} ({row.brand_name})
 Generic: {row.generic_name}
 Drug Class: {row.drug_class or 'N/A'}
-Composition: {row.composition or 'N/A'}
 Indications: {row.indications or 'N/A'}
 Mechanism: {row.mechanism_of_action or 'N/A'}
 Common Side Effects: {side_common}
@@ -228,7 +188,6 @@ Serious Side Effects: {side_serious}
 Warnings: {row.warnings or 'N/A'}
 Contraindications: {row.contraindications or 'N/A'}
 ---"""
-
         return context
 
     except Exception as e:
@@ -254,55 +213,55 @@ def gemini_generate(prompt: str) -> str:
     raise last_error
 
 
-# ── history helpers ───────────────────────────────────────────────────────────
+# ── session helpers ───────────────────────────────────────────────────────────
 
-def format_history(chat_history: list[ChatMessage]) -> str:
-    if not chat_history:
-        return ""
-    recent = chat_history[-(MAX_HISTORY_TURNS * 2):]
+def get_session_history(session_id: str) -> list[dict]:
+    """Return last MAX_HISTORY_TURNS * 2 messages for this session."""
+    return _sessions[session_id][-(MAX_HISTORY_TURNS * 2):]
+
+
+def save_to_session(session_id: str, role: str, text: str):
+    _sessions[session_id].append({"role": role, "text": text})
+    # Trim to avoid unbounded growth — keep last 20 messages per session
+    if len(_sessions[session_id]) > 20:
+        _sessions[session_id] = _sessions[session_id][-20:]
+
+
+def format_history(history: list[dict]) -> str:
     lines = []
-    for msg in recent:
-        label = "User" if msg.role == "user" else "MediInfo AI"
-        lines.append(f"{label}: {msg.text}")
+    for msg in history:
+        label = "User" if msg["role"] == "user" else "MediInfo AI"
+        lines.append(f"{label}: {msg['text']}")
     return "\n".join(lines)
 
 
-def extract_last_medicines(chat_history: list[ChatMessage]) -> list[str]:
+def extract_medicines_from_history(history: list[dict]) -> list[str]:
     """
-    Scans recent messages (both user AND ai) backwards to find medicine names.
-
-    Key insight: when a user asks "What are the side effects of Ibuprofen?"
-    and then "Is it safe during pregnancy?", the word "Ibuprofen" only appears
-    in the FIRST user message and the AI's response — NOT in the follow-up.
-    So we must scan all messages, not just user ones.
-
-    We scan backwards through the last 6 messages and collect capitalised
-    words that are likely medicine names (not common English words).
+    Scan recent history for capitalised words that look like medicine names.
+    Used to anchor follow-up questions to the right medicine.
     """
     common_words = {
         "what", "which", "how", "does", "is", "are", "can", "its", "it",
         "the", "a", "an", "and", "or", "of", "for", "in", "to", "that",
         "this", "with", "about", "safe", "during", "pregnancy", "dosage",
         "side", "effects", "interactions", "warnings", "me", "tell", "give",
-        "please", "what's", "should", "i", "take", "use", "used", "also",
-        "here", "some", "information", "based", "provided", "always",
-        "consult", "doctor", "before", "taking", "medicine", "medicines",
-        "common", "serious", "drug", "class", "brand", "generic", "indian",
-        "users", "please", "remember", "general", "understanding", "note",
-        "however", "also", "these", "those", "they", "them", "their",
-        "brufen", # brand names that shouldn't override the generic search
+        "please", "should", "i", "take", "use", "used", "also", "here",
+        "some", "information", "based", "provided", "always", "consult",
+        "doctor", "before", "taking", "medicine", "medicines", "common",
+        "serious", "drug", "class", "brand", "generic", "indian", "users",
+        "remember", "general", "understanding", "note", "however", "these",
+        "those", "they", "them", "their", "important", "please", "following",
+        "certain", "your", "you", "have", "been", "will", "not", "only",
+        "also", "both", "very", "more", "most", "such", "than", "then",
     }
     found = []
-    # Scan last 6 messages (3 turns) in reverse
-    recent = chat_history[-6:]
-    for msg in reversed(recent):
-        words = msg.text.split()
-        for word in words:
-            clean = word.strip("?.,!:;()*/\n")
+    for msg in reversed(history[-6:]):
+        for word in msg["text"].split():
+            clean = word.strip("?.,!:;()*/\n*#-")
             if (
                 len(clean) > 3
                 and clean[0].isupper()
-                and not clean.isupper()          # skip ALL-CAPS acronyms
+                and not clean.isupper()
                 and clean.lower() not in common_words
                 and clean not in found
             ):
@@ -317,42 +276,32 @@ def extract_last_medicines(chat_history: list[ChatMessage]) -> list[str]:
 @router.post("/ask")
 def ask_ai(question: AIQuestion, db: Session = Depends(get_db)):
     try:
-        print(f"DEBUG question: {question.question}")
-        print(f"DEBUG history length: {len(question.chat_history)}")
-        for m in question.chat_history:
-            print(f"  [{m.role}]: {m.text[:80]}")
+        # Ensure we have a session_id — generate one if frontend didn't send it
+        session_id = question.session_id or str(uuid.uuid4())
+
+        # Load this session's history from server memory
+        history = get_session_history(session_id)
 
         # 1. Exact name match from explicitly provided medicine names
         exact_context, seen_ids = get_medicine_context(db, question.medicine_names)
 
-        # 2. Always try to extract medicines from history for ALL questions
-        #    (not just detected follow-ups) — this ensures context is always
-        #    available when the user asks about something mentioned before
-        history_medicines = extract_last_medicines(question.chat_history)
-        print(f"DEBUG extracted medicines from history: {history_medicines}")
+        # 2. Extract medicines from server-side history for follow-up resolution
+        history_medicines = extract_medicines_from_history(history)
 
         if history_medicines:
             extra_context, extra_ids = get_medicine_context(db, history_medicines)
-            # Only add if not already in exact_context
             for mid in extra_ids:
                 if mid not in seen_ids:
                     seen_ids.add(mid)
             if extra_context and extra_context not in exact_context:
                 exact_context += extra_context
 
-        # 3. Hybrid semantic + keyword search
-        #    Prepend extracted medicine names to search query for better results
+        # 3. Hybrid search — prepend history medicine to query if it's a follow-up
         search_query = question.question
         if history_medicines and not question.medicine_names:
             search_query = f"{history_medicines[0]} {question.question}"
-        print(f"DEBUG search_query: {search_query}")
 
-        rag_context = hybrid_rag_search(
-            db,
-            search_query,
-            top_k=5,
-            exclude_ids=seen_ids,
-        )
+        rag_context = hybrid_rag_search(db, search_query, top_k=5, exclude_ids=seen_ids)
 
         # 4. Assemble context
         context_parts = []
@@ -362,8 +311,8 @@ def ask_ai(question: AIQuestion, db: Session = Depends(get_db)):
             context_parts.append(rag_context)
         context = "\n\n".join(context_parts)
 
-        # 5. Format conversation history for the prompt
-        history_block = format_history(question.chat_history)
+        # 5. Format history for the prompt
+        history_block = format_history(history)
         history_section = f"""CONVERSATION HISTORY:
 {history_block}
 
@@ -377,11 +326,10 @@ IMPORTANT RULES:
 - Always recommend consulting a doctor for medical decisions
 - Be clear, simple and helpful
 - If asked about drug interactions, be very specific and warn about dangers
-- CRITICAL: If the current question uses pronouns like "it", "its", "that medicine", or
-  is a short follow-up with no medicine name, look at the CONVERSATION HISTORY to identify
-  which medicine is being referred to and answer specifically about THAT medicine.
-  Do NOT give a generic answer about multiple medicines when the user is clearly asking
-  about a specific one from the conversation.
+- CRITICAL: If the current question uses words like "it", "its", "that", or is a short
+  follow-up with no medicine name, look at the CONVERSATION HISTORY to identify which
+  medicine is being referred to. Answer specifically about THAT medicine — do NOT give
+  a generic answer about multiple medicines.
 - ALWAYS respond in English unless the user's question contains Hindi/Devanagari script
 - Keep answers concise but complete
 
@@ -393,9 +341,15 @@ MEDICINE DATABASE CONTEXT:
 Answer:"""
 
         answer = gemini_generate(prompt)
+
+        # Save this turn to server-side session history
+        save_to_session(session_id, "user", question.question)
+        save_to_session(session_id, "ai", answer)
+
         return {
             "answer": answer,
-            "medicines_used": question.medicine_names
+            "medicines_used": question.medicine_names,
+            "session_id": session_id    # return so frontend can send it back next time
         }
 
     except Exception as e:
@@ -409,11 +363,7 @@ Answer:"""
 
 
 @router.post("/compare")
-def compare_medicines(
-    medicine1: str,
-    medicine2: str,
-    db: Session = Depends(get_db)
-):
+def compare_medicines(medicine1: str, medicine2: str, db: Session = Depends(get_db)):
     try:
         context, seen_ids = get_medicine_context(db, [medicine1, medicine2])
 

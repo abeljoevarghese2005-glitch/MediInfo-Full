@@ -28,8 +28,8 @@ export const createReminder = (data) => {
 }
 export const deleteReminder = (id) => API.delete(`/reminders/${id}`)
 
-export const askAI = (question, medicineNames = [], chatHistory = []) =>
-  API.post(`/ai/ask`, { question, medicine_names: medicineNames, chat_history: chatHistory })
+export const askAI = (question, medicineNames = [], sessionId = '') =>
+  API.post(`/ai/ask`, { question, medicine_names: medicineNames, session_id: sessionId })
 export const compareMedicines = (medicine1, medicine2) =>
   API.post(`/ai/compare?medicine1=${medicine1}&medicine2=${medicine2}`)
 
