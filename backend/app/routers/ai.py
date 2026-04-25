@@ -254,7 +254,7 @@ def gemini_generate(prompt: str) -> str:
     raise last_error
 
 
-# ── history formatter ─────────────────────────────────────────────────────────
+# ── history helpers ───────────────────────────────────────────────────────────
 
 def format_history(chat_history: list[ChatMessage]) -> str:
     if not chat_history:
@@ -267,23 +267,84 @@ def format_history(chat_history: list[ChatMessage]) -> str:
     return "\n".join(lines)
 
 
+def extract_last_medicines(chat_history: list[ChatMessage]) -> list[str]:
+    """
+    Scans recent user messages backwards to find medicine names mentioned.
+    Returns up to 2 medicine names so follow-up questions like
+    "is it safe during pregnancy?" can be anchored to the right medicine.
+
+    Strategy: look for capitalised words in user messages that are likely
+    medicine names (not common English words). This is a lightweight
+    heuristic — good enough for the most common follow-up patterns.
+    """
+    common_words = {
+        "what", "which", "how", "does", "is", "are", "can", "its", "it",
+        "the", "a", "an", "and", "or", "of", "for", "in", "to", "that",
+        "this", "with", "about", "safe", "during", "pregnancy", "dosage",
+        "side", "effects", "interactions", "warnings", "me", "tell", "give",
+        "please", "what's", "should", "i", "take", "use", "used", "also",
+    }
+    found = []
+    for msg in reversed(chat_history):
+        if msg.role != "user":
+            continue
+        words = msg.text.split()
+        for word in words:
+            clean = word.strip("?.,!:;()")
+            if (
+                len(clean) > 3
+                and clean[0].isupper()
+                and clean.lower() not in common_words
+                and clean not in found
+            ):
+                found.append(clean)
+        if found:
+            break   # stop at the first user message that has capitalised words
+    return found[:2]
+
+
 # ── routes ────────────────────────────────────────────────────────────────────
 
 @router.post("/ask")
 def ask_ai(question: AIQuestion, db: Session = Depends(get_db)):
     try:
-        # 1. Exact name match (highest priority)
+        # 1. Exact name match from explicitly provided medicine names
         exact_context, seen_ids = get_medicine_context(db, question.medicine_names)
 
-        # 2. Hybrid semantic + keyword search
+        # 2. If current question looks like a follow-up (short, no medicine name
+        #    mentioned), extract medicines from history and fetch their context too
+        q_lower = question.question.lower()
+        followup_indicators = ["it", "its", "that", "this", "the medicine", "the drug"]
+        is_followup = (
+            not question.medicine_names
+            and any(ind in q_lower for ind in followup_indicators)
+            and len(question.question.split()) < 12
+        )
+
+        if is_followup and question.chat_history:
+            history_medicines = extract_last_medicines(question.chat_history)
+            if history_medicines:
+                extra_context, extra_ids = get_medicine_context(db, history_medicines)
+                exact_context += extra_context
+                seen_ids |= extra_ids
+
+        # 3. Hybrid semantic + keyword search (skip already-fetched medicines)
+        #    For follow-ups, search using the resolved medicine name, not the
+        #    vague pronoun-filled question
+        search_query = question.question
+        if is_followup and question.chat_history:
+            resolved = extract_last_medicines(question.chat_history)
+            if resolved:
+                search_query = f"{resolved[0]} {question.question}"
+
         rag_context = hybrid_rag_search(
             db,
-            question.question,
+            search_query,
             top_k=5,
             exclude_ids=seen_ids,
         )
 
-        # 3. Assemble context
+        # 4. Assemble context
         context_parts = []
         if exact_context:
             context_parts.append("EXACT MATCH DATA:\n" + exact_context)
@@ -291,9 +352,9 @@ def ask_ai(question: AIQuestion, db: Session = Depends(get_db)):
             context_parts.append(rag_context)
         context = "\n\n".join(context_parts)
 
-        # 4. Format conversation history
+        # 5. Format conversation history for the prompt
         history_block = format_history(question.chat_history)
-        history_section = f"""CONVERSATION HISTORY (use this to understand follow-up questions):
+        history_section = f"""CONVERSATION HISTORY:
 {history_block}
 
 """ if history_block else ""
@@ -306,10 +367,14 @@ IMPORTANT RULES:
 - Always recommend consulting a doctor for medical decisions
 - Be clear, simple and helpful
 - If asked about drug interactions, be very specific and warn about dangers
-- If a follow-up question refers to something mentioned earlier (e.g. "that medicine", "its dosage"), use the conversation history to resolve what it refers to
+- CRITICAL: If the current question uses pronouns like "it", "its", "that medicine", or
+  is a short follow-up with no medicine name, look at the CONVERSATION HISTORY to identify
+  which medicine is being referred to and answer specifically about THAT medicine.
+  Do NOT give a generic answer about multiple medicines when the user is clearly asking
+  about a specific one from the conversation.
 - ALWAYS respond in English unless the user's question contains Hindi/Devanagari script
 - Keep answers concise but complete
-
+- Never mention  "based on the database" or "according to the provided data" etc. in the answer; just use the data to inform your response without calling attention to it.
 MEDICINE DATABASE CONTEXT:
 {context if context else "No specific medicine data found. Answer based on general knowledge but recommend consulting a doctor."}
 
