@@ -14,6 +14,15 @@ function AIChat() {
   const [loading, setLoading] = useState(false)
   const bottomRef = useRef(null)
 
+  // Keep a ref that always holds the latest messages array.
+  // React state updates are async — reading `messages` inside handleSend
+  // gives the snapshot at render time, not the post-setState value.
+  // The ref is updated synchronously on every render so it's always current.
+  const messagesRef = useRef(messages)
+  useEffect(() => {
+    messagesRef.current = messages
+  }, [messages])
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
@@ -27,12 +36,22 @@ function AIChat() {
       .filter(m => m.length > 0)
 
     const userMessage = { role: 'user', text: input }
+
+    // Use the ref (always up-to-date) to build history.
+    // Skip index 0 (the initial AI greeting) — it's not useful context.
+    // Include the current user message so the backend sees it in history too.
+    const currentMessages = messagesRef.current
+    const history = [
+      ...currentMessages.filter((_, i) => i > 0),
+      userMessage,
+    ]
+
     setMessages(prev => [...prev, userMessage])
     setInput('')
     setLoading(true)
 
     try {
-      const res = await askAI(input, medicineNames)
+      const res = await askAI(input, medicineNames, history)
       const aiMessage = { role: 'ai', text: res.data.answer }
       setMessages(prev => [...prev, aiMessage])
     } catch (err) {

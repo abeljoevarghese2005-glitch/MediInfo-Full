@@ -5,7 +5,7 @@ const API = axios.create({
 })
 
 API.interceptors.request.use((config) => {
-  const token = sessionStorage.getItem('token')
+  const token = localStorage.getItem('token')
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
@@ -28,8 +28,8 @@ export const createReminder = (data) => {
 }
 export const deleteReminder = (id) => API.delete(`/reminders/${id}`)
 
-export const askAI = (question, medicineNames = []) =>
-  API.post('/ai/ask', { question, medicine_names: medicineNames })
+export const askAI = (question, medicineNames = [], chatHistory = []) =>
+  API.post(`/ai/ask`, { question, medicine_names: medicineNames, chat_history: chatHistory })
 export const compareMedicines = (medicine1, medicine2) =>
   API.post(`/ai/compare?medicine1=${medicine1}&medicine2=${medicine2}`)
 
