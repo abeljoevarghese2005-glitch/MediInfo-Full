@@ -16,7 +16,14 @@ function Login() {
       const res = await loginUser(form)
       sessionStorage.setItem('token', res.data.access_token)
       sessionStorage.setItem('user', JSON.stringify(res.data.user))
-      navigate('/home')
+
+      // Route based on role
+      const role = res.data.user?.role
+      if (role === 'doctor') {
+        navigate('/doctor-dashboard')
+      } else {
+        navigate('/home')
+      }
     } catch (err) {
       setError('Invalid phone or password')
     }

@@ -12,9 +12,28 @@ import Doctors from './pages/Doctors'
 import MyAppointments from './pages/MyAppointments'
 import DoctorDashboard from './pages/DoctorDashboard'
 
+// Requires login; redirects to /login if not authenticated
 const ProtectedRoute = ({ children }) => {
- const token = sessionStorage.getItem('token')
+  const token = sessionStorage.getItem('token')
   return token ? children : <Navigate to="/login" />
+}
+
+// Only for patients/caretakers — redirects doctors to their dashboard
+const PatientRoute = ({ children }) => {
+  const token = sessionStorage.getItem('token')
+  if (!token) return <Navigate to="/login" />
+  const user = JSON.parse(sessionStorage.getItem('user') || '{}')
+  if (user.role === 'doctor') return <Navigate to="/doctor-dashboard" />
+  return children
+}
+
+// Only for doctors — redirects patients to their home
+const DoctorRoute = ({ children }) => {
+  const token = sessionStorage.getItem('token')
+  if (!token) return <Navigate to="/login" />
+  const user = JSON.parse(sessionStorage.getItem('user') || '{}')
+  if (user.role !== 'doctor') return <Navigate to="/home" />
+  return children
 }
 
 function App() {
@@ -24,32 +43,38 @@ function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+
+        {/* Patient / caretaker routes */}
         <Route path="/home" element={
-          <ProtectedRoute><Home /></ProtectedRoute>
+          <PatientRoute><Home /></PatientRoute>
         } />
         <Route path="/search" element={
-          <ProtectedRoute><SearchResults /></ProtectedRoute>
+          <PatientRoute><SearchResults /></PatientRoute>
         } />
         <Route path="/medicine/:id" element={
-          <ProtectedRoute><MedicineDetail /></ProtectedRoute>
+          <PatientRoute><MedicineDetail /></PatientRoute>
         } />
         <Route path="/ai-chat" element={
-          <ProtectedRoute><AIChat /></ProtectedRoute>
+          <PatientRoute><AIChat /></PatientRoute>
         } />
         <Route path="/reminders" element={
-          <ProtectedRoute><Reminders /></ProtectedRoute>
+          <PatientRoute><Reminders /></PatientRoute>
         } />
+        <Route path="/doctors" element={
+          <PatientRoute><Doctors /></PatientRoute>
+        } />
+        <Route path="/my-appointments" element={
+          <PatientRoute><MyAppointments /></PatientRoute>
+        } />
+
+        {/* Shared route (both roles can access) */}
         <Route path="/profile" element={
           <ProtectedRoute><Profile /></ProtectedRoute>
         } />
-        <Route path="/doctors" element={
-          <ProtectedRoute><Doctors /></ProtectedRoute>
-        } />
-        <Route path="/my-appointments" element={
-          <ProtectedRoute><MyAppointments /></ProtectedRoute>
-        } />
+
+        {/* Doctor-only route */}
         <Route path="/doctor-dashboard" element={
-          <ProtectedRoute><DoctorDashboard /></ProtectedRoute>
+          <DoctorRoute><DoctorDashboard /></DoctorRoute>
         } />
       </Routes>
     </BrowserRouter>
