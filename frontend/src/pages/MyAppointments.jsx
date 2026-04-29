@@ -160,7 +160,7 @@ function LiveQueueView({ appointment, onBack, onCancel, cancelling }) {
             {getInitials(appointment.doctor_name)}
           </div>
           <div>
-            <p className="font-bold text-gray-900 text-sm">Dr. {appointment.doctor_name}</p>
+            <p className="font-bold text-gray-900 text-sm">{appointment.doctor_name}</p>
             <p className="text-cyan-500 text-xs font-medium">{appointment.specialization}</p>
             {appointment.clinic_name && (
               <p className="text-gray-400 text-xs flex items-center gap-1 mt-0.5">
@@ -201,8 +201,8 @@ function AppointmentsList({ appointments, loading, navigate, onJoinQueue, onCanc
     }
   }
 
-  const upcoming = appointments.filter(a => a.status !== 'cancelled' && new Date(a.appointment_date) >= new Date())
-  const past = appointments.filter(a => a.status === 'cancelled' || new Date(a.appointment_date) < new Date())
+  const upcoming = appointments.filter(a => a.status !== 'cancelled' && a.appointment_date >= new Date().toISOString().split('T')[0])
+  const past = appointments.filter(a => a.status === 'cancelled' || a.appointment_date < new Date().toISOString().split('T')[0])
 
   if (loading) return (
     <div className="flex-1 flex items-center justify-center text-gray-400 text-sm">
@@ -256,7 +256,7 @@ function AppointmentsList({ appointments, loading, navigate, onJoinQueue, onCanc
                         {getInitials(appt.doctor_name)}
                       </div>
                       <div>
-                        <p className="font-bold text-gray-900 text-sm">Dr. {appt.doctor_name}</p>
+                        <p className="font-bold text-gray-900 text-sm">{appt.doctor_name}</p>
                         <p className="text-cyan-500 text-xs">{appt.specialization}</p>
                         <div className="flex items-center gap-2 mt-1 text-xs text-gray-400">
                           <span>📅 {formatDate(appt.appointment_date)}</span>
@@ -307,7 +307,7 @@ function AppointmentsList({ appointments, loading, navigate, onJoinQueue, onCanc
                         {getInitials(appt.doctor_name)}
                       </div>
                       <div>
-                        <p className="font-bold text-gray-900 text-sm">Dr. {appt.doctor_name}</p>
+                        <p className="font-bold text-gray-900 text-sm">{appt.doctor_name}</p>
                         <p className="text-cyan-500 text-xs">{appt.specialization}</p>
                         <div className="flex items-center gap-2 mt-1 text-xs text-gray-400">
                           <span>📅 {formatDate(appt.appointment_date)}</span>
