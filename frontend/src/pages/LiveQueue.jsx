@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
 import TopBar from '../components/TopBar'
+import { getMyAppointments } from '../api/index'
 
 const TRAVEL_OPTIONS = ['10m', '15m', '20m', '30m']
 
@@ -15,8 +16,10 @@ const getInitials = (name) => name?.split(' ').map(n => n[0]).join('').toUpperCa
 function LiveQueue() {
   const navigate = useNavigate()
   const location = useLocation()
-  const appointment = location.state?.appointment || null
+  const user = JSON.parse(sessionStorage.getItem('user') || '{}')
 
+  const [appointment, setAppointment] = useState(location.state?.appointment || null)
+  const [loading, setLoading] = useState(!location.state?.appointment)
   const [travelTime, setTravelTime] = useState('20m')
   const [customMinutes, setCustomMinutes] = useState('')
   const [notified, setNotified] = useState(false)
@@ -26,32 +29,70 @@ function LiveQueue() {
   const totalSlots = 12
   const progress = Math.round(((totalSlots - queuePosition) / totalSlots) * 100)
 
-  // No active appointment — prompt to go book one
-  if (!appointment) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex">
-        <Sidebar />
-        <div className="ml-56 flex-1 flex flex-col">
-          <TopBar />
-          <div className="flex-1 flex flex-col items-center justify-center py-16 px-8">
-            <div className="w-16 h-16 bg-cyan-50 rounded-2xl flex items-center justify-center mb-4">
-              <svg className="w-8 h-8 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-            </div>
-            <p className="text-gray-700 font-bold mb-1">No active queue</p>
-            <p className="text-gray-400 text-sm mb-5 text-center">Join a queue from your appointments to track your position</p>
-            <button
-              onClick={() => navigate('/my-appointments')}
-              className="bg-cyan-500 text-white px-6 py-2.5 rounded-xl text-sm font-semibold hover:bg-cyan-600"
-            >
-              View My Appointments
-            </button>
-          </div>
+  useEffect(() => {
+    // If no appointment passed via navigation state, auto-fetch the next upcoming one
+    if (!location.state?.appointment) {
+      fetchNextAppointment()
+    }
+  }, [])
+
+  const fetchNextAppointment = async () => {
+    setLoading(true)
+    try {
+      const res = await getMyAppointments(user.id)
+      const today = new Date().toISOString().split('T')[0]
+      // Get the soonest upcoming non-cancelled appointment
+      const upcoming = res.data
+        .filter(a => a.status !== 'cancelled' && a.appointment_date >= today)
+        .sort((a, b) => {
+          // Sort by date then time
+          if (a.appointment_date !== b.appointment_date) {
+            return a.appointment_date.localeCompare(b.appointment_date)
+          }
+          return a.appointment_time.localeCompare(b.appointment_time)
+        })
+      setAppointment(upcoming[0] || null)
+    } catch {
+      setAppointment(null)
+    }
+    setLoading(false)
+  }
+
+  if (loading) return (
+    <div className="min-h-screen bg-gray-50 flex">
+      <Sidebar />
+      <div className="ml-56 flex-1 flex flex-col">
+        <TopBar />
+        <div className="flex-1 flex items-center justify-center text-gray-400 text-sm">
+          Loading queue...
         </div>
       </div>
-    )
-  }
+    </div>
+  )
+
+  if (!appointment) return (
+    <div className="min-h-screen bg-gray-50 flex">
+      <Sidebar />
+      <div className="ml-56 flex-1 flex flex-col">
+        <TopBar />
+        <div className="flex-1 flex flex-col items-center justify-center py-16 px-8">
+          <div className="w-16 h-16 bg-cyan-50 rounded-2xl flex items-center justify-center mb-4">
+            <svg className="w-8 h-8 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+          </div>
+          <p className="text-gray-700 font-bold mb-1">No upcoming appointments</p>
+          <p className="text-gray-400 text-sm mb-5 text-center">Book an appointment to join the live queue</p>
+          <button
+            onClick={() => navigate('/doctors')}
+            className="bg-cyan-500 text-white px-6 py-2.5 rounded-xl text-sm font-semibold hover:bg-cyan-600"
+          >
+            Book a Doctor
+          </button>
+        </div>
+      </div>
+    </div>
+  )
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -188,6 +229,9 @@ function LiveQueue() {
                       {appointment.clinic_name}
                     </p>
                   )}
+                  <p className="text-gray-400 text-xs mt-0.5">
+                    📅 {appointment.appointment_date} &nbsp;🕐 {appointment.appointment_time}
+                  </p>
                 </div>
               </div>
             </div>
