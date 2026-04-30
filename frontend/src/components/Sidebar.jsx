@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 
 const navItems = [
@@ -36,10 +37,10 @@ const navItems = [
   {
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
       </svg>
     ),
-    label: 'Notifications', path: '/reminders'
+    label: 'Reminders', path: '/reminders'
   },
   {
     icon: (
@@ -51,17 +52,40 @@ const navItems = [
   },
 ]
 
-function Sidebar() {
+function Sidebar({ isOpen, onClose }) {
   const location = useLocation()
 
-  return (
-    <div className="w-56 bg-white border-r border-gray-100 flex flex-col py-6 px-3 fixed h-full z-10">
-      <Link to="/home" className="flex items-center gap-2 mb-8 px-3">
-        <div className="w-9 h-9 bg-cyan-500 rounded-xl flex items-center justify-center shadow-sm">
-          <span className="text-white font-black text-base">M</span>
-        </div>
-        <span className="text-xl font-black text-gray-900 tracking-tight">MediInfo</span>
-      </Link>
+  // Close sidebar on route change (mobile)
+  useEffect(() => {
+    onClose()
+  }, [location.pathname])
+
+  // Lock body scroll when open on mobile
+  useEffect(() => {
+    document.body.style.overflow = isOpen ? 'hidden' : ''
+    return () => { document.body.style.overflow = '' }
+  }, [isOpen])
+
+  const sidebarContent = (
+    <div className="w-56 bg-white border-r border-gray-100 flex flex-col py-6 px-3 h-full">
+      {/* Logo + close button (close only shown on mobile) */}
+      <div className="flex items-center justify-between mb-8 px-3">
+        <Link to="/home" className="flex items-center gap-2">
+          <div className="w-9 h-9 bg-cyan-500 rounded-xl flex items-center justify-center shadow-sm">
+            <span className="text-white font-black text-base">M</span>
+          </div>
+          <span className="text-xl font-black text-gray-900 tracking-tight">MediInfo</span>
+        </Link>
+        <button
+          onClick={onClose}
+          className="lg:hidden p-1 text-gray-400 hover:text-gray-600"
+          aria-label="Close menu"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
 
       <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 px-3">Menu</p>
 
@@ -85,6 +109,32 @@ function Sidebar() {
         })}
       </nav>
     </div>
+  )
+
+  return (
+    <>
+      {/* Desktop: always visible */}
+      <div className="hidden lg:flex fixed top-0 left-0 h-full z-20 w-56">
+        {sidebarContent}
+      </div>
+
+      {/* Mobile: backdrop */}
+      {isOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black/40 z-30"
+          onClick={onClose}
+        />
+      )}
+
+      {/* Mobile: slide-in drawer */}
+      <div
+        className={`lg:hidden fixed top-0 left-0 h-full z-40 transition-transform duration-300 ease-in-out ${
+          isOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        {sidebarContent}
+      </div>
+    </>
   )
 }
 

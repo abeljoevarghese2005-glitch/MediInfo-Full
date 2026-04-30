@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom'
 
-function TopBar() {
+function TopBar({ onMenuClick }) {
   const navigate = useNavigate()
   const user = JSON.parse(sessionStorage.getItem('user') || '{}')
 
@@ -12,12 +12,18 @@ function TopBar() {
 
   return (
     <div className="flex items-center justify-between px-8 py-4 bg-white border-b border-gray-100">
-      {/* Hamburger placeholder (mobile) */}
-      <button className="text-gray-400 hover:text-gray-600 lg:hidden">
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      {/* Hamburger — mobile only */}
+      <button
+        onClick={onMenuClick}
+        className="lg:hidden text-gray-500 hover:text-gray-700 transition-colors"
+        aria-label="Open menu"
+      >
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
         </svg>
       </button>
+
+      {/* Spacer on desktop */}
       <div className="hidden lg:block" />
 
       {/* Right side */}
