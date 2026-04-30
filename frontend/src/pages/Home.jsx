@@ -314,131 +314,127 @@ function Home() {
         <Sidebar />
         <div className="lg:ml-56 flex-1 flex flex-col min-w-0">
           <TopBar />
+          <div className="flex-1 px-4 sm:px-8 py-8 max-w-5xl w-full">
+            {/* Greeting */}
+            <p className="text-gray-400 text-sm font-medium mb-1">{getGreeting()}</p>
+            <h1 className="text-3xl font-black text-gray-900 mb-6">
+              Hi {user.full_name?.split(' ')[0]}, how can we help today?
+            </h1>
 
-        <div className="flex-1 px-4 sm:px-8 py-8 max-w-5xl w-full">
-          {/* Greeting */}
-          <p className="text-gray-400 text-sm font-medium mb-1">{getGreeting()}</p>
-          <h1 className="text-3xl font-black text-gray-900 mb-6">
-            Hi {user.full_name?.split(' ')[0]}, how can we help today?
-          </h1>
+            {/* Search bar */}
+            <form onSubmit={handleSearch} className="mb-8">
+              <div className="flex items-center bg-white border border-gray-200 rounded-2xl px-4 py-3 shadow-sm gap-3 max-w-2xl">
+                <svg className="w-5 h-5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input
+                  type="text"
+                  value={query}
+                  onChange={e => setQuery(e.target.value)}
+                  placeholder="Search doctor or clinic"
+                  className="flex-1 text-sm text-gray-700 focus:outline-none bg-transparent"
+                />
+              </div>
+            </form>
 
-          {/* Search bar */}
-          <form onSubmit={handleSearch} className="mb-8">
-            <div className="flex items-center bg-white border border-gray-200 rounded-2xl px-4 py-3 shadow-sm gap-3 max-w-2xl">
-              <svg className="w-5 h-5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <input
-                type="text"
-                value={query}
-                onChange={e => setQuery(e.target.value)}
-                placeholder="Search doctor or clinic"
-                className="flex-1 text-sm text-gray-700 focus:outline-none bg-transparent"
-              />
+            {success && (
+              <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl mb-6 text-sm flex items-center gap-2 max-w-2xl">
+                ✅ {success}
+                <button onClick={() => navigate('/my-appointments')} className="ml-auto text-green-600 underline font-medium">
+                  View Appointments →
+                </button>
+              </div>
+            )}
+
+            {/* Nearby Clinics */}
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                    <svg className="w-4 h-4 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    </svg>
+                    Nearby Clinics
+                  </h2>
+                  <p className="text-xs text-gray-400 mt-0.5">Within 2–3 km of you</p>
+                </div>
+                <button onClick={() => navigate('/doctors')} className="text-cyan-500 text-sm font-semibold hover:underline">
+                  See all →
+                </button>
+              </div>
+
+              {loadingDoctors ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {[1,2,3,4].map(i => (
+                    <div key={i} className="bg-white rounded-2xl border border-gray-100 p-4 h-32 animate-pulse" />
+                  ))}
+                </div>
+              ) : doctors.length === 0 ? (
+                <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center text-gray-400 text-sm">
+                  No doctors found nearby
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {doctors.map((doc, idx) => (
+                    <DoctorCard key={doc.id} doctor={doc} idx={idx} onBook={handleBook} />
+                  ))}
+                </div>
+              )}
             </div>
-          </form>
 
-          {success && (
-            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl mb-6 text-sm flex items-center gap-2 max-w-2xl">
-              ✅ {success}
-              <button onClick={() => navigate('/my-appointments')} className="ml-auto text-green-600 underline font-medium">
-                View Appointments →
-              </button>
-            </div>
-          )}
-
-          {/* Nearby Clinics */}
-          <div className="mb-8">
-            <div className="flex items-center justify-between mb-3">
-              <div>
+            {/* Previously Visited */}
+            <div>
+              <div className="mb-3">
                 <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
                   <svg className="w-4 h-4 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
-                  Nearby Clinics
+                  Previously Visited
                 </h2>
-                <p className="text-xs text-gray-400 mt-0.5">Within 2–3 km of you</p>
+                <p className="text-xs text-gray-400 mt-0.5">Quick rebook in one tap</p>
               </div>
-              <button
-                onClick={() => navigate('/doctors')}
-                className="text-cyan-500 text-sm font-semibold hover:underline"
-              >
-                See all →
-              </button>
-            </div>
 
-            {loadingDoctors ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {[1,2,3,4].map(i => (
-                  <div key={i} className="bg-white rounded-2xl border border-gray-100 p-4 h-32 animate-pulse" />
-                ))}
-              </div>
-            ) : doctors.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center text-gray-400 text-sm">
-                No doctors found nearby
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {doctors.map((doc, idx) => (
-                  <DoctorCard key={doc.id} doctor={doc} idx={idx} onBook={handleBook} />
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Previously Visited */}
-          <div>
-            <div className="mb-3">
-              <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
-                <svg className="w-4 h-4 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                Previously Visited
-              </h2>
-              <p className="text-xs text-gray-400 mt-0.5">Quick rebook in one tap</p>
-            </div>
-
-            {previousDoctors.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center">
-                <svg className="w-10 h-10 text-gray-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                </svg>
-                <p className="text-gray-400 text-sm">Doctors you visit will show up here for quick rebooking.</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">((appt, idx) => (
-                  <div key={appt.id} className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 ${getColor(appt.doctor_name)} rounded-full flex items-center justify-center text-white font-bold text-xs`}>
-                        {getInitials(appt.doctor_name)}
+              {previousDoctors.length === 0 ? (
+                <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center">
+                  <svg className="w-10 h-10 text-gray-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                  </svg>
+                  <p className="text-gray-400 text-sm">Doctors you visit will show up here for quick rebooking.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {previousDoctors.map((appt, idx) => (
+                    <div key={appt.id} className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 ${getColor(appt.doctor_name)} rounded-full flex items-center justify-center text-white font-bold text-xs`}>
+                          {getInitials(appt.doctor_name)}
+                        </div>
+                        <div>
+                          <p className="font-bold text-sm text-gray-900">Dr. {appt.doctor_name}</p>
+                          <p className="text-cyan-500 text-xs">{appt.specialization}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-bold text-sm text-gray-900">Dr. {appt.doctor_name}</p>
-                        <p className="text-cyan-500 text-xs">{appt.specialization}</p>
-                      </div>
+                      <button
+                        onClick={() => navigate('/doctors')}
+                        className="text-cyan-500 text-xs font-bold bg-cyan-50 px-3 py-1.5 rounded-lg hover:bg-cyan-100"
+                      >
+                        Rebook
+                      </button>
                     </div>
-                    <button
-                      onClick={() => navigate('/doctors')}
-                      className="text-cyan-500 text-xs font-bold bg-cyan-50 px-3 py-1.5 rounded-lg hover:bg-cyan-100"
-                    >
-                      Rebook
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      </div>
 
-        {selectedDoctor && (
-          <BookingModal
-            doctor={selectedDoctor}
-            idx={selectedIdx}
-            onClose={() => setSelectedDoctor(null)}
-            onBooked={handleBooked}
-          />
-        )}
+          {selectedDoctor && (
+            <BookingModal
+              doctor={selectedDoctor}
+              idx={selectedIdx}
+              onClose={() => setSelectedDoctor(null)}
+              onBooked={handleBooked}
+            />
+          )}
         </div>
       </div>
     </SidebarProvider>

@@ -210,8 +210,8 @@ function Doctors() {
       </div>
     </div>
   </div>
-)
+  </SidebarProvider>
+  )
 }
 
-</SidebarProvider>
 export default Doctors
