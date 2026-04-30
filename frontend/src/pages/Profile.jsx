@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TopBar from '../components/TopBar'
+import Sidebar from '../components/Sidebar'
+import { SidebarProvider } from '../components/SidebarContext'
 import { updateUser } from '../api/index'
 
 function Profile() {
@@ -48,7 +50,9 @@ function Profile() {
   }
 
   return (
+    <SidebarProvider>
     <div className="min-h-screen bg-gray-50 flex">
+      <Sidebar />
       <div className="lg:ml-56 flex-1 flex flex-col">
         <TopBar />
         <div className="px-10 py-8">
@@ -246,6 +250,7 @@ function Profile() {
         </div>
       </div>
     </div>
+  </SidebarProvider>
   )
 }
 

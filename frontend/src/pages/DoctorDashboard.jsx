@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TopBar from '../components/TopBar'
+import Sidebar from '../components/Sidebar'
+import { SidebarProvider } from '../components/SidebarContext'
 import { getDoctorAppointments, confirmAppointment, rejectAppointment } from '../api/index'
 
 function DoctorDashboard() {
@@ -76,7 +78,9 @@ function DoctorDashboard() {
   const pendingCount = appointments.filter(a => a.status === 'pending').length
 
   return (
+    <SidebarProvider>
     <div className="min-h-screen bg-gray-50 flex">
+      <Sidebar />
       <div className="lg:ml-56 flex-1 flex flex-col">
         <TopBar />
         <div className="px-10 py-8">
@@ -177,6 +181,7 @@ function DoctorDashboard() {
         </div>
       </div>
     </div>
+  </SidebarProvider>
   )
 }
 

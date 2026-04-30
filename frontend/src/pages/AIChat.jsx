@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import TopBar from '../components/TopBar'
+import Sidebar from '../components/Sidebar'
+import { SidebarProvider } from '../components/SidebarContext'
 import { askAI } from '../api/index'
 
 function AIChat() {
@@ -62,7 +64,9 @@ function AIChat() {
   }
 
   return (
+    <SidebarProvider>
     <div className="min-h-screen bg-gray-50 flex">
+      <Sidebar />
       <div className="lg:ml-56 flex-1 flex flex-col">
         <TopBar />
 
@@ -149,6 +153,7 @@ function AIChat() {
         </div>
       </div>
     </div>
+  </SidebarProvider>
   )
 }
 

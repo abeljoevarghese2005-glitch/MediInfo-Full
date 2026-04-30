@@ -1,3 +1,5 @@
+import Sidebar from '../components/Sidebar'
+import { SidebarProvider } from '../components/SidebarContext'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TopBar from '../components/TopBar'
@@ -307,9 +309,11 @@ function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      <div className="lg:ml-56 flex-1 flex flex-col min-w-0">
-        <TopBar />
+    <SidebarProvider>
+      <div className="min-h-screen bg-gray-50 flex">
+        <Sidebar />
+        <div className="lg:ml-56 flex-1 flex flex-col min-w-0">
+          <TopBar />
 
         <div className="flex-1 px-4 sm:px-8 py-8 max-w-5xl w-full">
           {/* Greeting */}
@@ -427,15 +431,17 @@ function Home() {
         </div>
       </div>
 
-      {selectedDoctor && (
-        <BookingModal
-          doctor={selectedDoctor}
-          idx={selectedIdx}
-          onClose={() => setSelectedDoctor(null)}
-          onBooked={handleBooked}
-        />
-      )}
-    </div>
+        {selectedDoctor && (
+          <BookingModal
+            doctor={selectedDoctor}
+            idx={selectedIdx}
+            onClose={() => setSelectedDoctor(null)}
+            onBooked={handleBooked}
+          />
+        )}
+        </div>
+      </div>
+    </SidebarProvider>
   )
 }
 

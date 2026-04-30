@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TopBar from '../components/TopBar'
+import Sidebar from '../components/Sidebar'
+import { SidebarProvider } from '../components/SidebarContext'
 import { getDoctors, bookAppointment } from '../api/index'
 
 const TIME_SLOTS = [
@@ -77,7 +79,9 @@ function Doctors() {
   const getColor = (name) => avatarColors[name?.charCodeAt(0) % avatarColors.length]
 
  return (
+  <SidebarProvider>
   <div className="min-h-screen bg-gray-50 flex">
+    <Sidebar />
     <div className="lg:ml-56 flex-1 flex flex-col">
       <TopBar />
       <div className="px-10 py-8">
@@ -209,4 +213,5 @@ function Doctors() {
 )
 }
 
+</SidebarProvider>
 export default Doctors

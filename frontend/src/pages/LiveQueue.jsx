@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import TopBar from '../components/TopBar'
+import Sidebar from '../components/Sidebar'
+import { SidebarProvider } from '../components/SidebarContext'
 import { getMyAppointments } from '../api/index'
 
 const TRAVEL_OPTIONS = ['10m', '15m', '20m', '30m']
@@ -58,7 +60,9 @@ function LiveQueue() {
   }
 
   if (loading) return (
+    <SidebarProvider>
     <div className="min-h-screen bg-gray-50 flex">
+      <Sidebar />
       <div className="lg:ml-56 flex-1 flex flex-col">
         <TopBar />
         <div className="flex-1 flex items-center justify-center text-gray-400 text-sm">
@@ -66,10 +70,13 @@ function LiveQueue() {
         </div>
       </div>
     </div>
+  </SidebarProvider>
   )
 
   if (!appointment) return (
+    <SidebarProvider>
     <div className="min-h-screen bg-gray-50 flex">
+      <Sidebar />
       <div className="lg:ml-56 flex-1 flex flex-col">
         <TopBar />
         <div className="flex-1 flex flex-col items-center justify-center py-16 px-8">
@@ -89,10 +96,13 @@ function LiveQueue() {
         </div>
       </div>
     </div>
+    </SidebarProvider>
   )
 
   return (
+    <SidebarProvider>
     <div className="min-h-screen bg-gray-50 flex">
+      <Sidebar />
       <div className="lg:ml-56 flex-1 flex flex-col">
         <TopBar />
         <div className="flex-1 overflow-y-auto">
@@ -249,6 +259,7 @@ function LiveQueue() {
         </div>
       </div>
     </div>
+  </SidebarProvider>
   )
 }
 

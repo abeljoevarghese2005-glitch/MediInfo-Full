@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
+import { useSidebar } from './SidebarContext'
 
 const navItems = [
   {
@@ -51,14 +52,12 @@ const navItems = [
   },
 ]
 
-// SidebarContent is shared between desktop sidebar and mobile drawer
 function SidebarContent({ onClose }) {
   const location = useLocation()
   const user = JSON.parse(sessionStorage.getItem('user') || '{}')
 
   return (
     <>
-      {/* Logo */}
       <Link
         to="/home"
         onClick={onClose}
@@ -92,7 +91,6 @@ function SidebarContent({ onClose }) {
           )
         })}
 
-        {/* Doctor dashboard link */}
         {user.role === 'doctor' && (
           <Link
             to="/doctor-dashboard"
@@ -116,40 +114,39 @@ function SidebarContent({ onClose }) {
   )
 }
 
-// Sidebar is now a controlled component — TopBar passes isOpen + onClose
-function Sidebar({ isOpen, onClose }) {
+function Sidebar() {
+  const { isOpen, close } = useSidebar()
+
   return (
     <>
-      {/* ── Desktop sidebar (always visible on lg+) ── */}
-      <div className="hidden lg:flex w-56 bg-white border-r border-gray-100 flex-col py-6 px-3 fixed h-full z-10">
+      {/* Desktop sidebar — always visible on lg+ */}
+      <div className="hidden lg:flex w-56 bg-white border-r border-gray-100 flex-col py-6 px-3 fixed top-0 left-0 h-full z-20">
         <SidebarContent onClose={() => {}} />
       </div>
 
-      {/* ── Mobile drawer backdrop ── */}
+      {/* Mobile backdrop */}
       {isOpen && (
         <div
           className="fixed inset-0 bg-black/40 z-20 lg:hidden"
-          onClick={onClose}
+          onClick={close}
         />
       )}
 
-      {/* ── Mobile drawer ── */}
+      {/* Mobile drawer */}
       <div
         className={`fixed top-0 left-0 h-full w-64 bg-white z-30 flex flex-col py-6 px-3 shadow-2xl transition-transform duration-300 ease-in-out lg:hidden ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        {/* Close button */}
         <button
-          onClick={onClose}
+          onClick={close}
           className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 p-1"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
-
-        <SidebarContent onClose={onClose} />
+        <SidebarContent onClose={close} />
       </div>
     </>
   )

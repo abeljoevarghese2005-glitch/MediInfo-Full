@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import TopBar from '../components/TopBar'
+import Sidebar from '../components/Sidebar'
+import { SidebarProvider } from '../components/SidebarContext'
 import MedicineCard from '../components/MedicineCard'
 import LoadingSpinner from '../components/LoadingSpinner'
 import { searchMedicines } from '../api'
@@ -27,7 +29,9 @@ function SearchResults() {
   }, [query])
 
   return (
+    <SidebarProvider>
     <div className="min-h-screen bg-gray-50 flex">
+      <Sidebar />
       <div className="lg:ml-56 flex-1 flex flex-col">
         <TopBar />
         <div className="px-10 py-8">
@@ -52,6 +56,7 @@ function SearchResults() {
         </div>
       </div>
     </div>
+  </SidebarProvider>
   )
 }
 
