@@ -14,6 +14,7 @@ const getColor = (name) => avatarColors[(name?.charCodeAt(0) || 0) % avatarColor
 const getInitials = (name) => name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'D'
 
 function LiveQueue() {
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
   const user = JSON.parse(sessionStorage.getItem('user') || '{}')
@@ -60,9 +61,9 @@ function LiveQueue() {
 
   if (loading) return (
     <div className="min-h-screen bg-gray-50 flex">
-      <Sidebar />
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="ml-56 flex-1 flex flex-col">
-        <TopBar />
+        <TopBar onMenuClick={() => setSidebarOpen(prev => !prev)} />
         <div className="flex-1 flex items-center justify-center text-gray-400 text-sm">
           Loading queue...
         </div>
@@ -72,9 +73,9 @@ function LiveQueue() {
 
   if (!appointment) return (
     <div className="min-h-screen bg-gray-50 flex">
-      <Sidebar />
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="ml-56 flex-1 flex flex-col">
-        <TopBar />
+        <TopBar onMenuClick={() => setSidebarOpen(prev => !prev)} />
         <div className="flex-1 flex flex-col items-center justify-center py-16 px-8">
           <div className="w-16 h-16 bg-cyan-50 rounded-2xl flex items-center justify-center mb-4">
             <svg className="w-8 h-8 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -96,9 +97,9 @@ function LiveQueue() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      <Sidebar />
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="ml-56 flex-1 flex flex-col">
-        <TopBar />
+        <TopBar onMenuClick={() => setSidebarOpen(prev => !prev)} />
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-xl mx-auto px-6 py-6">
 

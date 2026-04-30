@@ -5,6 +5,7 @@ import TopBar from '../components/TopBar'
 import { getDoctorAppointments, confirmAppointment, rejectAppointment } from '../api/index'
 
 function DoctorDashboard() {
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const navigate = useNavigate()
   const user = JSON.parse(sessionStorage.getItem('user') || '{}')
   const [appointments, setAppointments] = useState([])
@@ -78,9 +79,9 @@ function DoctorDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      <Sidebar />
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="ml-56 flex-1 flex flex-col">
-        <TopBar />
+        <TopBar onMenuClick={() => setSidebarOpen(prev => !prev)} />
         <div className="px-10 py-8">
 
           {/* Header */}

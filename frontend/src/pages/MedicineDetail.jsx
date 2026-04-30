@@ -6,6 +6,7 @@ import LoadingSpinner from '../components/LoadingSpinner'
 import { getMedicine, getMedicineLeaflet } from '../api'
 
 function MedicineDetail() {
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const { id } = useParams()
   const navigate = useNavigate()
   const [medicine, setMedicine] = useState(null)
@@ -32,9 +33,9 @@ function MedicineDetail() {
 
   if (loading) return (
     <div className="min-h-screen bg-gray-50 flex">
-      <Sidebar />
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="ml-56 flex-1 flex flex-col">
-        <TopBar />
+        <TopBar onMenuClick={() => setSidebarOpen(prev => !prev)} />
         <div className="flex-1 flex items-center justify-center">
           <LoadingSpinner />
         </div>
@@ -46,9 +47,9 @@ function MedicineDetail() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      <Sidebar />
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="ml-56 flex-1 flex flex-col">
-        <TopBar />
+        <TopBar onMenuClick={() => setSidebarOpen(prev => !prev)} />
         <div className="px-10 py-8">
 
           <button
