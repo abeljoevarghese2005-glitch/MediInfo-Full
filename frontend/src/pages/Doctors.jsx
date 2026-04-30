@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import Sidebar from '../components/Sidebar'
 import TopBar from '../components/TopBar'
 import { getDoctors, bookAppointment } from '../api/index'
 
@@ -15,7 +14,6 @@ const SPECIALIZATIONS = [
 ]
 
 function Doctors() {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
   const navigate = useNavigate()
   const user = JSON.parse(sessionStorage.getItem('user') || '{}')
   const [doctors, setDoctors] = useState([])
@@ -80,9 +78,8 @@ function Doctors() {
 
  return (
   <div className="min-h-screen bg-gray-50 flex">
-    <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-    <div className="ml-56 flex-1 flex flex-col">
-      <TopBar onMenuClick={() => setSidebarOpen(prev => !prev)} />
+    <div className="lg:ml-56 flex-1 flex flex-col">
+      <TopBar />
       <div className="px-10 py-8">
 
         {/* Header */}

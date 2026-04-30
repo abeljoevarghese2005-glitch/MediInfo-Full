@@ -1,11 +1,9 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import Sidebar from '../components/Sidebar'
 import TopBar from '../components/TopBar'
 import { updateUser } from '../api/index'
 
 function Profile() {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
   const navigate = useNavigate()
   const [user, setUser] = useState(JSON.parse(sessionStorage.getItem('user') || '{}'))
   const [activeTab, setActiveTab] = useState('profile')
@@ -51,9 +49,8 @@ function Profile() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <div className="ml-56 flex-1 flex flex-col">
-        <TopBar onMenuClick={() => setSidebarOpen(prev => !prev)} />
+      <div className="lg:ml-56 flex-1 flex flex-col">
+        <TopBar />
         <div className="px-10 py-8">
 
           {/* Profile Header Card */}

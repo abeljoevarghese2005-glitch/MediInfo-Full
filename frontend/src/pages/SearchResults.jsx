@@ -1,13 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import Sidebar from '../components/Sidebar'
 import TopBar from '../components/TopBar'
 import MedicineCard from '../components/MedicineCard'
 import LoadingSpinner from '../components/LoadingSpinner'
 import { searchMedicines } from '../api'
 
 function SearchResults() {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [searchParams] = useSearchParams()
   const [results, setResults] = useState([])
   const [loading, setLoading] = useState(true)
@@ -30,9 +28,8 @@ function SearchResults() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <div className="ml-56 flex-1 flex flex-col">
-        <TopBar onMenuClick={() => setSidebarOpen(prev => !prev)} />
+      <div className="lg:ml-56 flex-1 flex flex-col">
+        <TopBar />
         <div className="px-10 py-8">
           <h2 className="text-2xl font-bold text-gray-800 mb-2">
             Search Results

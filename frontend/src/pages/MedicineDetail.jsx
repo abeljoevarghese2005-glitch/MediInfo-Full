@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import Sidebar from '../components/Sidebar'
 import TopBar from '../components/TopBar'
 import LoadingSpinner from '../components/LoadingSpinner'
 import { getMedicine, getMedicineLeaflet } from '../api'
 
 function MedicineDetail() {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
   const { id } = useParams()
   const navigate = useNavigate()
   const [medicine, setMedicine] = useState(null)
@@ -33,9 +31,8 @@ function MedicineDetail() {
 
   if (loading) return (
     <div className="min-h-screen bg-gray-50 flex">
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <div className="ml-56 flex-1 flex flex-col">
-        <TopBar onMenuClick={() => setSidebarOpen(prev => !prev)} />
+      <div className="lg:ml-56 flex-1 flex flex-col">
+        <TopBar />
         <div className="flex-1 flex items-center justify-center">
           <LoadingSpinner />
         </div>
@@ -47,9 +44,8 @@ function MedicineDetail() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <div className="ml-56 flex-1 flex flex-col">
-        <TopBar onMenuClick={() => setSidebarOpen(prev => !prev)} />
+      <div className="lg:ml-56 flex-1 flex flex-col">
+        <TopBar />
         <div className="px-10 py-8">
 
           <button

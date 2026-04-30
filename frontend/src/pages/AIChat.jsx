@@ -1,10 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
-import Sidebar from '../components/Sidebar'
 import TopBar from '../components/TopBar'
 import { askAI } from '../api/index'
 
 function AIChat() {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [messages, setMessages] = useState([
     {
       role: 'ai',
@@ -65,9 +63,8 @@ function AIChat() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <div className="ml-56 flex-1 flex flex-col">
-        <TopBar onMenuClick={() => setSidebarOpen(prev => !prev)} />
+      <div className="lg:ml-56 flex-1 flex flex-col">
+        <TopBar />
 
         <div className="flex-1 flex flex-col p-8 gap-4 max-w-3xl w-full">
 
