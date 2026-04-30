@@ -308,10 +308,10 @@ function Home() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      <div className="lg:ml-56 flex-1 flex flex-col">
+      <div className="lg:ml-56 flex-1 flex flex-col min-w-0">
         <TopBar />
 
-        <div className="flex-1 px-8 py-8 max-w-5xl">
+        <div className="flex-1 px-4 sm:px-8 py-8 max-w-5xl w-full">
           {/* Greeting */}
           <p className="text-gray-400 text-sm font-medium mb-1">{getGreeting()}</p>
           <h1 className="text-3xl font-black text-gray-900 mb-6">
@@ -364,7 +364,7 @@ function Home() {
             </div>
 
             {loadingDoctors ? (
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {[1,2,3,4].map(i => (
                   <div key={i} className="bg-white rounded-2xl border border-gray-100 p-4 h-32 animate-pulse" />
                 ))}
@@ -374,7 +374,7 @@ function Home() {
                 No doctors found nearby
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {doctors.map((doc, idx) => (
                   <DoctorCard key={doc.id} doctor={doc} idx={idx} onBook={handleBook} />
                 ))}
@@ -402,8 +402,7 @@ function Home() {
                 <p className="text-gray-400 text-sm">Doctors you visit will show up here for quick rebooking.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-4">
-                {previousDoctors.map((appt, idx) => (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">((appt, idx) => (
                   <div key={appt.id} className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className={`w-10 h-10 ${getColor(appt.doctor_name)} rounded-full flex items-center justify-center text-white font-bold text-xs`}>
