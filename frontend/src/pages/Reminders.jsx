@@ -111,8 +111,12 @@ function Reminders() {
     await createReminder(reminderData, user.id)  // pass user_id as 2nd arg
     ...
   } catch(err) {
-    alert('Error: ' + (err.response?.data?.detail || JSON.stringify(err.response?.data) || err.message))
-  }
+  const detail = err.response?.data?.detail
+  const msg = Array.isArray(detail)
+    ? detail.map(e => `${e.loc?.join('.')} — ${e.msg}`).join('\n')
+    : (detail || err.message)
+  alert('Error:\n' + msg)
+}
 }
 
   const handleDelete = async (id) => {
