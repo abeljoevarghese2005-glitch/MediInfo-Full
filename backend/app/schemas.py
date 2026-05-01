@@ -68,6 +68,7 @@ class ReminderCreate(BaseModel):
     medicine_name: str
     dosage: Optional[str] = None
     frequency: Optional[str] = "daily"
+    reminder_time: Optional[str] = None         # ← ADD THIS
     start_date: date
     end_date: Optional[date] = None
     notes: Optional[str] = None

@@ -52,6 +52,7 @@ class MedicationReminder(Base):
     medicine_name = Column(String(255))
     dosage = Column(String(100))
     frequency = Column(String(20), default="daily")
+    reminder_time = Column(String(10))          # ← ADD THIS
     start_date = Column(Date, nullable=False)
     end_date = Column(Date)
     notes = Column(Text)
