@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .routers import medicines, auth, reminders, ai, appointments
+from .routers import medicines, auth, reminders, ai, appointments, push
+from .scheduler import start_scheduler
 
 app = FastAPI(
     title="MediInfo API",
@@ -21,6 +22,11 @@ app.include_router(medicines.router, prefix="/medicines", tags=["Medicines"])
 app.include_router(reminders.router, prefix="/reminders", tags=["Reminders"])
 app.include_router(ai.router, prefix="/ai", tags=["AI"])
 app.include_router(appointments.router, prefix="/appointments", tags=["Appointments"])
+app.include_router(push.router, prefix="/push", tags=["Push Notifications"])
+
+@app.on_event("startup")
+async def startup():
+    start_scheduler()
 
 @app.get("/")
 def root():
