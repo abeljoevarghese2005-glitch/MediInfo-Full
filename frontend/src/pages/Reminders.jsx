@@ -105,17 +105,25 @@ function Reminders() {
 
  const handleSubmit = async () => {
   if (!form.medicine_name || !form.start_date) return
-  console.log('Submitting:', JSON.stringify(form))  // ← ADD THIS
   try {
-    await createReminder(form, user.id)
-    ...
+    const payload = {
+      ...form,
+      end_date: form.end_date || null,      // ← convert "" to null
+      dosage: form.dosage || null,          // ← also fix dosage
+      notes: form.notes || null,            // ← also fix notes
+      reminder_time: form.reminder_time || null,
+    }
+    await createReminder(payload, user.id)
+    setForm({ medicine_name:'', dosage:'', frequency:'daily', reminder_time:'08:00', start_date:'', end_date:'', notes:'' })
+    setShowForm(false)
+    fetchReminders()
   } catch(err) {
-  const detail = err.response?.data?.detail
-  const msg = Array.isArray(detail)
-    ? detail.map(e => `${e.loc?.join('.')} — ${e.msg}`).join('\n')
-    : (detail || err.message)
-  alert('Error:\n' + msg)
-}
+    const detail = err.response?.data?.detail
+    const msg = Array.isArray(detail)
+      ? detail.map(e => `${e.loc?.join('.')} — ${e.msg}`).join('\n')
+      : (detail || err.message)
+    alert('Error:\n' + msg)
+  }
 }
 
   const handleDelete = async (id) => {
