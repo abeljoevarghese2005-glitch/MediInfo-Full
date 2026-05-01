@@ -103,14 +103,17 @@ function Reminders() {
     setPushLoading(false)
   }
 
-  const handleSubmit = async () => {
+ const handleSubmit = async () => {
     if (!form.medicine_name || !form.start_date) return
     try {
       await createReminder({ ...form, user_id: user.id })
       setForm({ medicine_name:'', dosage:'', frequency:'daily', reminder_time:'08:00', start_date:'', end_date:'', notes:'' })
       setShowForm(false)
       fetchReminders()
-    } catch(err) { console.error(err) }
+    } catch(err) {
+      console.error(err)
+      alert('Error: ' + (err.response?.data?.detail || err.message))  // ← ADD THIS
+    }
   }
 
   const handleDelete = async (id) => {
