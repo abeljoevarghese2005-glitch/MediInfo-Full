@@ -105,10 +105,9 @@ function Reminders() {
 
  const handleSubmit = async () => {
   if (!form.medicine_name || !form.start_date) return
+  console.log('Submitting:', JSON.stringify(form))  // ← ADD THIS
   try {
-    // Remove user_id from body, pass separately
-    const { user_id: _, ...reminderData } = { ...form, user_id: user.id }
-    await createReminder(reminderData, user.id)  // pass user_id as 2nd arg
+    await createReminder(form, user.id)
     ...
   } catch(err) {
   const detail = err.response?.data?.detail
