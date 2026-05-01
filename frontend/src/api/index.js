@@ -22,10 +22,8 @@ export const registerUser = (data) => API.post('/auth/register', data)
 export const updateUser = (userId, data) => API.put(`/auth/update/${userId}`, data)
 
 export const getReminders = (userId) => API.get(`/reminders/user/${userId}`)
-export const createReminder = (data) => {
-  const { user_id, ...body } = data
-  return API.post(`/reminders/?user_id=${user_id}`, body)
-}
+export const createReminder = (data, userId) =>
+  API.post(`/reminders/?user_id=${userId}`, data)
 export const deleteReminder = (id) => API.delete(`/reminders/${id}`)
 
 export const askAI = (question, medicineNames = [], sessionId = '') =>
