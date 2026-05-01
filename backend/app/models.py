@@ -35,7 +35,7 @@ class User(Base):
     password_hash = Column(Text, nullable=False)
     full_name = Column(String(255), nullable=False)
     role = Column(String(20), default="patient")
-    specialization = Column(String(255))  # NEW — for doctors
+    specialization = Column(String(255))
     preferred_language = Column(String(5), default="en")
     is_active = Column(Boolean, default=True)
     is_phone_verified = Column(Boolean, default=False)
@@ -52,62 +52,46 @@ class MedicationReminder(Base):
     medicine_name = Column(String(255))
     dosage = Column(String(100))
     frequency = Column(String(20), default="daily")
-reminder_time = Column(String(10))    # ← ADD THIS LINE
-start_date = Column(Date, nullable=False)
+    reminder_time = Column(String(10))
+    start_date = Column(Date, nullable=False)
     end_date = Column(Date)
     notes = Column(Text)
     is_active = Column(Boolean, default=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
+
 
 class MedicineLeaflet(Base):
     __tablename__ = "medicine_leaflets"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     medicine_id = Column(UUID(as_uuid=True), nullable=False)
-
     indications = Column(Text)
     contraindications = Column(Text)
-
     dosage_adult = Column(Text)
     dosage_child = Column(Text)
     dosage_elderly = Column(Text)
-
     side_effects_common = Column(ARRAY(Text))
     side_effects_serious = Column(ARRAY(Text))
-
     drug_interactions = Column(Text)
     food_interactions = Column(Text)
     warnings = Column(Text)
     overdose_info = Column(Text)
-
     pregnancy_category = Column(String(5))
     breastfeeding_safe = Column(Boolean)
-
     mechanism_of_action = Column(Text)
     onset_of_action = Column(String(100))
     duration_of_action = Column(String(100))
-
     created_at = Column(TIMESTAMP, server_default=func.now())
     updated_at = Column(TIMESTAMP, server_default=func.now())
 
 
-class Appointment(Base):  # NEW
+class Appointment(Base):
     __tablename__ = "appointments"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     patient_id = Column(UUID(as_uuid=True), nullable=False)
     doctor_id = Column(UUID(as_uuid=True), nullable=False)
     appointment_date = Column(Date, nullable=False)
-    appointment_time = Column(String(10), nullable=False)  # e.g. "10:30"
-    status = Column(String(20), default="pending")  # pending, confirmed, cancelled
+    appointment_time = Column(String(10), nullable=False)
+    status = Column(String(20), default="pending")
     created_at = Column(TIMESTAMP, server_default=func.now())
-
-
-    class ReminderCreate(BaseModel):
-    medicine_name: str
-    dosage: Optional[str] = None
-    frequency: Optional[str] = "daily"
-    reminder_time: Optional[str] = None    # ← ADD THIS
-    start_date: date
-    end_date: Optional[date] = None
-    notes: Optional[str] = None
