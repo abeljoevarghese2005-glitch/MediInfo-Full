@@ -52,8 +52,8 @@ class MedicationReminder(Base):
     medicine_name = Column(String(255))
     dosage = Column(String(100))
     frequency = Column(String(20), default="daily")
-    reminder_time = Column(String(10))          # ← ADD THIS
-    start_date = Column(Date, nullable=False)
+reminder_time = Column(String(10))    # ← ADD THIS LINE
+start_date = Column(Date, nullable=False)
     end_date = Column(Date)
     notes = Column(Text)
     is_active = Column(Boolean, default=True)
@@ -101,3 +101,13 @@ class Appointment(Base):  # NEW
     appointment_time = Column(String(10), nullable=False)  # e.g. "10:30"
     status = Column(String(20), default="pending")  # pending, confirmed, cancelled
     created_at = Column(TIMESTAMP, server_default=func.now())
+
+
+    class ReminderCreate(BaseModel):
+    medicine_name: str
+    dosage: Optional[str] = None
+    frequency: Optional[str] = "daily"
+    reminder_time: Optional[str] = None    # ← ADD THIS
+    start_date: date
+    end_date: Optional[date] = None
+    notes: Optional[str] = None
