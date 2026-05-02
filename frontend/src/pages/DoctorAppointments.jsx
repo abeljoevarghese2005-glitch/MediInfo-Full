@@ -11,7 +11,7 @@ function DoctorAppointments() {
   const [appointments, setAppointments] = useState([])
   const [loading, setLoading] = useState(true)
   const [acting, setActing] = useState(null)
-  const [filter, setFilter] = useState('all')
+  const [filter, setFilter] = useState('pending')
   const [search, setSearch] = useState('')
 
   useEffect(() => {
@@ -173,47 +173,85 @@ function DoctorAppointments() {
                   </svg>
                   <p className="text-sm">No appointments found</p>
                 </div>
-              ) : (
-                <div className="divide-y divide-gray-50">
-                  {displayed.map(appt => (
-                    <div key={appt.id} className="flex items-center gap-4 py-3.5 px-5 hover:bg-gray-50 transition-colors">
-                      <div className="w-9 h-9 rounded-full bg-cyan-100 text-cyan-600 font-bold text-sm flex items-center justify-center shrink-0">
-                        {appt.patient_name?.charAt(0).toUpperCase()}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-800 truncate">{appt.patient_name}</p>
-                        <p className="text-xs text-gray-400 truncate">{appt.issue || 'General consultation'}</p>
-                      </div>
-                      <div className="hidden sm:block text-right shrink-0">
-                        <p className="text-xs font-medium text-gray-600">{fmt(appt.appointment_date)}</p>
-                        <p className="text-xs text-gray-400">{appt.appointment_time}</p>
-                      </div>
-                      {appt.status === 'pending' ? (
-                        <div className="flex gap-2 shrink-0">
-                          <button
-                            onClick={() => handleConfirm(appt.id)}
-                            disabled={acting === appt.id}
-                            className="px-3 py-1.5 bg-green-500 text-white text-xs font-semibold rounded-lg hover:bg-green-600 disabled:opacity-50 transition-colors"
-                          >
-                            {acting === appt.id ? '…' : 'Accept'}
-                          </button>
-                          <button
-                            onClick={() => handleReject(appt.id)}
-                            disabled={acting === appt.id}
-                            className="px-3 py-1.5 border border-red-200 text-red-500 text-xs font-semibold rounded-lg hover:bg-red-50 disabled:opacity-50 transition-colors"
-                          >
-                            {acting === appt.id ? '…' : 'Reject'}
-                          </button>
+              ) : (() => {
+                  // Group appointments by date
+                  const groups = displayed.reduce((acc, appt) => {
+                    const key = appt.appointment_date
+                    if (!acc[key]) acc[key] = []
+                    acc[key].push(appt)
+                    return acc
+                  }, {})
+                  const sortedDates = Object.keys(groups).sort()
+                  const todayStr = new Date().toISOString().split('T')[0]
+                  const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split('T')[0]
+                  const dayLabel = (dateStr) => {
+                    if (dateStr === todayStr) return 'Today'
+                    if (dateStr === tomorrowStr) return 'Tomorrow'
+                    return new Date(dateStr).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short' })
+                  }
+                  return (
+                    <div>
+                      {sortedDates.map(dateKey => (
+                        <div key={dateKey}>
+                          {/* Date divider */}
+                          <div className="flex items-center gap-3 px-5 py-2.5 bg-gray-50 border-y border-gray-100">
+                            <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">
+                              {dayLabel(dateKey)}
+                            </span>
+                            <span className="text-xs text-gray-400">
+                              — {new Date(dateKey).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
+                            </span>
+                            <span className="ml-auto text-[11px] bg-gray-200 text-gray-500 font-semibold px-2 py-0.5 rounded-full">
+                              {groups[dateKey].length} appt{groups[dateKey].length > 1 ? 's' : ''}
+                            </span>
+                          </div>
+                          {/* Appointments under this date */}
+                          <div className="divide-y divide-gray-50">
+                            {groups[dateKey]
+                              .sort((a, b) => a.appointment_time.localeCompare(b.appointment_time))
+                              .map(appt => (
+                                <div key={appt.id} className="flex items-center gap-4 py-3.5 px-5 hover:bg-gray-50 transition-colors">
+                                  <div className="w-9 h-9 rounded-full bg-cyan-100 text-cyan-600 font-bold text-sm flex items-center justify-center shrink-0">
+                                    {appt.patient_name?.charAt(0).toUpperCase()}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-semibold text-gray-800 truncate">{appt.patient_name}</p>
+                                    <p className="text-xs text-gray-400 truncate">{appt.issue || 'General consultation'}</p>
+                                  </div>
+                                  {/* Time — always visible since date is in the group header */}
+                                  <div className="text-right shrink-0">
+                                    <p className="text-sm font-bold text-gray-700">{appt.appointment_time}</p>
+                                  </div>
+                                  {appt.status === 'pending' ? (
+                                    <div className="flex gap-2 shrink-0">
+                                      <button
+                                        onClick={() => handleConfirm(appt.id)}
+                                        disabled={acting === appt.id}
+                                        className="px-3 py-1.5 bg-green-500 text-white text-xs font-semibold rounded-lg hover:bg-green-600 disabled:opacity-50 transition-colors"
+                                      >
+                                        {acting === appt.id ? '…' : 'Accept'}
+                                      </button>
+                                      <button
+                                        onClick={() => handleReject(appt.id)}
+                                        disabled={acting === appt.id}
+                                        className="px-3 py-1.5 border border-red-200 text-red-500 text-xs font-semibold rounded-lg hover:bg-red-50 disabled:opacity-50 transition-colors"
+                                      >
+                                        {acting === appt.id ? '…' : 'Reject'}
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold capitalize shrink-0 ${statusStyles[appt.status] || 'bg-gray-100 text-gray-500'}`}>
+                                      {appt.status}
+                                    </span>
+                                  )}
+                                </div>
+                              ))}
+                          </div>
                         </div>
-                      ) : (
-                        <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold capitalize shrink-0 ${statusStyles[appt.status] || 'bg-gray-100 text-gray-500'}`}>
-                          {appt.status}
-                        </span>
-                      )}
+                      ))}
                     </div>
-                  ))}
-                </div>
-              )}
+                  )
+                })()}
             </div>
           </div>
         </div>
