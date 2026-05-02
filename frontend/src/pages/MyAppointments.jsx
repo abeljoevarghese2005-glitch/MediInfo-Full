@@ -1,19 +1,34 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TopBar from '../components/TopBar'
 import Sidebar from '../components/Sidebar'
 import { SidebarProvider } from '../components/SidebarContext'
 import { getMyAppointments, cancelAppointment } from '../api/index'
 
-const avatarColors = [
-  'bg-cyan-500', 'bg-purple-500', 'bg-green-500',
-  'bg-orange-500', 'bg-pink-500', 'bg-blue-500'
-]
+const POLL_INTERVAL = 15000
+
+const avatarColors = ['bg-cyan-500','bg-purple-500','bg-green-500','bg-orange-500','bg-pink-500','bg-blue-500']
 const getColor = (name) => avatarColors[(name?.charCodeAt(0) || 0) % avatarColors.length]
 const getInitials = (name) => name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'D'
-const formatDate = (dateStr) => {
-  const date = new Date(dateStr)
-  return date.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
+const formatDate = (dateStr) =>
+  new Date(dateStr).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
+
+function Toast({ toasts, onDismiss }) {
+  return (
+    <div className="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none">
+      {toasts.map(t => (
+        <div key={t.id}
+          className={`flex items-start gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-medium pointer-events-auto max-w-xs
+            ${t.type === 'confirmed' ? 'bg-green-500 text-white' : t.type === 'cancelled' ? 'bg-red-500 text-white' : 'bg-gray-800 text-white'}`}>
+          <span className="text-base leading-none mt-0.5">
+            {t.type === 'confirmed' ? '✅' : t.type === 'cancelled' ? '❌' : 'ℹ️'}
+          </span>
+          <span className="flex-1">{t.message}</span>
+          <button onClick={() => onDismiss(t.id)} className="opacity-70 hover:opacity-100 leading-none mt-0.5">✕</button>
+        </div>
+      ))}
+    </div>
+  )
 }
 
 function MyAppointments() {
@@ -22,19 +37,48 @@ function MyAppointments() {
   const [appointments, setAppointments] = useState([])
   const [loading, setLoading] = useState(true)
   const [cancelling, setCancelling] = useState(null)
+  const [toasts, setToasts] = useState([])
+  const [lastUpdated, setLastUpdated] = useState(null)
+  const prevAppointments = useRef([])
+  const intervalRef = useRef(null)
+  const toastCounter = useRef(0)
 
-  useEffect(() => { fetchAppointments() }, [])
+  const addToast = (message, type = 'info') => {
+    const id = ++toastCounter.current
+    setToasts(prev => [...prev, { id, message, type }])
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 5000)
+  }
 
-  const fetchAppointments = async () => {
-    setLoading(true)
+  const detectChanges = (fresh) => {
+    if (prevAppointments.current.length === 0) return
+    fresh.forEach(newAppt => {
+      const old = prevAppointments.current.find(a => a.id === newAppt.id)
+      if (!old || old.status === newAppt.status) return
+      const doc = newAppt.doctor_name || 'your doctor'
+      if (newAppt.status === 'confirmed')
+        addToast(`Your appointment with ${doc} has been confirmed! 🎉`, 'confirmed')
+      else if (newAppt.status === 'cancelled')
+        addToast(`Your appointment with ${doc} was rejected by the clinic.`, 'cancelled')
+    })
+  }
+
+  const fetchAppointments = async (silent = false) => {
+    if (!silent) setLoading(true)
     try {
       const res = await getMyAppointments(user.id)
+      detectChanges(res.data)
+      prevAppointments.current = res.data
       setAppointments(res.data)
-    } catch {
-      setAppointments([])
-    }
-    setLoading(false)
+      setLastUpdated(new Date())
+    } catch { setAppointments([]) }
+    if (!silent) setLoading(false)
   }
+
+  useEffect(() => {
+    fetchAppointments(false)
+    intervalRef.current = setInterval(() => fetchAppointments(true), POLL_INTERVAL)
+    return () => clearInterval(intervalRef.current)
+  }, [])
 
   const handleCancel = async (id) => {
     setCancelling(id)
@@ -61,6 +105,7 @@ function MyAppointments() {
     <SidebarProvider>
     <div className="min-h-screen bg-gray-50 flex">
       <Sidebar />
+      <Toast toasts={toasts} onDismiss={(id) => setToasts(prev => prev.filter(t => t.id !== id))} />
       <div className="lg:ml-56 flex-1 flex flex-col">
         <TopBar />
         <div className="flex-1 px-8 py-8">
@@ -69,12 +114,20 @@ function MyAppointments() {
               <h1 className="text-2xl font-black text-gray-900">My Appointments</h1>
               <p className="text-gray-400 text-sm mt-0.5">Manage all your bookings</p>
             </div>
-            <button
-              onClick={() => navigate('/doctors')}
-              className="bg-cyan-500 text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-cyan-600"
-            >
-              + Book New
-            </button>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                Live
+                {lastUpdated && (
+                  <span className="hidden sm:inline">
+                    · {lastUpdated.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                )}
+              </div>
+              <button onClick={() => navigate('/doctors')} className="bg-cyan-500 text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-cyan-600">
+                + Book New
+              </button>
+            </div>
           </div>
 
           {loading ? (
@@ -88,9 +141,7 @@ function MyAppointments() {
               </div>
               <p className="text-gray-700 font-bold mb-1">No appointments yet</p>
               <p className="text-gray-400 text-sm mb-5">Book your first appointment with a doctor</p>
-              <button onClick={() => navigate('/doctors')} className="bg-cyan-500 text-white px-6 py-2.5 rounded-xl text-sm font-semibold hover:bg-cyan-600">
-                Find a Doctor
-              </button>
+              <button onClick={() => navigate('/doctors')} className="bg-cyan-500 text-white px-6 py-2.5 rounded-xl text-sm font-semibold hover:bg-cyan-600">Find a Doctor</button>
             </div>
           ) : (
             <div className="space-y-6 max-w-2xl">
@@ -118,27 +169,19 @@ function MyAppointments() {
                             {appt.status}
                           </span>
                         </div>
-
-                        {/* Action area — depends on status */}
                         {appt.status === 'confirmed' ? (
                           <div className="flex gap-2">
-                            <button
-                              onClick={() => navigate('/live-queue', { state: { appointment: appt } })}
-                              className="flex-1 bg-cyan-500 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-cyan-600 transition-colors flex items-center justify-center gap-2"
-                            >
+                            <button onClick={() => navigate('/live-queue', { state: { appointment: appt } })}
+                              className="flex-1 bg-cyan-500 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-cyan-600 transition-colors flex items-center justify-center gap-2">
                               <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
                               Join Live Queue
                             </button>
-                            <button
-                              onClick={() => handleCancel(appt.id)}
-                              disabled={cancelling === appt.id}
-                              className="px-4 py-2.5 rounded-xl border border-red-200 text-red-500 text-sm font-semibold hover:bg-red-50 disabled:opacity-50"
-                            >
+                            <button onClick={() => handleCancel(appt.id)} disabled={cancelling === appt.id}
+                              className="px-4 py-2.5 rounded-xl border border-red-200 text-red-500 text-sm font-semibold hover:bg-red-50 disabled:opacity-50">
                               {cancelling === appt.id ? '...' : 'Cancel'}
                             </button>
                           </div>
                         ) : (
-                          /* pending — show waiting message + cancel only */
                           <div className="flex gap-2 items-center">
                             <div className="flex-1 flex items-center gap-2 bg-amber-50 border border-amber-100 text-amber-600 py-2.5 px-4 rounded-xl text-sm font-medium">
                               <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -146,11 +189,8 @@ function MyAppointments() {
                               </svg>
                               Awaiting clinic approval
                             </div>
-                            <button
-                              onClick={() => handleCancel(appt.id)}
-                              disabled={cancelling === appt.id}
-                              className="px-4 py-2.5 rounded-xl border border-red-200 text-red-500 text-sm font-semibold hover:bg-red-50 disabled:opacity-50"
-                            >
+                            <button onClick={() => handleCancel(appt.id)} disabled={cancelling === appt.id}
+                              className="px-4 py-2.5 rounded-xl border border-red-200 text-red-500 text-sm font-semibold hover:bg-red-50 disabled:opacity-50">
                               {cancelling === appt.id ? '...' : 'Cancel'}
                             </button>
                           </div>
@@ -160,7 +200,6 @@ function MyAppointments() {
                   </div>
                 </div>
               )}
-
               {past.length > 0 && (
                 <div>
                   <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Past & Cancelled</p>

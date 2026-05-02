@@ -1,9 +1,26 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import DoctorTopBar from '../components/DoctorTopBar'
 import DoctorSidebar from '../components/DoctorSidebar'
 import { SidebarProvider } from '../components/SidebarContext'
 import { getDoctorAppointments, confirmAppointment, rejectAppointment } from '../api/index'
+
+const POLL_INTERVAL = 15000
+
+function Toast({ toasts, onDismiss }) {
+  return (
+    <div className="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none">
+      {toasts.map(t => (
+        <div key={t.id}
+          className="flex items-start gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-medium pointer-events-auto max-w-xs bg-cyan-600 text-white">
+          <span className="text-base leading-none mt-0.5">🔔</span>
+          <span className="flex-1">{t.message}</span>
+          <button onClick={() => onDismiss(t.id)} className="opacity-70 hover:opacity-100 leading-none mt-0.5">✕</button>
+        </div>
+      ))}
+    </div>
+  )
+}
 
 function DoctorAppointments() {
   const navigate = useNavigate()
@@ -13,17 +30,39 @@ function DoctorAppointments() {
   const [acting, setActing] = useState(null)
   const [filter, setFilter] = useState('pending')
   const [search, setSearch] = useState('')
+  const [toasts, setToasts] = useState([])
+  const [lastUpdated, setLastUpdated] = useState(null)
+  const prevAppointments = useRef([])
+  const intervalRef = useRef(null)
+  const toastCounter = useRef(0)
+
+  const addToast = (message) => {
+    const id = ++toastCounter.current
+    setToasts(prev => [...prev, { id, message }])
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 6000)
+  }
+
+  const detectChanges = (fresh) => {
+    if (prevAppointments.current.length === 0) return
+    const prevIds = new Set(prevAppointments.current.map(a => a.id))
+    const newRequests = fresh.filter(a => !prevIds.has(a.id) && a.status === 'pending')
+    if (newRequests.length === 1)
+      addToast(`New appointment request from ${newRequests[0].patient_name}`)
+    else if (newRequests.length > 1)
+      addToast(`${newRequests.length} new appointment requests received`)
+  }
 
   useEffect(() => {
     if (user.role !== 'doctor') { navigate('/home'); return }
-    fetchAppointments()
+    fetchAppointments(false)
+    intervalRef.current = setInterval(() => fetchAppointments(true), POLL_INTERVAL)
+    return () => clearInterval(intervalRef.current)
   }, [])
 
-  const fetchAppointments = async () => {
-    setLoading(true)
+  const fetchAppointments = async (silent = false) => {
+    if (!silent) setLoading(true)
     try {
       const res = await getDoctorAppointments(user.id)
-      // Filter to next 30 days
       const now = new Date()
       const limit = new Date()
       limit.setDate(now.getDate() + 30)
@@ -31,11 +70,12 @@ function DoctorAppointments() {
         const d = new Date(a.appointment_date)
         return d >= now && d <= limit
       })
+      detectChanges(filtered)
+      prevAppointments.current = filtered
       setAppointments(filtered)
-    } catch {
-      setAppointments([])
-    }
-    setLoading(false)
+      setLastUpdated(new Date())
+    } catch { setAppointments([]) }
+    if (!silent) setLoading(false)
   }
 
   const handleConfirm = async (id) => {
@@ -87,6 +127,7 @@ function DoctorAppointments() {
     <SidebarProvider>
       <div className="min-h-screen bg-[#f0f4f8] flex">
         <DoctorSidebar />
+        <Toast toasts={toasts} onDismiss={(id) => setToasts(prev => prev.filter(t => t.id !== id))} />
         <div className="lg:ml-56 flex-1 flex flex-col">
           <DoctorTopBar />
           <div className="flex-1 px-4 sm:px-6 lg:px-8 py-6 space-y-5">
@@ -97,12 +138,21 @@ function DoctorAppointments() {
                 <h1 className="text-xl font-black text-gray-900">Appointments</h1>
                 <p className="text-sm text-gray-400">Upcoming bookings for the next 30 days</p>
               </div>
-              <button
-                onClick={fetchAppointments}
-                className="text-sm border border-gray-200 bg-white text-gray-500 px-4 py-2 rounded-xl hover:bg-gray-50 transition-colors"
-              >
-                Refresh
-              </button>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                  <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                  Live
+                  {lastUpdated && (
+                    <span className="hidden sm:inline">
+                      · {lastUpdated.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  )}
+                </div>
+                <button onClick={() => fetchAppointments(false)}
+                  className="text-sm border border-gray-200 bg-white text-gray-500 px-4 py-2 rounded-xl hover:bg-gray-50 transition-colors">
+                  Refresh
+                </button>
+              </div>
             </div>
 
             {/* Mini stats */}
