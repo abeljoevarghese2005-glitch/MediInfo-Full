@@ -118,22 +118,43 @@ function MyAppointments() {
                             {appt.status}
                           </span>
                         </div>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => navigate('/live-queue', { state: { appointment: appt } })}
-                            className="flex-1 bg-cyan-500 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-cyan-600 transition-colors flex items-center justify-center gap-2"
-                          >
-                            <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                            Join Live Queue
-                          </button>
-                          <button
-                            onClick={() => handleCancel(appt.id)}
-                            disabled={cancelling === appt.id}
-                            className="px-4 py-2.5 rounded-xl border border-red-200 text-red-500 text-sm font-semibold hover:bg-red-50 disabled:opacity-50"
-                          >
-                            {cancelling === appt.id ? '...' : 'Cancel'}
-                          </button>
-                        </div>
+
+                        {/* Action area — depends on status */}
+                        {appt.status === 'confirmed' ? (
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => navigate('/live-queue', { state: { appointment: appt } })}
+                              className="flex-1 bg-cyan-500 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-cyan-600 transition-colors flex items-center justify-center gap-2"
+                            >
+                              <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                              Join Live Queue
+                            </button>
+                            <button
+                              onClick={() => handleCancel(appt.id)}
+                              disabled={cancelling === appt.id}
+                              className="px-4 py-2.5 rounded-xl border border-red-200 text-red-500 text-sm font-semibold hover:bg-red-50 disabled:opacity-50"
+                            >
+                              {cancelling === appt.id ? '...' : 'Cancel'}
+                            </button>
+                          </div>
+                        ) : (
+                          /* pending — show waiting message + cancel only */
+                          <div className="flex gap-2 items-center">
+                            <div className="flex-1 flex items-center gap-2 bg-amber-50 border border-amber-100 text-amber-600 py-2.5 px-4 rounded-xl text-sm font-medium">
+                              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              Awaiting clinic approval
+                            </div>
+                            <button
+                              onClick={() => handleCancel(appt.id)}
+                              disabled={cancelling === appt.id}
+                              className="px-4 py-2.5 rounded-xl border border-red-200 text-red-500 text-sm font-semibold hover:bg-red-50 disabled:opacity-50"
+                            >
+                              {cancelling === appt.id ? '...' : 'Cancel'}
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
