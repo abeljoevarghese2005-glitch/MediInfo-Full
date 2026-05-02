@@ -3,7 +3,7 @@ import { SidebarProvider } from '../components/SidebarContext'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TopBar from '../components/TopBar'
-import { getDoctors, getMyAppointments, createPaymentOrder, verifyPayment } from '../api/index'
+import { getDoctors, getMyAppointments, bookAppointment } from '../api/index'
 
 const TIME_SLOTS = ['10:30', '13:00', '16:00', '09:00', '11:00', '14:00']
 
@@ -53,65 +53,22 @@ function BookingModal({ doctor, idx, onClose, onBooked }) {
 
   const fee = doctor.consultation_fee || mockFee(idx)
 
-  const handlePayment = async () => {
+  const handleBook = async () => {
     if (!date || !slot) { setError('Please select date and time'); return }
     setLoading(true)
     setError('')
     try {
-      // Step 1: Create Razorpay order from backend
-      const orderRes = await createPaymentOrder(user.id, {
+      await bookAppointment(user.id, {
         doctor_id: doctor.id,
         appointment_date: date,
         appointment_time: slot,
         issue: issue || null,
       })
-      const { order_id, amount, currency, key_id, doctor_name } = orderRes.data
-
-      // Step 2: Open Razorpay checkout
-      const options = {
-        key: key_id,
-        amount,
-        currency,
-        name: 'MediInfo',
-        description: `Consultation with Dr. ${doctor_name}`,
-        order_id,
-        prefill: {
-          name: user.full_name,
-          contact: user.phone,
-        },
-        theme: { color: '#06b6d4' },
-        handler: async (response) => {
-          try {
-            // Step 3: Verify payment on backend → creates appointment
-            const verifyRes = await verifyPayment(user.id, {
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-              doctor_id: doctor.id,
-              appointment_date: date,
-              appointment_time: slot,
-              issue: issue || null,
-            })
-            onBooked(`Appointment confirmed with Dr. ${doctor_name}! ₹${fee} paid.`)
-            onClose()
-          } catch (err) {
-            setError('Payment verification failed. Contact support.')
-          }
-        },
-        modal: {
-          ondismiss: () => {
-            setLoading(false)
-            setError('Payment cancelled.')
-          }
-        }
-      }
-
-      const rzp = new window.Razorpay(options)
-      rzp.open()
-      setLoading(false)
-
+      // Appointment is created as PENDING — receptionist must confirm it
+      onBooked(`Appointment request sent to Dr. ${doctor.full_name}! Awaiting clinic approval.`)
+      onClose()
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to initiate payment')
+      setError(err.response?.data?.detail || 'Failed to book appointment. Please try again.')
       setLoading(false)
     }
   }
@@ -181,9 +138,9 @@ function BookingModal({ doctor, idx, onClose, onBooked }) {
             className="py-3 rounded-xl border border-gray-200 text-gray-600 text-sm font-semibold hover:bg-gray-50">
             Cancel
           </button>
-          <button onClick={handlePayment} disabled={loading}
+          <button onClick={handleBook} disabled={loading}
             className="py-3 rounded-xl bg-cyan-500 text-white text-sm font-semibold hover:bg-cyan-600 disabled:opacity-60 flex items-center justify-center gap-2">
-            {loading ? 'Loading...' : `Pay ₹${fee}`}
+            {loading ? 'Booking...' : `📅 Book — ₹${fee}`}
           </button>
         </div>
       </div>
@@ -225,7 +182,7 @@ function DoctorCard({ doctor, idx, onBook }) {
           </svg>
           {mockDist(idx)}
         </span>
-        <span>₹ {mockFee(idx)}</span>
+        <span>₹ {doctor.consultation_fee ?? mockFee(idx)}</span>
       </div>
 
       <div className="flex items-center justify-between">
@@ -343,9 +300,9 @@ function Home() {
             </form>
 
             {success && (
-              <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl mb-6 text-sm flex items-center gap-2 max-w-2xl">
-                ✅ {success}
-                <button onClick={() => navigate('/my-appointments')} className="ml-auto text-green-600 underline font-medium">
+              <div className="bg-amber-50 border border-amber-200 text-amber-700 px-4 py-3 rounded-xl mb-6 text-sm flex items-center gap-2 max-w-2xl">
+                ⏳ {success}
+                <button onClick={() => navigate('/my-appointments')} className="ml-auto text-amber-600 underline font-medium">
                   View Appointments →
                 </button>
               </div>
