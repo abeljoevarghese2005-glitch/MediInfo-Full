@@ -2,6 +2,7 @@ from pydantic import BaseModel, field_validator
 from typing import Optional, List, Any
 from datetime import date, datetime
 from uuid import UUID
+from decimal import Decimal
 
 # ── Medicine schemas ───────────────────────────────────────
 class MedicineBase(BaseModel):
@@ -42,7 +43,8 @@ class UserRegister(BaseModel):
     password: str
     full_name: str
     role: Optional[str] = "patient"
-    specialization: Optional[str] = None  # NEW — for doctors
+    specialization: Optional[str] = None
+    consultation_fee: Optional[float] = 500.0
 
 class UserLogin(BaseModel):
     phone: str
@@ -53,7 +55,8 @@ class UserResponse(BaseModel):
     phone: str
     full_name: str
     role: str
-    specialization: Optional[str] = None  # NEW
+    specialization: Optional[str] = None
+    consultation_fee: Optional[float] = None
     preferred_language: str
 
     class Config:
@@ -68,7 +71,7 @@ class ReminderCreate(BaseModel):
     medicine_name: str
     dosage: Optional[str] = None
     frequency: Optional[str] = "daily"
-    reminder_time: Optional[str] = None         # ← ADD THIS
+    reminder_time: Optional[str] = None
     start_date: date
     end_date: Optional[date] = None
     notes: Optional[str] = None
@@ -86,7 +89,8 @@ class ReminderResponse(ReminderCreate):
 class AppointmentCreate(BaseModel):
     doctor_id: UUID
     appointment_date: date
-    appointment_time: str  # "10:30"
+    appointment_time: str
+    issue: Optional[str] = None
 
 class AppointmentResponse(BaseModel):
     id: UUID
@@ -94,6 +98,44 @@ class AppointmentResponse(BaseModel):
     doctor_id: UUID
     appointment_date: date
     appointment_time: str
+    status: str
+    payment_status: Optional[str] = "pending"
+    amount_paid: Optional[float] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+# ── Payment schemas ────────────────────────────────────────
+class CreateOrderRequest(BaseModel):
+    doctor_id: UUID
+    appointment_date: date
+    appointment_time: str
+    issue: Optional[str] = None
+
+class CreateOrderResponse(BaseModel):
+    order_id: str
+    amount: int          # in paise
+    currency: str
+    doctor_name: str
+    fee: float
+    key_id: str
+
+class VerifyPaymentRequest(BaseModel):
+    razorpay_order_id: str
+    razorpay_payment_id: str
+    razorpay_signature: str
+    doctor_id: UUID
+    appointment_date: date
+    appointment_time: str
+    issue: Optional[str] = None
+
+class PaymentResponse(BaseModel):
+    id: UUID
+    appointment_id: UUID
+    razorpay_order_id: str
+    razorpay_payment_id: Optional[str] = None
+    amount: float
     status: str
     created_at: datetime
 

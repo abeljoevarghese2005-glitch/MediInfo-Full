@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Boolean, Text, Date, TIMESTAMP, ARRAY, DateTime
+from sqlalchemy import Column, String, Boolean, Text, Date, TIMESTAMP, ARRAY, Integer, Numeric
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from .database import Base
@@ -36,6 +36,7 @@ class User(Base):
     full_name = Column(String(255), nullable=False)
     role = Column(String(20), default="patient")
     specialization = Column(String(255))
+    consultation_fee = Column(Numeric(10, 2), default=500)  # ← NEW
     preferred_language = Column(String(5), default="en")
     is_active = Column(Boolean, default=True)
     is_phone_verified = Column(Boolean, default=False)
@@ -94,4 +95,24 @@ class Appointment(Base):
     appointment_date = Column(Date, nullable=False)
     appointment_time = Column(String(10), nullable=False)
     status = Column(String(20), default="pending")
+    issue = Column(Text)
+    payment_status = Column(String(20), default="pending")  # ← NEW
+    payment_id = Column(String(255))                         # ← NEW
+    amount_paid = Column(Numeric(10, 2))                     # ← NEW
+    created_at = Column(TIMESTAMP, server_default=func.now())
+
+
+class Payment(Base):
+    __tablename__ = "payments"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    appointment_id = Column(UUID(as_uuid=True), nullable=False)
+    patient_id = Column(UUID(as_uuid=True), nullable=False)
+    doctor_id = Column(UUID(as_uuid=True), nullable=False)
+    razorpay_order_id = Column(String(255), nullable=False)
+    razorpay_payment_id = Column(String(255))
+    razorpay_signature = Column(String(500))
+    amount = Column(Numeric(10, 2), nullable=False)
+    currency = Column(String(10), default="INR")
+    status = Column(String(20), default="created")  # created, paid, failed
     created_at = Column(TIMESTAMP, server_default=func.now())

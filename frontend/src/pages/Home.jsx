@@ -3,7 +3,7 @@ import { SidebarProvider } from '../components/SidebarContext'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TopBar from '../components/TopBar'
-import { getDoctors, bookAppointment, getMyAppointments } from '../api/index'
+import { getDoctors, getMyAppointments, createPaymentOrder, verifyPayment } from '../api/index'
 
 const TIME_SLOTS = ['10:30', '13:00', '16:00', '09:00', '11:00', '14:00']
 
@@ -47,29 +47,73 @@ function BookingModal({ doctor, idx, onClose, onBooked }) {
   const today = new Date().toISOString().split('T')[0]
   const [date, setDate] = useState(today)
   const [slot, setSlot] = useState(TIME_SLOTS[0])
-  const [patientName, setPatientName] = useState(user.full_name || '')
-  const [phone, setPhone] = useState(user.phone || '')
   const [issue, setIssue] = useState('')
-  const [booking, setBooking] = useState(false)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const handleConfirm = async () => {
+  const fee = doctor.consultation_fee || mockFee(idx)
+
+  const handlePayment = async () => {
     if (!date || !slot) { setError('Please select date and time'); return }
-    setBooking(true)
+    setLoading(true)
     setError('')
     try {
-      await bookAppointment(user.id, {
+      // Step 1: Create Razorpay order from backend
+      const orderRes = await createPaymentOrder(user.id, {
         doctor_id: doctor.id,
         appointment_date: date,
         appointment_time: slot,
         issue: issue || null,
       })
-      onBooked(`Appointment booked with Dr. ${doctor.full_name}!`)
-      onClose()
+      const { order_id, amount, currency, key_id, doctor_name } = orderRes.data
+
+      // Step 2: Open Razorpay checkout
+      const options = {
+        key: key_id,
+        amount,
+        currency,
+        name: 'MediInfo',
+        description: `Consultation with Dr. ${doctor_name}`,
+        order_id,
+        prefill: {
+          name: user.full_name,
+          contact: user.phone,
+        },
+        theme: { color: '#06b6d4' },
+        handler: async (response) => {
+          try {
+            // Step 3: Verify payment on backend → creates appointment
+            const verifyRes = await verifyPayment(user.id, {
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              doctor_id: doctor.id,
+              appointment_date: date,
+              appointment_time: slot,
+              issue: issue || null,
+            })
+            onBooked(`Appointment confirmed with Dr. ${doctor_name}! ₹${fee} paid.`)
+            onClose()
+          } catch (err) {
+            setError('Payment verification failed. Contact support.')
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            setLoading(false)
+            setError('Payment cancelled.')
+          }
+        }
+      }
+
+      const rzp = new window.Razorpay(options)
+      rzp.open()
+      setLoading(false)
+
     } catch (err) {
-      setError(err.response?.data?.detail || 'Booking failed')
+      setError(err.response?.data?.detail || 'Failed to initiate payment')
+      setLoading(false)
     }
-    setBooking(false)
   }
 
   return (
@@ -84,30 +128,25 @@ function BookingModal({ doctor, idx, onClose, onBooked }) {
             <div>
               <h3 className="font-bold text-gray-900">Dr. {doctor.full_name}</h3>
               <p className="text-cyan-500 text-sm">{doctor.specialization || 'General Physician'}</p>
-              {doctor.clinic_name && <p className="text-gray-400 text-xs">{doctor.clinic_name}</p>}
             </div>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg">✕</button>
         </div>
 
-        {/* Date + Fee */}
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          <div>
-            <label className="text-xs font-semibold text-gray-500 mb-1 block">Date</label>
-            <input
-              type="date"
-              min={today}
-              value={date}
-              onChange={e => setDate(e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400"
-            />
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-gray-500 mb-1 block">Consultation Fee</label>
-            <div className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-700 bg-gray-50">
-              ₹ {mockFee(idx)}
-            </div>
-          </div>
+        {/* Fee banner */}
+        <div className="bg-cyan-50 rounded-xl px-4 py-3 mb-4 flex items-center justify-between">
+          <span className="text-sm text-gray-600">Consultation Fee</span>
+          <span className="text-xl font-black text-cyan-600">₹{fee}</span>
+        </div>
+
+        {/* Date */}
+        <div className="mb-4">
+          <label className="text-xs font-semibold text-gray-500 mb-1 block">Date</label>
+          <input
+            type="date" min={today} value={date}
+            onChange={e => setDate(e.target.value)}
+            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400"
+          />
         </div>
 
         {/* Time slots */}
@@ -115,51 +154,22 @@ function BookingModal({ doctor, idx, onClose, onBooked }) {
           <label className="text-xs font-semibold text-gray-500 mb-2 block">Select Time Slot</label>
           <div className="flex flex-wrap gap-2">
             {TIME_SLOTS.map(s => (
-              <button
-                key={s}
-                onClick={() => setSlot(s)}
+              <button key={s} onClick={() => setSlot(s)}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
                   slot === s ? 'bg-cyan-500 text-white' : 'border border-gray-200 text-gray-600 hover:border-cyan-300'
-                }`}
-              >
+                }`}>
                 {formatSlot(s)}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Patient name */}
-        <div className="mb-3">
-          <label className="text-xs font-semibold text-gray-500 mb-1 block">Patient Name</label>
-          <input
-            type="text"
-            value={patientName}
-            onChange={e => setPatientName(e.target.value)}
-            placeholder="Full name"
-            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400"
-          />
-        </div>
-
-        {/* Phone */}
-        <div className="mb-3">
-          <label className="text-xs font-semibold text-gray-500 mb-1 block">Phone Number</label>
-          <input
-            type="text"
-            value={phone}
-            onChange={e => setPhone(e.target.value)}
-            placeholder="+91 9876543210"
-            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400"
-          />
-        </div>
-
         {/* Issue */}
-        <div className="mb-4">
+        <div className="mb-5">
           <label className="text-xs font-semibold text-gray-500 mb-1 block">Describe your issue</label>
-          <textarea
-            value={issue}
-            onChange={e => setIssue(e.target.value)}
-            placeholder="e.g. Persistent cough for 5 days, mild fever..."
-            rows={3}
+          <textarea value={issue} onChange={e => setIssue(e.target.value)}
+            placeholder="e.g. Persistent cough for 5 days..."
+            rows={2}
             className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 resize-none"
           />
         </div>
@@ -167,18 +177,13 @@ function BookingModal({ doctor, idx, onClose, onBooked }) {
         {error && <div className="bg-red-50 text-red-600 px-3 py-2 rounded-lg text-sm mb-3">{error}</div>}
 
         <div className="grid grid-cols-2 gap-3">
-          <button
-            onClick={onClose}
-            className="py-3 rounded-xl border border-gray-200 text-gray-600 text-sm font-semibold hover:bg-gray-50"
-          >
+          <button onClick={onClose}
+            className="py-3 rounded-xl border border-gray-200 text-gray-600 text-sm font-semibold hover:bg-gray-50">
             Cancel
           </button>
-          <button
-            onClick={handleConfirm}
-            disabled={booking}
-            className="py-3 rounded-xl bg-cyan-500 text-white text-sm font-semibold hover:bg-cyan-600 disabled:opacity-60"
-          >
-            {booking ? 'Booking...' : 'Confirm Booking'}
+          <button onClick={handlePayment} disabled={loading}
+            className="py-3 rounded-xl bg-cyan-500 text-white text-sm font-semibold hover:bg-cyan-600 disabled:opacity-60 flex items-center justify-center gap-2">
+            {loading ? 'Loading...' : `Pay ₹${fee}`}
           </button>
         </div>
       </div>
