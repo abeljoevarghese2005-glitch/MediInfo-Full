@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
 import TopBar from '../components/TopBar'
 import Sidebar from '../components/Sidebar'
 import { SidebarProvider } from '../components/SidebarContext'
 import { getDoctorAppointments, confirmAppointment, rejectAppointment } from '../api/index'
 
 function DoctorDashboard() {
-  const navigate = useNavigate()
   const user = JSON.parse(sessionStorage.getItem('user') || '{}')
   const [appointments, setAppointments] = useState([])
   const [loading, setLoading] = useState(true)
@@ -14,10 +12,6 @@ function DoctorDashboard() {
   const [filter, setFilter] = useState('all')
 
   useEffect(() => {
-    if (user.role !== 'doctor') {
-      navigate('/home')
-      return
-    }
     fetchAppointments()
   }, [])
 
