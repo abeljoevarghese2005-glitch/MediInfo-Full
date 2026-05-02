@@ -41,6 +41,12 @@ export const getMyAppointments = (patientId) =>
 export const cancelAppointment = (appointmentId) =>
   API.patch(`/appointments/cancel/${appointmentId}`)
 
+// Payment (Razorpay flow)
+export const createPaymentOrder = (patientId, data) =>
+  API.post(`/appointments/payment/create-order?patient_id=${patientId}`, data)
+export const verifyPayment = (patientId, data) =>
+  API.post(`/appointments/payment/verify?patient_id=${patientId}`, data)
+
 // Doctor dashboard
 export const getDoctorAppointments = (doctorId) =>
   API.get(`/appointments/doctor-dashboard/${doctorId}`)

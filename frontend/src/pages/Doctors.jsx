@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import TopBar from '../components/TopBar'
 import Sidebar from '../components/Sidebar'
 import { SidebarProvider } from '../components/SidebarContext'
-import { getDoctors, createPaymentOrder, verifyPayment } from '../api/index'
+import { getDoctors, bookAppointment } from '../api/index'
 
 const TIME_SLOTS = [
   '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
@@ -46,67 +46,28 @@ function Doctors() {
     setLoading(false)
   }
 
-  const handlePay = async () => {
+  const handleBook = async () => {
     if (!selectedDate || !selectedTime) { setError('Please select date and time'); return }
     setPaying(true)
     setError('')
     try {
-      // Step 1: Create order on backend
-      const orderRes = await createPaymentOrder(user.id, {
+      await bookAppointment(user.id, {
         doctor_id: selectedDoctor.id,
         appointment_date: selectedDate,
         appointment_time: selectedTime,
         issue: issue || null,
       })
-      const { order_id, amount, currency, key_id, doctor_name, fee } = orderRes.data
-
-      // Step 2: Open Razorpay popup
-      const options = {
-        key: key_id,
-        amount,
-        currency,
-        name: 'MediInfo',
-        description: `Consultation with Dr. ${doctor_name}`,
-        order_id,
-        prefill: { name: user.full_name, contact: user.phone },
-        theme: { color: '#06b6d4' },
-        handler: async (response) => {
-          try {
-            // Step 3: Verify & confirm appointment
-            await verifyPayment(user.id, {
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-              doctor_id: selectedDoctor.id,
-              appointment_date: selectedDate,
-              appointment_time: selectedTime,
-              issue: issue || null,
-            })
-            setSuccess(`Appointment confirmed with Dr. ${doctor_name}! ₹${fee} paid.`)
-            setSelectedDoctor(null)
-            setSelectedDate('')
-            setSelectedTime('')
-            setIssue('')
-            setTimeout(() => setSuccess(''), 5000)
-          } catch {
-            setError('Payment verification failed. Contact support.')
-          }
-          setPaying(false)
-        },
-        modal: {
-          ondismiss: () => {
-            setPaying(false)
-            setError('Payment cancelled.')
-          }
-        }
-      }
-      const rzp = new window.Razorpay(options)
-      rzp.open()
-
+      // Appointment is created as PENDING — receptionist must confirm it
+      setSuccess(`Appointment request sent to Dr. ${selectedDoctor.full_name}! Awaiting clinic approval.`)
+      setSelectedDoctor(null)
+      setSelectedDate('')
+      setSelectedTime('')
+      setIssue('')
+      setTimeout(() => setSuccess(''), 6000)
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to initiate payment')
-      setPaying(false)
+      setError(err.response?.data?.detail || 'Failed to book appointment. Please try again.')
     }
+    setPaying(false)
   }
 
   return (
@@ -123,9 +84,9 @@ function Doctors() {
             </div>
 
             {success && (
-              <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl mb-4 text-sm flex items-center gap-2">
-                ✅ {success}
-                <button onClick={() => navigate('/my-appointments')} className="ml-auto text-green-600 underline font-medium">
+              <div className="bg-amber-50 border border-amber-200 text-amber-700 px-4 py-3 rounded-xl mb-4 text-sm flex items-center gap-2">
+                ⏳ {success}
+                <button onClick={() => navigate('/my-appointments')} className="ml-auto text-amber-600 underline font-medium">
                   View Appointments
                 </button>
               </div>
@@ -238,9 +199,9 @@ function Doctors() {
 
                   {error && <div className="bg-red-50 text-red-600 px-3 py-2 rounded-lg text-sm mb-4">❌ {error}</div>}
 
-                  <button onClick={handlePay} disabled={paying}
+                  <button onClick={handleBook} disabled={paying}
                     className="w-full bg-cyan-500 text-white py-3 rounded-xl font-bold hover:bg-cyan-600 disabled:opacity-60 flex items-center justify-center gap-2">
-                    {paying ? 'Opening payment...' : `🔒 Pay ₹${selectedDoctor.consultation_fee || 500} & Confirm`}
+                    {paying ? 'Booking...' : `📅 Request Appointment — ₹${selectedDoctor.consultation_fee ?? 500}`}
                   </button>
                 </div>
               </div>

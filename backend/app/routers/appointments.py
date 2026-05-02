@@ -19,7 +19,8 @@ def get_doctors(specialization: str = None, db: Session = Depends(get_db)):
             "id": str(d.id),
             "full_name": d.full_name,
             "phone": d.phone,
-            "specialization": d.specialization or "General Physician"
+            "specialization": d.specialization or "General Physician",
+            "consultation_fee": float(d.consultation_fee) if d.consultation_fee is not None else 500.0,
         }
         for d in doctors
     ]

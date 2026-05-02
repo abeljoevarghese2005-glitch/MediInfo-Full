@@ -19,8 +19,11 @@ function LiveQueue() {
   const location = useLocation()
   const user = JSON.parse(sessionStorage.getItem('user') || '{}')
 
-  const [appointment, setAppointment] = useState(location.state?.appointment || null)
-  const [loading, setLoading] = useState(!location.state?.appointment)
+  const [appointment, setAppointment] = useState(
+    // Only accept confirmed appointments from navigation state
+    location.state?.appointment?.status === 'confirmed' ? location.state.appointment : null
+  )
+  const [loading, setLoading] = useState(!location.state?.appointment || location.state?.appointment?.status !== 'confirmed')
   const [travelTime, setTravelTime] = useState('20m')
   const [customMinutes, setCustomMinutes] = useState('')
   const [notified, setNotified] = useState(false)
@@ -42,9 +45,9 @@ function LiveQueue() {
     try {
       const res = await getMyAppointments(user.id)
       const today = new Date().toISOString().split('T')[0]
-      // Get the soonest upcoming non-cancelled appointment
+      // Get the soonest upcoming CONFIRMED appointment only
       const upcoming = res.data
-        .filter(a => a.status !== 'cancelled' && a.appointment_date >= today)
+        .filter(a => a.status === 'confirmed' && a.appointment_date >= today)
         .sort((a, b) => {
           // Sort by date then time
           if (a.appointment_date !== b.appointment_date) {
