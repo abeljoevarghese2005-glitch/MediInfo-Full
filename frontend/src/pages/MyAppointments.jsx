@@ -187,7 +187,7 @@ function MyAppointments() {
                               <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                               </svg>
-                              Awaiting clinic approval
+                              Awaiting approval
                             </div>
                             <button onClick={() => handleCancel(appt.id)} disabled={cancelling === appt.id}
                               className="px-4 py-2.5 rounded-xl border border-red-200 text-red-500 text-sm font-semibold hover:bg-red-50 disabled:opacity-50">
