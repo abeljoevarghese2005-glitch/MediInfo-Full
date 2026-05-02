@@ -5,7 +5,7 @@ const API = axios.create({
 })
 
 API.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token')
+  const token = sessionStorage.getItem('token')  // was localStorage — token is stored in sessionStorage
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
@@ -22,10 +22,8 @@ export const registerUser = (data) => API.post('/auth/register', data)
 export const updateUser = (userId, data) => API.put(`/auth/update/${userId}`, data)
 
 export const getReminders = (userId) => API.get(`/reminders/user/${userId}`)
-export const createReminder = (data) => {
-  const { user_id, ...body } = data
-  return API.post(`/reminders/?user_id=${user_id}`, body)
-}
+export const createReminder = (data, userId) =>
+  API.post(`/reminders/?user_id=${userId}`, data)
 export const deleteReminder = (id) => API.delete(`/reminders/${id}`)
 
 export const askAI = (question, medicineNames = [], sessionId = '') =>
@@ -36,16 +34,12 @@ export const compareMedicines = (medicine1, medicine2) =>
 // Appointments
 export const getDoctors = (specialization = '') =>
   API.get(`/appointments/doctors${specialization ? `?specialization=${specialization}` : ''}`)
+export const bookAppointment = (patientId, data) =>
+  API.post(`/appointments/book?patient_id=${patientId}`, data)
 export const getMyAppointments = (patientId) =>
   API.get(`/appointments/my/${patientId}`)
 export const cancelAppointment = (appointmentId) =>
   API.patch(`/appointments/cancel/${appointmentId}`)
-
-// Payment
-export const createPaymentOrder = (patientId, data) =>
-  API.post(`/appointments/create-order?patient_id=${patientId}`, data)
-export const verifyPayment = (patientId, data) =>
-  API.post(`/appointments/verify-payment?patient_id=${patientId}`, data)
 
 // Doctor dashboard
 export const getDoctorAppointments = (doctorId) =>
