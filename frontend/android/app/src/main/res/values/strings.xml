@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">MediInfo</string>
+    <string name="title_activity_main">MediInfo</string>
+    <string name="package_name">com.mediinfo.app</string>
+    <string name="custom_url_scheme">com.mediinfo.app</string>
+</resources>
