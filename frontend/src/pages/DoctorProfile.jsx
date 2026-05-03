@@ -97,9 +97,9 @@ function DayRow({ day, d, editing, tpp, toggleDay, updateRange, addRange, remove
         <button
           onClick={() => editing && toggleDay(day)}
           disabled={!editing}
-          className={`relative w-10 h-5.5 h-[22px] rounded-full transition-colors shrink-0 ${d.enabled ? 'bg-cyan-500' : 'bg-gray-200'} ${!editing ? 'cursor-default' : 'cursor-pointer'}`}
+          className={`relative w-11 h-6 rounded-full transition-colors duration-200 shrink-0 ${d.enabled ? 'bg-cyan-500' : 'bg-gray-200'} ${!editing ? 'cursor-default opacity-80' : 'cursor-pointer'}`}
         >
-          <span className={`absolute top-[3px] w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${d.enabled ? 'translate-x-[22px]' : 'translate-x-[3px]'}`} />
+          <span className={`absolute top-[3px] left-[3px] w-[18px] h-[18px] bg-white rounded-full shadow transition-transform duration-200 ${d.enabled ? 'translate-x-[20px]' : 'translate-x-0'}`} />
         </button>
 
         <span className={`text-sm font-bold w-24 ${d.enabled ? 'text-gray-800' : 'text-gray-400'}`}>{label}</span>
