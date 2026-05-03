@@ -43,8 +43,13 @@ class UserRegister(BaseModel):
     password: str
     full_name: str
     role: Optional[str] = "patient"
+    email: Optional[str] = None
     specialization: Optional[str] = None
     consultation_fee: Optional[float] = 500.0
+    # Doctor registration fields — frontend sends these names
+    years_of_experience: Optional[int] = None
+    clinic_name: Optional[str] = None
+    medical_license: Optional[str] = None
 
 class UserLogin(BaseModel):
     phone: str

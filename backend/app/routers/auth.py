@@ -67,7 +67,12 @@ def register(user: UserRegister, db: Session = Depends(get_db)):
         password_hash=hash_password(user.password),
         full_name=user.full_name,
         role=user.role,
+        email=user.email,
         specialization=user.specialization,
+        consultation_fee=user.consultation_fee,
+        experience_years=user.years_of_experience,
+        clinic_name=user.clinic_name,
+        license_number=user.medical_license,
     )
     db.add(new_user)
     db.commit()
