@@ -20,24 +20,42 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = os.getenv("ALGORITHM")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))
 
+
 class UserUpdate(BaseModel):
     full_name: Optional[str] = None
     phone: Optional[str] = None
+
+
+class DoctorProfileUpdate(BaseModel):
+    full_name: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    specialization: Optional[str] = None
+    clinic_name: Optional[str] = None
+    license_number: Optional[str] = None
+    experience_years: Optional[int] = None
+    consultation_fee: Optional[int] = None
+    availability: Optional[str] = None
+    time_per_patient: Optional[int] = None
+
 
 def hash_password(password: str) -> str:
     password_bytes = password.encode('utf-8')[:72]
     salt = bcrypt.gensalt()
     return bcrypt.hashpw(password_bytes, salt).decode('utf-8')
 
+
 def verify_password(plain: str, hashed: str) -> bool:
     plain_bytes = plain.encode('utf-8')[:72]
     return bcrypt.checkpw(plain_bytes, hashed.encode('utf-8'))
+
 
 def create_token(data: dict) -> str:
     to_encode = data.copy()
     expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
 
 @router.post("/register", response_model=UserResponse)
 def register(user: UserRegister, db: Session = Depends(get_db)):
@@ -48,12 +66,14 @@ def register(user: UserRegister, db: Session = Depends(get_db)):
         phone=user.phone,
         password_hash=hash_password(user.password),
         full_name=user.full_name,
-        role=user.role
+        role=user.role,
+        specialization=user.specialization,
     )
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
     return new_user
+
 
 @router.post("/login")
 def login(user: UserLogin, db: Session = Depends(get_db)):
@@ -68,9 +88,16 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
             "id": str(db_user.id),
             "phone": db_user.phone,
             "full_name": db_user.full_name,
-            "role": db_user.role
+            "role": db_user.role,
+            "specialization": db_user.specialization,
+            "email": db_user.email,
+            "clinic_name": db_user.clinic_name,
+            "license_number": db_user.license_number,
+            "experience_years": db_user.experience_years,
+            "consultation_fee": db_user.consultation_fee,
         }
     }
+
 
 @router.put("/update/{user_id}")
 def update_user(user_id: str, update: UserUpdate, db: Session = Depends(get_db)):
@@ -90,5 +117,58 @@ def update_user(user_id: str, update: UserUpdate, db: Session = Depends(get_db))
         "id": str(db_user.id),
         "phone": db_user.phone,
         "full_name": db_user.full_name,
-        "role": db_user.role
+        "role": db_user.role,
+    }
+
+
+# ── Doctor profile endpoints ─────────────────────────────────────────────────
+
+@router.get("/doctor-profile/{doctor_id}")
+def get_doctor_profile(doctor_id: str, db: Session = Depends(get_db)):
+    doctor = db.query(User).filter(User.id == doctor_id, User.role == "doctor").first()
+    if not doctor:
+        raise HTTPException(status_code=404, detail="Doctor not found")
+    return {
+        "id": str(doctor.id),
+        "full_name": doctor.full_name,
+        "phone": doctor.phone,
+        "email": doctor.email,
+        "specialization": doctor.specialization,
+        "clinic_name": doctor.clinic_name,
+        "license_number": doctor.license_number,
+        "experience_years": doctor.experience_years or 0,
+        "consultation_fee": doctor.consultation_fee or 500,
+        "availability": doctor.availability,
+        "time_per_patient": doctor.time_per_patient or 15,
+    }
+
+
+@router.put("/doctor-profile/{doctor_id}")
+def update_doctor_profile(doctor_id: str, update: DoctorProfileUpdate, db: Session = Depends(get_db)):
+    doctor = db.query(User).filter(User.id == doctor_id, User.role == "doctor").first()
+    if not doctor:
+        raise HTTPException(status_code=404, detail="Doctor not found")
+
+    for field, value in update.dict(exclude_none=True).items():
+        # Prevent phone conflicts
+        if field == "phone" and value:
+            existing = db.query(User).filter(User.phone == value).first()
+            if existing and str(existing.id) != doctor_id:
+                raise HTTPException(status_code=400, detail="Phone number already in use")
+        setattr(doctor, field, value)
+
+    db.commit()
+    db.refresh(doctor)
+    return {
+        "id": str(doctor.id),
+        "full_name": doctor.full_name,
+        "phone": doctor.phone,
+        "email": doctor.email,
+        "specialization": doctor.specialization,
+        "clinic_name": doctor.clinic_name,
+        "license_number": doctor.license_number,
+        "experience_years": doctor.experience_years or 0,
+        "consultation_fee": doctor.consultation_fee or 500,
+        "availability": doctor.availability,
+        "time_per_patient": doctor.time_per_patient or 15,
     }

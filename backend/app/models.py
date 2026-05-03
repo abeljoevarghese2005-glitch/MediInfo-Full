@@ -4,6 +4,7 @@ from sqlalchemy.sql import func
 from .database import Base
 import uuid
 
+
 class Medicine(Base):
     __tablename__ = "medicines"
 
@@ -36,12 +37,19 @@ class User(Base):
     full_name = Column(String(255), nullable=False)
     role = Column(String(20), default="patient")
     specialization = Column(String(255))
-    consultation_fee = Column(Numeric(10, 2), default=500)  # ← NEW
+    consultation_fee = Column(Numeric(10, 2), default=500)
     preferred_language = Column(String(5), default="en")
     is_active = Column(Boolean, default=True)
     is_phone_verified = Column(Boolean, default=False)
     created_at = Column(TIMESTAMP, server_default=func.now())
     updated_at = Column(TIMESTAMP, server_default=func.now())
+
+    # ── Doctor-specific fields ───────────────────────────────
+    clinic_name = Column(String(255))
+    license_number = Column(String(100))
+    experience_years = Column(Integer, default=0)
+    availability = Column(Text)        # JSON string of weekly schedule
+    time_per_patient = Column(Integer, default=15)
 
 
 class MedicationReminder(Base):
@@ -96,9 +104,9 @@ class Appointment(Base):
     appointment_time = Column(String(10), nullable=False)
     status = Column(String(20), default="pending")
     issue = Column(Text)
-    payment_status = Column(String(20), default="pending")  # ← NEW
-    payment_id = Column(String(255))                         # ← NEW
-    amount_paid = Column(Numeric(10, 2))                     # ← NEW
+    payment_status = Column(String(20), default="pending")
+    payment_id = Column(String(255))
+    amount_paid = Column(Numeric(10, 2))
     created_at = Column(TIMESTAMP, server_default=func.now())
 
 
@@ -114,5 +122,5 @@ class Payment(Base):
     razorpay_signature = Column(String(500))
     amount = Column(Numeric(10, 2), nullable=False)
     currency = Column(String(10), default="INR")
-    status = Column(String(20), default="created")  # created, paid, failed
+    status = Column(String(20), default="created")
     created_at = Column(TIMESTAMP, server_default=func.now())
