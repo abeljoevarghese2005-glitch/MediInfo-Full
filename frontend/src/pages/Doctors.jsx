@@ -5,10 +5,32 @@ import Sidebar from '../components/Sidebar'
 import { SidebarProvider } from '../components/SidebarContext'
 import { getDoctors, bookAppointment } from '../api/index'
 
-const TIME_SLOTS = [
-  '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
-  '12:00', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30'
-]
+// Generate time slots from a doctor's availability for a given date
+// Supports both old format {start, end} and new format {ranges: [{start, end}]}
+function getSlotsForDoctor(doctor, dateStr) {
+  if (!doctor?.availability || !dateStr) return []
+  let avail
+  try { avail = JSON.parse(doctor.availability) } catch { return [] }
+  const dayName = new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
+  const day = avail[dayName]
+  if (!day?.enabled) return []
+  const minsPerSlot = doctor.time_per_patient || 15
+  const ranges = day.ranges || (day.start && day.end ? [{ start: day.start, end: day.end }] : [])
+  const slots = []
+  for (const r of ranges) {
+    const [sh, sm] = r.start.split(':').map(Number)
+    const [eh, em] = r.end.split(':').map(Number)
+    let cur = sh * 60 + sm
+    const endMins = eh * 60 + em
+    while (cur + minsPerSlot <= endMins) {
+      const h = Math.floor(cur / 60)
+      const m = cur % 60
+      slots.push(`${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`)
+      cur += minsPerSlot
+    }
+  }
+  return slots
+}
 
 const SPECIALIZATIONS = [
   'All', 'General Physician', 'Cardiologist', 'Dermatologist',
