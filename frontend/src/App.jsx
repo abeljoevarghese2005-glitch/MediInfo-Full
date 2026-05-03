@@ -14,6 +14,7 @@ import LiveQueue from './pages/LiveQueue'
 import DoctorDashboard from './pages/DoctorDashboard'
 import DoctorAppointments from './pages/DoctorAppointments'
 import DoctorLiveQueue from './pages/DoctorLiveQueue'
+import DoctorProfile from './pages/DoctorProfile'
 
 const ProtectedRoute = ({ children }) => {
   const token = sessionStorage.getItem('token')
@@ -61,6 +62,7 @@ function App() {
         <Route path="/doctor-dashboard" element={<DoctorRoute><DoctorDashboard /></DoctorRoute>} />
         <Route path="/doctor-appointments" element={<DoctorRoute><DoctorAppointments /></DoctorRoute>} />
         <Route path="/doctor-live-queue" element={<DoctorRoute><DoctorLiveQueue /></DoctorRoute>} />
+        <Route path="/doctor/profile" element={<DoctorRoute><DoctorProfile /></DoctorRoute>} />
       </Routes>
     </BrowserRouter>
   )
