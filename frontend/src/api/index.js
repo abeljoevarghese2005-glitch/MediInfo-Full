@@ -54,3 +54,7 @@ export const confirmAppointment = (appointmentId) =>
   API.patch(`/appointments/confirm/${appointmentId}`)
 export const rejectAppointment = (appointmentId) =>
   API.patch(`/appointments/reject/${appointmentId}`)
+export const getDoctorProfile = (doctorId) =>
+  API.get(`/auth/doctor-profile/${doctorId}`)
+export const updateDoctorProfile = (doctorId, data) =>
+  API.put(`/auth/doctor-profile/${doctorId}`, data) 
