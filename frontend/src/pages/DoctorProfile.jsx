@@ -175,7 +175,6 @@ function DoctorProfile() {
   const [saved, setSaved] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [debugData, setDebugData] = useState(null)
 
   useEffect(() => {
     if (user.role !== 'doctor') { navigate('/home'); return }
@@ -187,8 +186,11 @@ function DoctorProfile() {
     setError('')
     try {
       const res = await getDoctorProfile(user.id)
-      const data = res.data
-      setDebugData(data)
+      // Normalize empty strings to null so fields display correctly
+      const raw = res.data
+      const data = Object.fromEntries(
+        Object.entries(raw).map(([k, v]) => [k, v === '' ? null : v])
+      )
       setProfile(data)
       const parsedAvail = normalizeAvail(data.availability)
       setAvail(parsedAvail)
@@ -204,8 +206,8 @@ function DoctorProfile() {
         license_number: data.license_number || '',
         time_per_patient: data.time_per_patient || 15,
       })
-    } catch (e) {
-      setError(`Failed to load profile: ${e?.response?.status} ${e?.response?.data?.detail || e?.message || 'Unknown error'}`)
+    } catch {
+      setError('Failed to load profile. Please refresh.')
     }
     setLoading(false)
   }
@@ -310,14 +312,6 @@ function DoctorProfile() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 {error}
-              </div>
-            )}
-
-            {/* ── DEBUG PANEL (remove after fixing) ── */}
-            {debugData && (
-              <div className="mb-4 bg-yellow-50 border border-yellow-300 text-yellow-900 px-4 py-3 rounded-xl text-xs font-mono">
-                <p className="font-bold mb-1 text-yellow-700">🔍 Raw API response (debug — remove later):</p>
-                <pre className="whitespace-pre-wrap break-all">{JSON.stringify(debugData, null, 2)}</pre>
               </div>
             )}
 

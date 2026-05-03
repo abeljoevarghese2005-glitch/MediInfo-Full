@@ -133,14 +133,21 @@ def get_doctor_profile(doctor_id: str, db: Session = Depends(get_db)):
     doctor = db.query(User).filter(User.id == doctor_id, User.role == "doctor").first()
     if not doctor:
         raise HTTPException(status_code=404, detail="Doctor not found")
+
+    def clean(v):
+        """Return None for empty/whitespace strings so the frontend renders correctly."""
+        if isinstance(v, str) and v.strip() == '':
+            return None
+        return v
+
     return {
         "id": str(doctor.id),
         "full_name": doctor.full_name,
         "phone": doctor.phone,
-        "email": doctor.email,
-        "specialization": doctor.specialization,
-        "clinic_name": doctor.clinic_name,
-        "license_number": doctor.license_number,
+        "email": clean(doctor.email),
+        "specialization": clean(doctor.specialization),
+        "clinic_name": clean(doctor.clinic_name),
+        "license_number": clean(doctor.license_number),
         "experience_years": doctor.experience_years or 0,
         "consultation_fee": doctor.consultation_fee or 500,
         "availability": doctor.availability,
