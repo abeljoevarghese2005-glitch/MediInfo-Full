@@ -155,6 +155,9 @@ def update_doctor_profile(doctor_id: str, update: DoctorProfileUpdate, db: Sessi
         raise HTTPException(status_code=404, detail="Doctor not found")
 
     for field, value in update.dict(exclude_none=True).items():
+        # Treat empty strings as None — prevents unique constraint violations on email
+        if isinstance(value, str) and value.strip() == '':
+            continue
         # Prevent phone conflicts
         if field == "phone" and value:
             existing = db.query(User).filter(User.phone == value).first()

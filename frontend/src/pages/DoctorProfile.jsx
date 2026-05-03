@@ -222,7 +222,12 @@ function DoctorProfile() {
     setSaving(true)
     setError('')
     try {
-      const payload = { ...form, availability: JSON.stringify(editAvail) }
+      // Convert empty strings to null so the backend's exclude_none=True skips them
+      // and the unique email constraint isn't violated by blank strings
+      const sanitized = Object.fromEntries(
+        Object.entries(form).map(([k, v]) => [k, v === '' ? null : v])
+      )
+      const payload = { ...sanitized, availability: JSON.stringify(editAvail) }
       const res = await updateDoctorProfile(user.id, payload)
       const updated = res.data
       const newAvail = normalizeAvail(JSON.stringify(editAvail))
