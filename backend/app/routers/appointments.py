@@ -1,12 +1,102 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from uuid import UUID
-
 from ..database import get_db
 from ..models import Appointment, User
 from ..schemas import AppointmentCreate, AppointmentResponse
+import os
+from jose import jwt
 
 router = APIRouter()
+
+# ── Haversine distance expression (plain PostgreSQL, no PostGIS) ──────────────
+def _haversine(tbl):
+    return f"""(
+        6371 * acos(
+            LEAST(1.0,
+                cos(radians(:lat)) * cos(radians({tbl}.latitude))
+                * cos(radians({tbl}.longitude) - radians(:lng))
+                + sin(radians(:lat)) * sin(radians({tbl}.latitude))
+            )
+        )
+    )"""
+
+def _user_from_request(request: Request, db: Session):
+    auth = request.headers.get("Authorization", "")
+    if not auth.startswith("Bearer "):
+        return None
+    try:
+        payload = jwt.decode(auth[7:], os.getenv("SECRET_KEY"), algorithms=[os.getenv("ALGORITHM", "HS256")])
+        return db.query(User).filter(User.id == payload.get("sub")).first()
+    except Exception:
+        return None
+
+
+@router.get("/nearby-doctors")
+def get_nearby_doctors(
+    request: Request,
+    lat: float = Query(...),
+    lng: float = Query(...),
+    radius: float = Query(15.0),
+    specialization: str = Query(None),
+    db: Session = Depends(get_db),
+):
+    dist = _haversine("u")
+    spec_clause = "AND u.specialization ILIKE :spec" if specialization else ""
+    params = {"lat": lat, "lng": lng, "radius": radius}
+    if specialization:
+        params["spec"] = f"%{specialization}%"
+
+    sql = text(f"""
+        SELECT u.id::text, u.full_name, u.specialization,
+               u.consultation_fee, u.latitude, u.longitude,
+               {dist} AS distance_km
+        FROM users u
+        WHERE u.role = 'doctor'
+          AND u.is_active = true
+          AND u.latitude IS NOT NULL
+          AND u.longitude IS NOT NULL
+          {spec_clause}
+        HAVING {dist} <= :radius
+        ORDER BY distance_km ASC
+        LIMIT 30
+    """)
+    return [dict(r) for r in db.execute(sql, params).mappings().all()]
+
+
+@router.get("/nearby-patients")
+def get_nearby_patients(
+    request: Request,
+    lat: float = Query(...),
+    lng: float = Query(...),
+    radius: float = Query(20.0),
+    db: Session = Depends(get_db),
+):
+    current_user = _user_from_request(request, db)
+    if not current_user or current_user.role != "doctor":
+        raise HTTPException(status_code=403, detail="Doctors only")
+
+    dist = _haversine("u")
+    params = {"lat": lat, "lng": lng, "radius": radius, "doctor_id": str(current_user.id)}
+
+    sql = text(f"""
+        SELECT DISTINCT ON (u.id)
+            u.id::text, u.full_name, u.latitude, u.longitude,
+            a.appointment_date::text AS date,
+            a.appointment_time AS time, a.status,
+            {dist} AS distance_km
+        FROM appointments a
+        JOIN users u ON a.patient_id = u.id
+        WHERE a.doctor_id = :doctor_id::uuid
+          AND u.latitude IS NOT NULL
+          AND u.longitude IS NOT NULL
+        HAVING {dist} <= :radius
+        ORDER BY u.id, distance_km ASC
+        LIMIT 20
+    """)
+    rows = [dict(r) for r in db.execute(sql, params).mappings().all()]
+    return sorted(rows, key=lambda x: x["distance_km"])
 
 @router.get("/doctors")
 def get_doctors(specialization: str = None, db: Session = Depends(get_db)):

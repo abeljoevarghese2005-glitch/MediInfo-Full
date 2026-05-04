@@ -58,3 +58,11 @@ export const getDoctorProfile = (doctorId) =>
   API.get(`/auth/doctor-profile/${doctorId}`)
 export const updateDoctorProfile = (doctorId, data) =>
   API.put(`/auth/doctor-profile/${doctorId}`, data) 
+
+export const getNearbyDoctors = (lat, lng, radius = 15, specialization = '') => {
+  const params = new URLSearchParams({ lat, lng, radius })
+  if (specialization) params.append('specialization', specialization)
+  return API.get(`/appointments/nearby-doctors?${params}`)
+}
+export const getNearbyPatients = (lat, lng, radius = 20) =>
+  API.get(`/appointments/nearby-patients?lat=${lat}&lng=${lng}&radius=${radius}`)

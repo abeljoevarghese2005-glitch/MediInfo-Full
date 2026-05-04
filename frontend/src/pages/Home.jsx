@@ -1,9 +1,10 @@
 import Sidebar from '../components/Sidebar'
 import { SidebarProvider } from '../components/SidebarContext'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TopBar from '../components/TopBar'
-import { getDoctors, getMyAppointments, bookAppointment } from '../api/index'
+import LocationBar from '../components/LocationBar'
+import { getDoctors, getMyAppointments, bookAppointment, getNearbyDoctors } from '../api/index'
 
 const TIME_SLOTS = ['10:30', '13:00', '16:00', '09:00', '11:00', '14:00']
 
@@ -21,7 +22,6 @@ const formatSlot = (t) => {
   return `${hour}:${m.toString().padStart(2, '0')} ${suffix}`
 }
 
-// Assign a mock "next available" slot to each doctor for display
 const mockSlot = (idx) => {
   const slots = ['Today, 10:00 AM', 'Today, 1:00 PM', 'Today, 11:30 AM', 'Today, 4:30 PM', 'Today, 9:30 AM', 'Tomorrow, 10:00 AM']
   return slots[idx % slots.length]
@@ -30,11 +30,6 @@ const mockSlot = (idx) => {
 const mockFee = (idx) => {
   const fees = [800, 700, 550, 900, 600, 750]
   return fees[idx % fees.length]
-}
-
-const mockDist = (idx) => {
-  const dists = ['0.8 km', '1.2 km', '1.4 km', '1.7 km', '2.0 km', '2.3 km']
-  return dists[idx % dists.length]
 }
 
 const mockRating = (idx) => {
@@ -64,7 +59,6 @@ function BookingModal({ doctor, idx, onClose, onBooked }) {
         appointment_time: slot,
         issue: issue || null,
       })
-      // Appointment is created as PENDING — receptionist must confirm it
       onBooked(`Appointment request sent to Dr. ${doctor.full_name}! Awaiting clinic approval.`)
       onClose()
     } catch (err) {
@@ -76,7 +70,6 @@ function BookingModal({ doctor, idx, onClose, onBooked }) {
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
       <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
-        {/* Header */}
         <div className="flex items-start justify-between mb-5">
           <div className="flex items-center gap-3">
             <div className={`w-12 h-12 ${getColor(doctor.full_name)} rounded-full flex items-center justify-center text-white font-bold text-sm`}>
@@ -90,13 +83,11 @@ function BookingModal({ doctor, idx, onClose, onBooked }) {
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg">✕</button>
         </div>
 
-        {/* Fee banner */}
         <div className="bg-cyan-50 rounded-xl px-4 py-3 mb-4 flex items-center justify-between">
           <span className="text-sm text-gray-600">Consultation Fee</span>
           <span className="text-xl font-black text-cyan-600">₹{fee}</span>
         </div>
 
-        {/* Date */}
         <div className="mb-4">
           <label className="text-xs font-semibold text-gray-500 mb-1 block">Date</label>
           <input
@@ -106,7 +97,6 @@ function BookingModal({ doctor, idx, onClose, onBooked }) {
           />
         </div>
 
-        {/* Time slots */}
         <div className="mb-4">
           <label className="text-xs font-semibold text-gray-500 mb-2 block">Select Time Slot</label>
           <div className="flex flex-wrap gap-2">
@@ -121,7 +111,6 @@ function BookingModal({ doctor, idx, onClose, onBooked }) {
           </div>
         </div>
 
-        {/* Issue */}
         <div className="mb-5">
           <label className="text-xs font-semibold text-gray-500 mb-1 block">Describe your issue</label>
           <textarea value={issue} onChange={e => setIssue(e.target.value)}
@@ -148,7 +137,7 @@ function BookingModal({ doctor, idx, onClose, onBooked }) {
   )
 }
 
-function DoctorCard({ doctor, idx, onBook }) {
+function DoctorCard({ doctor, idx, onBook, distanceMap }) {
   return (
     <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between mb-3">
@@ -180,7 +169,10 @@ function DoctorCard({ doctor, idx, onBook }) {
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
           </svg>
-          {mockDist(idx)}
+          {distanceMap[doctor.id] != null
+            ? <span className="text-cyan-600 font-semibold">{distanceMap[doctor.id].toFixed(1)} km</span>
+            : <span className="text-gray-300">— km</span>
+          }
         </span>
         <span>₹ {doctor.consultation_fee ?? mockFee(idx)}</span>
       </div>
@@ -213,10 +205,26 @@ function Home() {
   const [selectedDoctor, setSelectedDoctor] = useState(null)
   const [selectedIdx, setSelectedIdx] = useState(0)
   const [success, setSuccess] = useState('')
+  const [distanceMap, setDistanceMap] = useState({})
+  const [nearbyLoading, setNearbyLoading] = useState(false)
 
   useEffect(() => {
     fetchDoctors()
     fetchPrevious()
+  }, [])
+
+  const handleLocationReady = useCallback((loc) => {
+    if (!loc) return
+    setNearbyLoading(true)
+    getNearbyDoctors(loc.lat, loc.lng, 50)
+      .then(res => {
+        const map = {}
+        res.data.forEach(d => { map[d.id] = d.distance_km })
+        setDistanceMap(map)
+        setDoctors(prev => [...prev].sort((a, b) => (map[a.id] ?? Infinity) - (map[b.id] ?? Infinity)))
+      })
+      .catch(() => {})
+      .finally(() => setNearbyLoading(false))
   }, [])
 
   const fetchDoctors = async () => {
@@ -233,7 +241,6 @@ function Home() {
   const fetchPrevious = async () => {
     try {
       const res = await getMyAppointments(user.id)
-      // Get unique doctors from past appointments
       const seen = new Set()
       const prev = []
       for (const appt of res.data) {
@@ -277,17 +284,18 @@ function Home() {
         <div className="lg:ml-56 flex-1 flex flex-col min-w-0">
           <TopBar />
           <div className="flex-1 px-4 sm:px-8 py-8 max-w-5xl w-full">
-            {/* Greeting */}
+
             <p className="text-gray-400 text-sm font-medium mb-1">{getGreeting()}</p>
-            <h1 className="text-3xl font-black text-gray-900 mb-6">
+            <h1 className="text-3xl font-black text-gray-900 mb-4">
               Hi {user.full_name?.split(' ')[0]}, how can we help today?
             </h1>
 
-            {/* Search bar */}
+            <LocationBar onLocationReady={handleLocationReady} />
+
             <form onSubmit={handleSearch} className="mb-8">
               <div className="flex items-center bg-white border border-gray-200 rounded-2xl px-4 py-3 shadow-sm gap-3 max-w-2xl">
                 <svg className="w-5 h-5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0118 0z" />
                 </svg>
                 <input
                   type="text"
@@ -308,7 +316,7 @@ function Home() {
               </div>
             )}
 
-            {/* Nearby Clinics */}
+            {/* Nearby Doctors */}
             <div className="mb-8">
               <div className="flex items-center justify-between mb-3">
                 <div>
@@ -316,9 +324,14 @@ function Home() {
                     <svg className="w-4 h-4 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                     </svg>
-                    Nearby Clinics
+                    Nearby Doctors
+                    {nearbyLoading && <span className="text-xs font-normal text-cyan-400 animate-pulse ml-1">Sorting by distance…</span>}
                   </h2>
-                  <p className="text-xs text-gray-400 mt-0.5">Within 2–3 km of you</p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {Object.keys(distanceMap).length > 0
+                      ? 'Sorted by distance from your location'
+                      : 'Enable location for distance sorting'}
+                  </p>
                 </div>
                 <button onClick={() => navigate('/doctors')} className="text-cyan-500 text-sm font-semibold hover:underline">
                   See all →
@@ -338,7 +351,7 @@ function Home() {
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {doctors.map((doc, idx) => (
-                    <DoctorCard key={doc.id} doctor={doc} idx={idx} onBook={handleBook} />
+                    <DoctorCard key={doc.id} doctor={doc} idx={idx} onBook={handleBook} distanceMap={distanceMap} />
                   ))}
                 </div>
               )}

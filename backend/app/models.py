@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Boolean, Text, Date, TIMESTAMP, ARRAY, Integer, Numeric
+from sqlalchemy import Column, String, Boolean, Text, Date, TIMESTAMP, ARRAY, Integer, Numeric, Float
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from .database import Base
@@ -50,6 +50,11 @@ class User(Base):
     experience_years = Column(Integer, default=0)
     availability = Column(Text)        # JSON string of weekly schedule
     time_per_patient = Column(Integer, default=15)
+
+    # ── Location fields ──────────────────────────────────────
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
+    location_updated_at = Column(TIMESTAMP, nullable=True)
 
 
 class MedicationReminder(Base):

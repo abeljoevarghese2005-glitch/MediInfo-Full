@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from jose import jwt
 from datetime import datetime, timedelta
@@ -153,6 +153,27 @@ def get_doctor_profile(doctor_id: str, db: Session = Depends(get_db)):
         "availability": doctor.availability,
         "time_per_patient": doctor.time_per_patient or 15,
     }
+    
+ @router.patch("/update-location")
+async def update_location(request: Request, lat: float, lng: float, db: Session = Depends(get_db)):
+    from datetime import datetime
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    token_str = auth_header[7:]
+    try:
+        payload = jwt.decode(token_str, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload.get("sub")
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.latitude = lat
+    user.longitude = lng
+    user.location_updated_at = datetime.utcnow()
+    db.commit()
+    return {"message": "Location updated"}
 
 
 @router.put("/doctor-profile/{doctor_id}")

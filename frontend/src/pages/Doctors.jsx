@@ -1,36 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TopBar from '../components/TopBar'
 import Sidebar from '../components/Sidebar'
 import { SidebarProvider } from '../components/SidebarContext'
-import { getDoctors, bookAppointment } from '../api/index'
+import LocationBar from '../components/LocationBar'
+import { getDoctors, bookAppointment, getNearbyDoctors } from '../api/index'
 
-// Generate time slots from a doctor's availability for a given date
-// Supports both old format {start, end} and new format {ranges: [{start, end}]}
-function getSlotsForDoctor(doctor, dateStr) {
-  if (!doctor?.availability || !dateStr) return []
-  let avail
-  try { avail = JSON.parse(doctor.availability) } catch { return [] }
-  const dayName = new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
-  const day = avail[dayName]
-  if (!day?.enabled) return []
-  const minsPerSlot = doctor.time_per_patient || 15
-  const ranges = day.ranges || (day.start && day.end ? [{ start: day.start, end: day.end }] : [])
-  const slots = []
-  for (const r of ranges) {
-    const [sh, sm] = r.start.split(':').map(Number)
-    const [eh, em] = r.end.split(':').map(Number)
-    let cur = sh * 60 + sm
-    const endMins = eh * 60 + em
-    while (cur + minsPerSlot <= endMins) {
-      const h = Math.floor(cur / 60)
-      const m = cur % 60
-      slots.push(`${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`)
-      cur += minsPerSlot
-    }
-  }
-  return slots
-}
+const TIME_SLOTS = ['10:30', '13:00', '16:00', '09:00', '11:00', '14:00']
 
 const SPECIALIZATIONS = [
   'All', 'General Physician', 'Cardiologist', 'Dermatologist',
@@ -54,10 +30,22 @@ function Doctors() {
   const [paying, setPaying] = useState(false)
   const [success, setSuccess] = useState('')
   const [error, setError] = useState('')
+  const [distanceMap, setDistanceMap] = useState({})
 
   const today = new Date().toISOString().split('T')[0]
 
   useEffect(() => { fetchDoctors() }, [filter])
+
+  const handleLocationReady = useCallback((loc) => {
+    if (!loc) return
+    getNearbyDoctors(loc.lat, loc.lng, 100, filter === 'All' ? '' : filter)
+      .then(res => {
+        const map = {}
+        res.data.forEach(d => { map[d.id] = d.distance_km })
+        setDistanceMap(map)
+      })
+      .catch(() => {})
+  }, [filter])
 
   const fetchDoctors = async () => {
     setLoading(true)
@@ -79,7 +67,6 @@ function Doctors() {
         appointment_time: selectedTime,
         issue: issue || null,
       })
-      // Appointment is created as PENDING — receptionist must confirm it
       setSuccess(`Appointment request sent to Dr. ${selectedDoctor.full_name}! Awaiting clinic approval.`)
       setSelectedDoctor(null)
       setSelectedDate('')
@@ -100,10 +87,12 @@ function Doctors() {
           <TopBar />
           <div className="px-4 sm:px-8 py-8">
 
-            <div className="mb-6">
+            <div className="mb-4">
               <h1 className="text-2xl font-black text-gray-900">Find a Doctor</h1>
               <p className="text-gray-400 text-sm mt-1">Browse and book appointments</p>
             </div>
+
+            <LocationBar onLocationReady={handleLocationReady} />
 
             {success && (
               <div className="bg-amber-50 border border-amber-200 text-amber-700 px-4 py-3 rounded-xl mb-4 text-sm flex items-center gap-2">
@@ -147,6 +136,11 @@ function Doctors() {
                         <h3 className="font-semibold text-gray-800">Dr. {doctor.full_name}</h3>
                         <p className="text-cyan-600 text-sm">{doctor.specialization || 'General Physician'}</p>
                         <p className="text-gray-400 text-xs mt-0.5">📞 {doctor.phone}</p>
+                        {distanceMap[doctor.id] != null && (
+                          <p className="text-cyan-500 text-xs font-semibold mt-0.5">
+                            📍 {distanceMap[doctor.id].toFixed(1)} km away
+                          </p>
+                        )}
                       </div>
                       <div className="text-right shrink-0">
                         <p className="text-cyan-600 font-bold text-sm">₹{doctor.consultation_fee || 500}</p>
@@ -163,7 +157,7 @@ function Doctors() {
               </div>
             )}
 
-            {/* Booking + Payment Modal */}
+            {/* Booking Modal */}
             {selectedDoctor && (
               <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 px-4 pb-6 sm:pb-0">
                 <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
@@ -172,7 +166,6 @@ function Doctors() {
                     <button onClick={() => setSelectedDoctor(null)} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
                   </div>
 
-                  {/* Doctor info + fee */}
                   <div className="flex items-center gap-3 bg-cyan-50 rounded-xl p-3 mb-4">
                     <div className={`w-10 h-10 ${getColor(selectedDoctor.full_name)} rounded-full flex items-center justify-center text-white font-bold shrink-0`}>
                       {getInitials(selectedDoctor.full_name)}
@@ -187,7 +180,6 @@ function Doctors() {
                     </div>
                   </div>
 
-                  {/* Date */}
                   <div className="mb-4">
                     <label className="text-xs font-semibold text-gray-500 mb-1 block">Select Date</label>
                     <input type="date" min={today} value={selectedDate}
@@ -195,7 +187,6 @@ function Doctors() {
                       className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-gray-800 text-sm" />
                   </div>
 
-                  {/* Time slots */}
                   <div className="mb-4">
                     <label className="text-xs font-semibold text-gray-500 mb-2 block">Select Time Slot</label>
                     <div className="grid grid-cols-4 gap-2">
@@ -210,7 +201,6 @@ function Doctors() {
                     </div>
                   </div>
 
-                  {/* Issue */}
                   <div className="mb-4">
                     <label className="text-xs font-semibold text-gray-500 mb-1 block">Describe your issue (optional)</label>
                     <textarea value={issue} onChange={e => setIssue(e.target.value)}
