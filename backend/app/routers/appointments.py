@@ -10,7 +10,6 @@ from jose import jwt
 
 router = APIRouter()
 
-# ── Haversine distance expression (plain PostgreSQL, no PostGIS) ──────────────
 def _haversine(tbl):
     return f"""(
         6371 * acos(
@@ -98,6 +97,7 @@ def get_nearby_patients(
     rows = [dict(r) for r in db.execute(sql, params).mappings().all()]
     return sorted(rows, key=lambda x: x["distance_km"])
 
+
 @router.get("/doctors")
 def get_doctors(specialization: str = None, db: Session = Depends(get_db)):
     query = db.query(User).filter(User.role == "doctor", User.is_active == True)
@@ -115,6 +115,7 @@ def get_doctors(specialization: str = None, db: Session = Depends(get_db)):
         for d in doctors
     ]
 
+
 @router.post("/book", response_model=AppointmentResponse)
 def book_appointment(data: AppointmentCreate, patient_id: str, db: Session = Depends(get_db)):
     doctor = db.query(User).filter(User.id == data.doctor_id, User.role == "doctor").first()
@@ -128,25 +129,29 @@ def book_appointment(data: AppointmentCreate, patient_id: str, db: Session = Dep
         Appointment.status != "cancelled"
     ).first()
     if existing:
-        raise HTTPException(status_code=400, detail="This slot is already booked")
+        raise HTTPException(
+            status_code=400,
+            detail=f"This slot was just booked by someone else. Please choose a different time."
+        )
 
     appointment = Appointment(
         patient_id=patient_id,
         doctor_id=data.doctor_id,
         appointment_date=data.appointment_date,
         appointment_time=data.appointment_time,
-        status="pending",  # Always start as pending — doctor must manually confirm
+        status="pending",
     )
     db.add(appointment)
     db.commit()
     db.refresh(appointment)
     return appointment
 
+
 @router.get("/my/{patient_id}")
 def get_my_appointments(patient_id: str, db: Session = Depends(get_db)):
     appointments = db.query(Appointment).filter(
         Appointment.patient_id == patient_id
-    ).order_by(Appointment.appointment_date).all()
+    ).order_by(Appointment.created_at.desc()).all()
 
     result = []
     for a in appointments:
@@ -161,6 +166,7 @@ def get_my_appointments(patient_id: str, db: Session = Depends(get_db)):
         })
     return result
 
+
 @router.patch("/cancel/{appointment_id}")
 def cancel_appointment(appointment_id: str, db: Session = Depends(get_db)):
     appointment = db.query(Appointment).filter(Appointment.id == appointment_id).first()
@@ -170,7 +176,6 @@ def cancel_appointment(appointment_id: str, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Appointment cancelled"}
 
-# ── Doctor Dashboard Endpoints ─────────────────────────────
 
 @router.get("/doctor-dashboard/{doctor_id}")
 def get_doctor_appointments(doctor_id: str, db: Session = Depends(get_db)):
@@ -180,7 +185,7 @@ def get_doctor_appointments(doctor_id: str, db: Session = Depends(get_db)):
 
     appointments = db.query(Appointment).filter(
         Appointment.doctor_id == doctor_id
-    ).order_by(Appointment.appointment_date, Appointment.appointment_time).all()
+    ).order_by(Appointment.created_at.desc()).all()
 
     result = []
     for a in appointments:
@@ -195,6 +200,7 @@ def get_doctor_appointments(doctor_id: str, db: Session = Depends(get_db)):
         })
     return result
 
+
 @router.patch("/confirm/{appointment_id}")
 def confirm_appointment(appointment_id: str, db: Session = Depends(get_db)):
     appointment = db.query(Appointment).filter(Appointment.id == appointment_id).first()
@@ -203,6 +209,7 @@ def confirm_appointment(appointment_id: str, db: Session = Depends(get_db)):
     appointment.status = "confirmed"
     db.commit()
     return {"message": "Appointment confirmed"}
+
 
 @router.patch("/reject/{appointment_id}")
 def reject_appointment(appointment_id: str, db: Session = Depends(get_db)):

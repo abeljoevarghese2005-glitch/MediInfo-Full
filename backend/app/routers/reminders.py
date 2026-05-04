@@ -21,7 +21,7 @@ def get_user_reminders(user_id: UUID, db: Session = Depends(get_db)):
     return db.query(MedicationReminder).filter(
         MedicationReminder.user_id == user_id,
         MedicationReminder.is_active == True
-    ).all()
+    ).order_by(MedicationReminder.created_at.desc()).all()
 
 @router.delete("/{reminder_id}")
 def delete_reminder(reminder_id: UUID, db: Session = Depends(get_db)):
