@@ -153,10 +153,10 @@ def get_doctor_profile(doctor_id: str, db: Session = Depends(get_db)):
         "availability": doctor.availability,
         "time_per_patient": doctor.time_per_patient or 15,
     }
-    
- @router.patch("/update-location")
+
+
+@router.patch("/update-location")
 async def update_location(request: Request, lat: float, lng: float, db: Session = Depends(get_db)):
-    from datetime import datetime
     auth_header = request.headers.get("Authorization", "")
     if not auth_header.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Not authenticated")
@@ -183,10 +183,8 @@ def update_doctor_profile(doctor_id: str, update: DoctorProfileUpdate, db: Sessi
         raise HTTPException(status_code=404, detail="Doctor not found")
 
     for field, value in update.dict(exclude_none=True).items():
-        # Treat empty strings as None — prevents unique constraint violations on email
         if isinstance(value, str) and value.strip() == '':
             continue
-        # Prevent phone conflicts
         if field == "phone" and value:
             existing = db.query(User).filter(User.phone == value).first()
             if existing and str(existing.id) != doctor_id:
