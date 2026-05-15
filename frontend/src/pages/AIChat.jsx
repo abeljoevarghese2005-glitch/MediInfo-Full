@@ -2,7 +2,9 @@ import { useState, useRef, useEffect } from 'react'
 import TopBar from '../components/TopBar'
 import Sidebar from '../components/Sidebar'
 import { SidebarProvider } from '../components/SidebarContext'
-import { askAI } from '../api/index'
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 function AIChat() {
   const [messages, setMessages] = useState([
@@ -15,7 +17,6 @@ function AIChat() {
   const [medicineInput, setMedicineInput] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const sessionIdRef = useRef(null)
   const bottomRef = useRef(null)
 
   useEffect(() => {
@@ -31,19 +32,41 @@ function AIChat() {
       .filter(m => m.length > 0)
 
     const userMessage = { role: 'user', text: input }
-    setMessages(prev => [...prev, userMessage])
+    const updatedMessages = [...messages, userMessage]
+    setMessages(updatedMessages)
     setInput('')
     setLoading(true)
 
     try {
-      const res = await askAI(input, medicineNames, sessionIdRef.current || '')
-      if (res.data.session_id) {
-        sessionIdRef.current = res.data.session_id
+      // Build conversation history for the Edge Function (stateless — send full history)
+      const conversationHistory = updatedMessages.map(msg => ({
+        role: msg.role === 'ai' ? 'assistant' : 'user',
+        content: msg.text,
+      }))
+
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/ai-chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          query: input,
+          medicines: medicineNames,
+          conversation_history: conversationHistory,
+        }),
+      })
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.error || `Server error: ${res.status}`)
       }
-      const aiMessage = { role: 'ai', text: res.data.answer }
+
+      const data = await res.json()
+      const aiMessage = { role: 'ai', text: data.answer }
       setMessages(prev => [...prev, aiMessage])
     } catch (err) {
-      const errorMsg = err.response?.data?.detail || 'Something went wrong. Please try again.'
+      const errorMsg = err.message || 'Something went wrong. Please try again.'
       setMessages(prev => [...prev, { role: 'ai', text: `❌ ${errorMsg}` }])
     } finally {
       setLoading(false)
@@ -65,95 +88,95 @@ function AIChat() {
 
   return (
     <SidebarProvider>
-    <div className="min-h-screen bg-gray-50 flex">
-      <Sidebar />
-      <div className="lg:ml-56 flex-1 flex flex-col">
-        <TopBar />
+      <div className="min-h-screen bg-gray-50 flex">
+        <Sidebar />
+        <div className="lg:ml-56 flex-1 flex flex-col">
+          <TopBar />
 
-        <div className="flex-1 flex flex-col p-8 gap-4 max-w-3xl w-full">
+          <div className="flex-1 flex flex-col p-8 gap-4 max-w-3xl w-full">
 
-          <div className="bg-white rounded-2xl shadow-sm p-4 flex items-center gap-3">
-            <div className="w-10 h-10 bg-cyan-500 rounded-full flex items-center justify-center text-white text-lg">
-              🤖
+            <div className="bg-white rounded-2xl shadow-sm p-4 flex items-center gap-3">
+              <div className="w-10 h-10 bg-cyan-500 rounded-full flex items-center justify-center text-white text-lg">
+                🤖
+              </div>
+              <div>
+                <h1 className="font-bold text-gray-800 text-lg">MediInfo AI</h1>
+                <p className="text-gray-500 text-sm">Powered by Gemini · Ask about any medicine</p>
+              </div>
             </div>
-            <div>
-              <h1 className="font-bold text-gray-800 text-lg">MediInfo AI</h1>
-              <p className="text-gray-500 text-sm">Powered by Gemini · Ask about any medicine</p>
+
+            <div className="bg-white rounded-xl shadow-sm p-3 flex items-center gap-2">
+              <span className="text-gray-500 text-sm whitespace-nowrap">💊 Medicine(s):</span>
+              <input
+                type="text"
+                value={medicineInput}
+                onChange={e => setMedicineInput(e.target.value)}
+                placeholder="e.g. Paracetamol, Ibuprofen (optional)"
+                className="flex-1 text-sm outline-none text-gray-700 placeholder-gray-400"
+              />
             </div>
-          </div>
 
-          <div className="bg-white rounded-xl shadow-sm p-3 flex items-center gap-2">
-            <span className="text-gray-500 text-sm whitespace-nowrap">💊 Medicine(s):</span>
-            <input
-              type="text"
-              value={medicineInput}
-              onChange={e => setMedicineInput(e.target.value)}
-              placeholder="e.g. Paracetamol, Ibuprofen (optional)"
-              className="flex-1 text-sm outline-none text-gray-700 placeholder-gray-400"
-            />
-          </div>
+            <div className="flex-1 bg-white rounded-2xl shadow-sm p-4 flex flex-col gap-4 overflow-y-auto min-h-[400px] max-h-[500px]">
+              {messages.map((msg, i) => (
+                <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  {msg.role === 'ai' && (
+                    <div className="w-8 h-8 bg-cyan-500 rounded-full flex items-center justify-center text-white text-sm mr-2 mt-1 flex-shrink-0">
+                      🤖
+                    </div>
+                  )}
+                  <div
+                    className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm leading-relaxed ${
+                      msg.role === 'user'
+                        ? 'bg-cyan-500 text-white rounded-tr-none'
+                        : 'bg-gray-100 text-gray-800 rounded-tl-none'
+                    }`}
+                    dangerouslySetInnerHTML={{ __html: formatText(msg.text) }}
+                  />
+                </div>
+              ))}
 
-          <div className="flex-1 bg-white rounded-2xl shadow-sm p-4 flex flex-col gap-4 overflow-y-auto min-h-[400px] max-h-[500px]">
-            {messages.map((msg, i) => (
-              <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                {msg.role === 'ai' && (
-                  <div className="w-8 h-8 bg-cyan-500 rounded-full flex items-center justify-center text-white text-sm mr-2 mt-1 flex-shrink-0">
+              {loading && (
+                <div className="flex justify-start">
+                  <div className="w-8 h-8 bg-cyan-500 rounded-full flex items-center justify-center text-white text-sm mr-2 flex-shrink-0">
                     🤖
                   </div>
-                )}
-                <div
-                  className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm leading-relaxed ${
-                    msg.role === 'user'
-                      ? 'bg-cyan-500 text-white rounded-tr-none'
-                      : 'bg-gray-100 text-gray-800 rounded-tl-none'
-                  }`}
-                  dangerouslySetInnerHTML={{ __html: formatText(msg.text) }}
-                />
-              </div>
-            ))}
-
-            {loading && (
-              <div className="flex justify-start">
-                <div className="w-8 h-8 bg-cyan-500 rounded-full flex items-center justify-center text-white text-sm mr-2 flex-shrink-0">
-                  🤖
-                </div>
-                <div className="bg-gray-100 px-4 py-3 rounded-2xl rounded-tl-none">
-                  <div className="flex gap-1 items-center h-5">
-                    <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  <div className="bg-gray-100 px-4 py-3 rounded-2xl rounded-tl-none">
+                    <div className="flex gap-1 items-center h-5">
+                      <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
-            <div ref={bottomRef} />
-          </div>
+              )}
+              <div ref={bottomRef} />
+            </div>
 
-          <div className="bg-white rounded-2xl shadow-sm p-3 flex items-end gap-3">
-            <textarea
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Ask about side effects, dosage, interactions..."
-              rows={2}
-              className="flex-1 outline-none text-gray-700 placeholder-gray-400 resize-none text-sm pt-1"
-            />
-            <button
-              onClick={handleSend}
-              disabled={loading || !input.trim()}
-              className="bg-cyan-500 hover:bg-cyan-600 disabled:bg-gray-300 text-white px-4 py-2 rounded-xl font-medium text-sm transition-colors"
-            >
-              Send
-            </button>
-          </div>
+            <div className="bg-white rounded-2xl shadow-sm p-3 flex items-end gap-3">
+              <textarea
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Ask about side effects, dosage, interactions..."
+                rows={2}
+                className="flex-1 outline-none text-gray-700 placeholder-gray-400 resize-none text-sm pt-1"
+              />
+              <button
+                onClick={handleSend}
+                disabled={loading || !input.trim()}
+                className="bg-cyan-500 hover:bg-cyan-600 disabled:bg-gray-300 text-white px-4 py-2 rounded-xl font-medium text-sm transition-colors"
+              >
+                Send
+              </button>
+            </div>
 
-          <p className="text-center text-xs text-gray-400">
-            ⚠️ MediInfo AI is for informational purposes only. Always consult a doctor.
-          </p>
+            <p className="text-center text-xs text-gray-400">
+              ⚠️ MediInfo AI is for informational purposes only. Always consult a doctor.
+            </p>
+          </div>
         </div>
       </div>
-    </div>
-  </SidebarProvider>
+    </SidebarProvider>
   )
 }
 
