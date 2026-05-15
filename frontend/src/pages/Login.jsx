@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { loginUser } from '../api'
+import { supabase } from '../lib/supabase'
 
 function Login() {
   const [form, setForm] = useState({ phone: '', password: '' })
@@ -13,19 +13,38 @@ function Login() {
     setLoading(true)
     setError('')
     try {
-      const res = await loginUser(form)
-      sessionStorage.setItem('token', res.data.access_token)
-      sessionStorage.setItem('user', JSON.stringify(res.data.user))
+      // If user typed an actual email use it directly, otherwise build phone-based email
+      const isEmail = form.phone.includes('@')
+      const email = isEmail
+        ? form.phone.trim()
+        : `${form.phone.replace(/\s+/g, '')}@mediinfo.app`
 
-      // Route based on role
-      const role = res.data.user?.role
-      if (role === 'doctor') {
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password: form.password,
+      })
+
+      if (authError) throw authError
+
+      // Fetch full user profile from users table
+      const { data: profile, error: profileError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', data.user.id)
+        .single()
+
+      if (profileError) throw profileError
+
+      sessionStorage.setItem('token', data.session.access_token)
+      sessionStorage.setItem('user', JSON.stringify(profile))
+
+      if (profile.role === 'doctor') {
         navigate('/doctor-dashboard')
       } else {
         navigate('/home')
       }
     } catch (err) {
-      setError('Invalid phone or password')
+      setError('Invalid phone/email or password')
     }
     setLoading(false)
   }
@@ -40,23 +59,21 @@ function Login() {
           <h1 className="text-2xl font-bold text-gray-800">Welcome back</h1>
           <p className="text-gray-500 text-sm mt-1">Login to your MediInfo account</p>
         </div>
-
         {error && (
           <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg mb-4 text-sm">
             {error}
           </div>
         )}
-
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="text-sm font-medium text-gray-700 block mb-1">
-              Phone Number
+              Phone Number or Email
             </label>
             <input
               type="text"
               value={form.phone}
               onChange={(e) => setForm({ ...form, phone: e.target.value })}
-              placeholder="Enter your phone number"
+              placeholder="Enter phone number or email"
               className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-cyan-400"
             />
           </div>
@@ -80,7 +97,6 @@ function Login() {
             {loading ? 'Logging in...' : 'Login'}
           </button>
         </form>
-
         <p className="text-center text-sm text-gray-500 mt-6">
           Don't have an account?{' '}
           <Link to="/register" className="text-cyan-500 font-medium hover:underline">

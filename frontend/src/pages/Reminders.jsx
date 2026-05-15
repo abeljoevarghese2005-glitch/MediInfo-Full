@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import TopBar from '../components/TopBar'
 import Sidebar from '../components/Sidebar'
 import { SidebarProvider } from '../components/SidebarContext'
-import { getReminders, createReminder, deleteReminder, getMyAppointments } from '../api/index'
+import { supabase } from '../lib/supabase'
 import { subscribeToPush, unsubscribeFromPush } from '../hooks/usePushNotifications'
 
 const API_BASE = 'https://mediinfo-full-production.up.railway.app'
@@ -53,7 +53,6 @@ function Reminders() {
     fetchAppointments()
     checkPushStatus()
 
-    // Listen for "Mark Taken" from service worker
     navigator.serviceWorker?.addEventListener('message', (event) => {
       if (event.data?.type === 'MARK_TAKEN') {
         toggleTaken(event.data.reminderId)
@@ -74,18 +73,33 @@ function Reminders() {
 
   const fetchReminders = async () => {
     try {
-      const res = await getReminders(user.id)
-      setReminders(res.data)
+      const { data, error } = await supabase
+        .from('medication_reminders')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      setReminders(data || [])
     } catch { setReminders([]) }
     finally { setLoading(false) }
   }
 
   const fetchAppointments = async () => {
     try {
-      const res = await getMyAppointments(user.id)
       const today = new Date().toISOString().split('T')[0]
-      const upcoming = res.data.filter(a => a.appointment_date >= today)
-      setAppointments(upcoming)
+      const { data, error } = await supabase
+        .from('appointments')
+        .select('*, users!appointments_doctor_id_fkey(full_name, specialization)')
+        .eq('patient_id', user.id)
+        .gte('appointment_date', today)
+        .order('appointment_date', { ascending: true })
+      if (error) throw error
+      const formatted = (data || []).map(a => ({
+        ...a,
+        doctor_name: a.users?.full_name,
+        specialization: a.users?.specialization
+      }))
+      setAppointments(formatted)
     } catch { setAppointments([]) }
   }
 
@@ -103,32 +117,37 @@ function Reminders() {
     setPushLoading(false)
   }
 
- const handleSubmit = async () => {
-  if (!form.medicine_name || !form.start_date) return
-  try {
-    const payload = {
-      ...form,
-      end_date: form.end_date || null,      // ← convert "" to null
-      dosage: form.dosage || null,          // ← also fix dosage
-      notes: form.notes || null,            // ← also fix notes
-      reminder_time: form.reminder_time || null,
+  const handleSubmit = async () => {
+    if (!form.medicine_name || !form.start_date) return
+    try {
+      const { error } = await supabase
+        .from('medication_reminders')
+        .insert({
+          user_id: user.id,
+          medicine_name: form.medicine_name,
+          dosage: form.dosage || null,
+          frequency: form.frequency,
+          reminder_time: form.reminder_time || null,
+          start_date: form.start_date,
+          end_date: form.end_date || null,
+          notes: form.notes || null,
+        })
+      if (error) throw error
+      setForm({ medicine_name:'', dosage:'', frequency:'daily', reminder_time:'08:00', start_date:'', end_date:'', notes:'' })
+      setShowForm(false)
+      fetchReminders()
+    } catch(err) {
+      alert('Error: ' + JSON.stringify(err))
     }
-    await createReminder(payload, user.id)
-    setForm({ medicine_name:'', dosage:'', frequency:'daily', reminder_time:'08:00', start_date:'', end_date:'', notes:'' })
-    setShowForm(false)
-    fetchReminders()
-  } catch(err) {
-    const detail = err.response?.data?.detail
-    const msg = Array.isArray(detail)
-      ? detail.map(e => `${e.loc?.join('.')} — ${e.msg}`).join('\n')
-      : (detail || err.message)
-    alert('Error:\n' + msg)
   }
-}
 
   const handleDelete = async (id) => {
     try {
-      await deleteReminder(id)
+      const { error } = await supabase
+        .from('medication_reminders')
+        .delete()
+        .eq('id', id)
+      if (error) throw error
       setReminders(reminders.filter(r => r.id !== id))
     } catch(err) { console.error(err) }
   }

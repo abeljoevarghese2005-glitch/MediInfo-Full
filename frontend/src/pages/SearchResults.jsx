@@ -5,7 +5,7 @@ import Sidebar from '../components/Sidebar'
 import { SidebarProvider } from '../components/SidebarContext'
 import MedicineCard from '../components/MedicineCard'
 import LoadingSpinner from '../components/LoadingSpinner'
-import { searchMedicines } from '../api'
+import { supabase } from '../lib/supabase'
 
 function SearchResults() {
   const [searchParams] = useSearchParams()
@@ -18,8 +18,13 @@ function SearchResults() {
     const fetch = async () => {
       setLoading(true)
       try {
-        const res = await searchMedicines(query)
-        setResults(res.data)
+        const { data, error: err } = await supabase
+      .from('medicines')
+      .select('*')
+      .ilike('medicine_name', `%${query}%`)
+      .limit(30)
+    if (err) throw err
+        setResults(data)
       } catch {
         setError('No medicines found')
       }

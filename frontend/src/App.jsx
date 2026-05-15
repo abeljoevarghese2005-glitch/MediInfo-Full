@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { supabase } from './lib/supabase'
 import Landing from './pages/Landing'
 import Login from './pages/Login'
 import Register from './pages/Register'
@@ -37,6 +38,16 @@ const DoctorRoute = ({ children }) => {
   return children
 }
 
+// Listen for Supabase auth changes and keep sessionStorage in sync
+supabase.auth.onAuthStateChange((event, session) => {
+  if (event === 'SIGNED_OUT' || !session) {
+    sessionStorage.removeItem('token')
+    sessionStorage.removeItem('user')
+  } else if (session) {
+    sessionStorage.setItem('token', session.access_token)
+  }
+})
+
 function App() {
   return (
     <BrowserRouter>
@@ -44,7 +55,6 @@ function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-
         {/* Patient routes */}
         <Route path="/home" element={<PatientRoute><Home /></PatientRoute>} />
         <Route path="/search" element={<PatientRoute><SearchResults /></PatientRoute>} />
@@ -54,10 +64,8 @@ function App() {
         <Route path="/doctors" element={<PatientRoute><Doctors /></PatientRoute>} />
         <Route path="/my-appointments" element={<PatientRoute><MyAppointments /></PatientRoute>} />
         <Route path="/live-queue" element={<PatientRoute><LiveQueue /></PatientRoute>} />
-
         {/* Shared */}
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-
         {/* Doctor routes */}
         <Route path="/doctor-dashboard" element={<DoctorRoute><DoctorDashboard /></DoctorRoute>} />
         <Route path="/doctor-appointments" element={<DoctorRoute><DoctorAppointments /></DoctorRoute>} />

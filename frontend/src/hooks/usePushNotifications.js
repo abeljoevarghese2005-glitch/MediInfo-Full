@@ -1,6 +1,8 @@
 // src/hooks/usePushNotifications.js
+import { supabase } from '../lib/supabase'
 
 const VAPID_PUBLIC_KEY = 'BErAQwEBStBYEz301Cimfen61RiYq6FAw4liNAaUad7A4crX2W63IKL2P1l2pplAZV0KwGanSqErDyXWwvlcTXw'
+const SUPABASE_FUNCTIONS_URL = 'https://xfuzwuraowhaxqnfolzg.supabase.co/functions/v1'
 
 function urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - base64String.length % 4) % 4)
@@ -23,6 +25,11 @@ export async function registerServiceWorker() {
   return reg
 }
 
+async function getAuthToken() {
+  const { data: { session } } = await supabase.auth.getSession()
+  return session?.access_token || ''
+}
+
 export async function subscribeToPush(userId, apiBase) {
   try {
     const reg = await registerServiceWorker()
@@ -31,9 +38,7 @@ export async function subscribeToPush(userId, apiBase) {
     const permission = await Notification.requestPermission()
     if (permission !== 'granted') return false
 
-    // Check if already subscribed
     let subscription = await reg.pushManager.getSubscription()
-
     if (!subscription) {
       subscription = await reg.pushManager.subscribe({
         userVisibleOnly: true,
@@ -41,10 +46,13 @@ export async function subscribeToPush(userId, apiBase) {
       })
     }
 
-    // Send subscription to backend
-    await fetch(`${apiBase}/push/subscribe?user_id=${userId}`, {
+    const token = await getAuthToken()
+    await fetch(`${SUPABASE_FUNCTIONS_URL}/push-subscribe`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
       body: JSON.stringify(subscription.toJSON())
     })
 
@@ -62,7 +70,14 @@ export async function unsubscribeFromPush(userId, apiBase) {
     const subscription = await reg.pushManager.getSubscription()
     if (subscription) {
       await subscription.unsubscribe()
-      await fetch(`${apiBase}/push/unsubscribe?user_id=${userId}`, { method: 'DELETE' })
+      const token = await getAuthToken()
+      await fetch(`${SUPABASE_FUNCTIONS_URL}/push-unsubscribe`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      })
     }
   } catch (err) {
     console.error('Unsubscribe failed:', err)

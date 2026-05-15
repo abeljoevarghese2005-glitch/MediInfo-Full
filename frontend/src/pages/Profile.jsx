@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import TopBar from '../components/TopBar'
 import Sidebar from '../components/Sidebar'
 import { SidebarProvider } from '../components/SidebarContext'
-import { updateUser } from '../api/index'
+import { supabase } from '../lib/supabase'
 
 function Profile() {
   const navigate = useNavigate()
@@ -17,7 +17,8 @@ function Profile() {
 
   const tabs = ['profile', 'security']
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
     sessionStorage.removeItem('token')
     sessionStorage.removeItem('user')
     navigate('/')
@@ -28,15 +29,21 @@ function Profile() {
     setError('')
     setSuccess('')
     try {
-      const res = await updateUser(user.id, form)
-      const updatedUser = { ...user, ...res.data }
+      const { data, error: updateError } = await supabase
+        .from('users')
+        .update({ full_name: form.full_name, phone: form.phone })
+        .eq('id', user.id)
+        .select()
+        .single()
+      if (updateError) throw updateError
+      const updatedUser = { ...user, ...data }
       sessionStorage.setItem('user', JSON.stringify(updatedUser))
       setUser(updatedUser)
       setEditing(false)
       setSuccess('Profile updated successfully!')
       setTimeout(() => setSuccess(''), 3000)
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to update profile')
+      setError(err.message || 'Failed to update profile')
     }
     setSaving(false)
   }
@@ -200,7 +207,7 @@ function Profile() {
                 <div className="bg-gray-50 rounded-xl p-4 flex items-center justify-between">
                   <div>
                     <p className="font-medium text-gray-800">Password</p>
-                    <p className="text-sm text-gray-500">Secured with bcrypt</p>
+                    <p className="text-sm text-gray-500">Managed by Supabase Auth</p>
                   </div>
                   <span className="text-gray-400 text-sm">••••••••</span>
                 </div>
@@ -215,7 +222,7 @@ function Profile() {
 
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
                   <p className="text-sm text-amber-700">
-                    🔒 Your account is secured with bcrypt password hashing and JWT authentication.
+                    🔒 Your account is secured with Supabase Auth.
                   </p>
                 </div>
 
@@ -223,7 +230,7 @@ function Profile() {
                   onClick={handleLogout}
                   className="w-full bg-red-500 text-white py-3 rounded-xl hover:bg-red-600 font-medium"
                 >
-                  Logout from all devices
+                  Logout
                 </button>
               </div>
             )}

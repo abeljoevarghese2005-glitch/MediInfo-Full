@@ -4,7 +4,8 @@ import TopBar from '../components/TopBar'
 import Sidebar from '../components/Sidebar'
 import { SidebarProvider } from '../components/SidebarContext'
 import LocationBar from '../components/LocationBar'
-import { getDoctors, bookAppointment, getNearbyDoctors } from '../api/index'
+import { supabase } from '../lib/supabase'
+import { getNearbyDoctors } from '../api/index'
 
 const TIME_SLOTS = ['10:30', '13:00', '16:00', '09:00', '11:00', '14:00']
 
@@ -36,23 +37,36 @@ function Doctors() {
 
   useEffect(() => { fetchDoctors() }, [filter])
 
-  const handleLocationReady = useCallback((loc) => {
-    if (!loc) return
-    getNearbyDoctors(loc.lat, loc.lng, 100, filter === 'All' ? '' : filter)
-      .then(res => {
-        const map = {}
-        res.data.forEach(d => { map[d.id] = d.distance_km })
-        setDistanceMap(map)
-      })
-      .catch(() => {})
-  }, [filter])
+  const handleLocationReady = useCallback(async (loc) => {
+  if (!loc) return
+  try {
+    const { data: { session } } = await supabase.auth.getSession()
+    const token = session?.access_token || ''
+    const spec = filter === 'All' ? '' : `&specialization=${filter}`
+    const res = await fetch(
+      `https://xfuzwuraowhaxqnfolzg.supabase.co/functions/v1/nearby-doctors?lat=${loc.lat}&lng=${loc.lng}&radius=100${spec}`,
+      { headers: { 'Authorization': `Bearer ${token}` } }
+    )
+    const data = await res.json()
+    const map = {}
+    data.forEach(d => { map[d.id] = d.distance_km })
+    setDistanceMap(map)
+  } catch {}
+}, [filter])
 
   const fetchDoctors = async () => {
     setLoading(true)
-    try {
-      const res = await getDoctors(filter === 'All' ? '' : filter)
-      setDoctors(res.data)
-    } catch { setDoctors([]) }
+    let query = supabase
+      .from('users')
+      .select('id, full_name, specialization, years_of_experience, consultation_fee, phone')
+      .eq('role', 'doctor')
+
+    if (filter !== 'All') {
+      query = query.eq('specialization', filter)
+    }
+
+    const { data, error } = await query
+    setDoctors(error ? [] : data)
     setLoading(false)
   }
 
@@ -61,12 +75,15 @@ function Doctors() {
     setPaying(true)
     setError('')
     try {
-      await bookAppointment(user.id, {
+      const { error: bookError } = await supabase.from('appointments').insert({
+        patient_id: user.id,
         doctor_id: selectedDoctor.id,
         appointment_date: selectedDate,
         appointment_time: selectedTime,
         issue: issue || null,
+        status: 'pending',
       })
+      if (bookError) throw bookError
       setSuccess(`Appointment request sent to Dr. ${selectedDoctor.full_name}! Awaiting clinic approval.`)
       setSelectedDoctor(null)
       setSelectedDate('')
@@ -74,7 +91,7 @@ function Doctors() {
       setIssue('')
       setTimeout(() => setSuccess(''), 6000)
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to book appointment. Please try again.')
+      setError(err.message || 'Failed to book appointment. Please try again.')
     }
     setPaying(false)
   }
@@ -103,7 +120,6 @@ function Doctors() {
               </div>
             )}
 
-            {/* Specialization filters */}
             <div className="flex gap-2 overflow-x-auto pb-2 mb-6 scrollbar-hide">
               {SPECIALIZATIONS.map(spec => (
                 <button key={spec} onClick={() => setFilter(spec)}
@@ -115,7 +131,6 @@ function Doctors() {
               ))}
             </div>
 
-            {/* Doctors list */}
             {loading ? (
               <div className="text-center py-16 text-gray-400">Loading doctors...</div>
             ) : doctors.length === 0 ? (
@@ -146,8 +161,7 @@ function Doctors() {
                         <p className="text-cyan-600 font-bold text-sm">₹{doctor.consultation_fee || 500}</p>
                         <button
                           onClick={() => { setSelectedDoctor(doctor); setError(''); setSelectedDate(''); setSelectedTime(''); setIssue('') }}
-                          className="mt-1 bg-cyan-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-cyan-600"
-                        >
+                          className="mt-1 bg-cyan-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-cyan-600">
                           Book
                         </button>
                       </div>
@@ -157,7 +171,6 @@ function Doctors() {
               </div>
             )}
 
-            {/* Booking Modal */}
             {selectedDoctor && (
               <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 px-4 pb-6 sm:pb-0">
                 <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
@@ -204,8 +217,7 @@ function Doctors() {
                   <div className="mb-4">
                     <label className="text-xs font-semibold text-gray-500 mb-1 block">Describe your issue (optional)</label>
                     <textarea value={issue} onChange={e => setIssue(e.target.value)}
-                      placeholder="e.g. Fever and headache for 2 days..."
-                      rows={2}
+                      placeholder="e.g. Fever and headache for 2 days..." rows={2}
                       className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 resize-none" />
                   </div>
 
