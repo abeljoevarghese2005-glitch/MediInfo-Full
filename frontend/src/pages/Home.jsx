@@ -5,7 +5,6 @@ import { useNavigate } from 'react-router-dom'
 import TopBar from '../components/TopBar'
 import LocationBar from '../components/LocationBar'
 import { supabase } from '../lib/supabase'
-import { getNearbyDoctors } from '../api/index'
 
 const TIME_SLOTS = ['10:30', '13:00', '16:00', '09:00', '11:00', '14:00']
 
