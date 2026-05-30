@@ -133,11 +133,16 @@ function DoctorDashboard() {
   }
 
   const handleConfirm = async (id) => {
-    setActing(id)
-    const { error } = await supabase.from('appointments').update({ status: 'confirmed' }).eq('id', id)
-    if (!error) setAppointments(prev => prev.map(a => a.id === id ? { ...a, status: 'confirmed' } : a))
-    setActing(null)
+  setActing(id)
+  const { error } = await supabase.from('appointments').update({ status: 'confirmed' }).eq('id', id)
+  if (error) {
+    console.error('Confirm error:', error)
+    alert(JSON.stringify(error))
+  } else {
+    setAppointments(prev => prev.map(a => a.id === id ? { ...a, status: 'confirmed' } : a))
   }
+  setActing(null)
+}
 
   const handleReject = async (id) => {
     setActing(id)
