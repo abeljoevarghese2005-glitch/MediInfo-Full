@@ -5,7 +5,6 @@ import { SidebarProvider } from '../components/SidebarContext'
 import { supabase } from '../lib/supabase'
 import { subscribeToPush, unsubscribeFromPush } from '../hooks/usePushNotifications'
 
-const API_BASE = 'https://mediinfo-full-production.up.railway.app'
 const frequencyOptions = ['daily', 'twice daily', 'three times daily', 'weekly', 'as needed']
 const avatarColors = ['bg-cyan-500','bg-purple-500','bg-green-500','bg-orange-500','bg-pink-500','bg-blue-500']
 const getColor = (name) => avatarColors[(name?.charCodeAt(0)||0) % avatarColors.length]
@@ -105,14 +104,14 @@ function Reminders() {
 
   const handleEnablePush = async () => {
     setPushLoading(true)
-    const success = await subscribeToPush(user.id, API_BASE)
+    const success = await subscribeToPush(user.id)
     setPushEnabled(success)
     setPushLoading(false)
   }
 
   const handleDisablePush = async () => {
     setPushLoading(true)
-    await unsubscribeFromPush(user.id, API_BASE)
+    await unsubscribeFromPush(user.id)
     setPushEnabled(false)
     setPushLoading(false)
   }
@@ -185,7 +184,6 @@ function Reminders() {
           <TopBar />
           <div className="px-4 sm:px-8 py-8 max-w-4xl">
 
-            {/* Header */}
             <div className="flex items-start justify-between mb-6">
               <div>
                 <h1 className="text-2xl font-black text-gray-900">Reminders</h1>
@@ -201,7 +199,6 @@ function Reminders() {
               )}
             </div>
 
-            {/* Push notification banner */}
             {pushSupported && !pushEnabled && (
               <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 mb-5 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
@@ -244,7 +241,6 @@ function Reminders() {
               </div>
             )}
 
-            {/* Stats */}
             <div className="grid grid-cols-3 gap-3 mb-6">
               <div className="bg-white rounded-2xl p-4 border border-gray-100 text-center">
                 <p className="text-2xl font-black text-cyan-500">{reminders.length}</p>
@@ -260,7 +256,6 @@ function Reminders() {
               </div>
             </div>
 
-            {/* Tabs */}
             <div className="flex gap-2 mb-6">
               {['medicine', 'appointments'].map(t => (
                 <button
@@ -275,7 +270,6 @@ function Reminders() {
               ))}
             </div>
 
-            {/* Add Form */}
             {tab === 'medicine' && showForm && (
               <div className="bg-white rounded-2xl shadow-sm p-6 mb-6 border border-gray-100">
                 <h2 className="text-base font-bold text-gray-800 mb-4">New Medicine Reminder</h2>
@@ -337,7 +331,6 @@ function Reminders() {
               </div>
             )}
 
-            {/* Medicine List */}
             {tab === 'medicine' && (
               <>
                 {loading ? (
@@ -396,7 +389,6 @@ function Reminders() {
               </>
             )}
 
-            {/* Appointments Tab */}
             {tab === 'appointments' && (
               <>
                 {appointments.length === 0 ? (

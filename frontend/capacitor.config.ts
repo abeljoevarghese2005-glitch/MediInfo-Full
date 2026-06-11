@@ -1,13 +1,12 @@
-import { CapacitorConfig } from '@capacitor/cli'
+import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.mediinfo.app',
   appName: 'MediInfo',
   webDir: 'dist',
   server: {
-    url: 'https://medi-info-full.vercel.app',
-    cleartext: true
-  }
-}
+    androidScheme: 'https',  // keeps Supabase Auth cookies working
+  },
+};
 
-export default config
+export default config;

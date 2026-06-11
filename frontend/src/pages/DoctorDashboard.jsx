@@ -5,7 +5,6 @@ import DoctorSidebar from '../components/DoctorSidebar'
 import { SidebarProvider } from '../components/SidebarContext'
 import LocationBar from '../components/LocationBar'
 import { supabase } from '../lib/supabase'
-import { getNearbyPatients } from '../api/index'
 
 const greeting = () => {
   const h = new Date().getHours()
@@ -95,7 +94,6 @@ function DoctorDashboard() {
     if (user.role !== 'doctor') { navigate('/home'); return }
     fetchAppointments()
 
-    // Real-time subscription
     const channel = supabase
       .channel('doctor-appointments')
       .on('postgres_changes', {
@@ -107,11 +105,18 @@ function DoctorDashboard() {
     return () => supabase.removeChannel(channel)
   }, [])
 
-  const handleLocationReady = useCallback((loc) => {
+  const handleLocationReady = useCallback(async (loc) => {
     if (!loc) return
-    getNearbyPatients(loc.lat, loc.lng, 25)
-      .then(res => setNearbyPatients(res.data))
-      .catch(() => {})
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token || ''
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/nearby-patients?lat=${loc.lat}&lng=${loc.lng}&radius=25`,
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      )
+      const data = await res.json()
+      setNearbyPatients(Array.isArray(data) ? data : [])
+    } catch {}
   }, [])
 
   const fetchAppointments = async () => {
@@ -133,16 +138,16 @@ function DoctorDashboard() {
   }
 
   const handleConfirm = async (id) => {
-  setActing(id)
-  const { error } = await supabase.from('appointments').update({ status: 'confirmed' }).eq('id', id)
-  if (error) {
-    console.error('Confirm error:', error)
-    alert(JSON.stringify(error))
-  } else {
-    setAppointments(prev => prev.map(a => a.id === id ? { ...a, status: 'confirmed' } : a))
+    setActing(id)
+    const { error } = await supabase.from('appointments').update({ status: 'confirmed' }).eq('id', id)
+    if (error) {
+      console.error('Confirm error:', error)
+      alert(JSON.stringify(error))
+    } else {
+      setAppointments(prev => prev.map(a => a.id === id ? { ...a, status: 'confirmed' } : a))
+    }
+    setActing(null)
   }
-  setActing(null)
-}
 
   const handleReject = async (id) => {
     setActing(id)
@@ -211,7 +216,7 @@ function DoctorDashboard() {
                         </div>
                       </div>
                       <span className="text-xs font-bold text-cyan-600 bg-white px-2.5 py-1 rounded-lg border border-cyan-100">
-                        {p.distance_km.toFixed(1)} km
+                        {p.distance_km?.toFixed(1)} km
                       </span>
                     </div>
                   ))}
