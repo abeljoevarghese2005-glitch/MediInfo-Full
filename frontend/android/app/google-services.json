@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "482058809425",
+    "project_id": "mediinfo-120cf",
+    "storage_bucket": "mediinfo-120cf.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:482058809425:android:829774f33bc40cd9c1c870",
+        "android_client_info": {
+          "package_name": "com.mediinfo.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBfmNxjJ49QV49F4Zg2FOcRAz7Nw-1-ayY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
