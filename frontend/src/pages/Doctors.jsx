@@ -5,7 +5,6 @@ import Sidebar from '../components/Sidebar'
 import { SidebarProvider } from '../components/SidebarContext'
 import LocationBar from '../components/LocationBar'
 import { supabase } from '../lib/supabase'
-import { getNearbyDoctors } from '../api/index'
 
 const TIME_SLOTS = ['10:30', '13:00', '16:00', '09:00', '11:00', '14:00']
 
@@ -20,7 +19,7 @@ const getInitials = (name) => name?.split(' ').map(n => n[0]).join('').toUpperCa
 
 function Doctors() {
   const navigate = useNavigate()
-  const user = JSON.parse(sessionStorage.getItem('user') || '{}')
+  const user = JSON.parse(localStorage.getItem('user') || '{}')
   const [doctors, setDoctors] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('All')

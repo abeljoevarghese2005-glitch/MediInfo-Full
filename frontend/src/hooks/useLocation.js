@@ -17,7 +17,7 @@ export function useLocation() {
     setStatus(source)
     setError(null)
     localStorage.setItem(STORAGE_KEY, JSON.stringify(loc))
-    const token = sessionStorage.getItem('token')
+    const token = localStorage.getItem('token')
     if (token) {
       fetch(
         `https://mediinfo-full-production.up.railway.app/auth/update-location?lat=${lat}&lng=${lng}`,

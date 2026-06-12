@@ -54,7 +54,7 @@ const navItems = [
 
 function SidebarContent({ onClose }) {
   const location = useLocation()
-  const user = JSON.parse(sessionStorage.getItem('user') || '{}')
+  const user = JSON.parse(localStorage.getItem('user') || '{}')
 
   return (
     <>

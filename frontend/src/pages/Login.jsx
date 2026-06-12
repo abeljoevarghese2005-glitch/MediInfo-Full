@@ -35,8 +35,8 @@ function Login() {
 
       if (profileError) throw profileError
 
-      sessionStorage.setItem('token', data.session.access_token)
-      sessionStorage.setItem('user', JSON.stringify(profile))
+      localStorage.setItem('token', data.session.access_token)
+      localStorage.setItem('user', JSON.stringify(profile))
 
       if (profile.role === 'doctor') {
         navigate('/doctor-dashboard')

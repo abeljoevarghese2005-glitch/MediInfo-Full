@@ -30,7 +30,7 @@ function StatusBadge({ active }) {
 }
 
 function Reminders() {
-  const user = JSON.parse(sessionStorage.getItem('user') || '{}')
+  const user = JSON.parse(localStorage.getItem('user') || '{}')
   const [tab, setTab] = useState('medicine')
   const [reminders, setReminders] = useState([])
   const [appointments, setAppointments] = useState([])

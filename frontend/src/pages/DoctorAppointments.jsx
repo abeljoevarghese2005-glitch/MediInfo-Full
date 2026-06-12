@@ -22,7 +22,7 @@ function Toast({ toasts, onDismiss }) {
 
 function DoctorAppointments() {
   const navigate = useNavigate()
-  const user = JSON.parse(sessionStorage.getItem('user') || '{}')
+  const user = JSON.parse(localStorage.getItem('user') || '{}')
   const [appointments, setAppointments] = useState([])
   const [loading, setLoading] = useState(true)
   const [acting, setActing] = useState(null)

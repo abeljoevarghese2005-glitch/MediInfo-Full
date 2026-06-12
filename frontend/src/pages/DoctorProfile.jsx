@@ -128,7 +128,7 @@ function DayRow({ day, d, editing, tpp, toggleDay, updateRange, addRange, remove
 
 function DoctorProfile() {
   const navigate = useNavigate()
-  const user = JSON.parse(sessionStorage.getItem('user') || '{}')
+  const user = JSON.parse(localStorage.getItem('user') || '{}')
   const [profile, setProfile] = useState(null)
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState(EMPTY_FORM)
@@ -196,8 +196,8 @@ function DoctorProfile() {
       setEditing(false)
       setSaved(true)
       setTimeout(() => setSaved(false), 4000)
-      const stored = JSON.parse(sessionStorage.getItem('user') || '{}')
-      sessionStorage.setItem('user', JSON.stringify({ ...stored, full_name: updated.full_name }))
+      const stored = JSON.parse(localStorage.getItem('user') || '{}')
+      localStorage.setItem('user', JSON.stringify({ ...stored, full_name: updated.full_name }))
     } catch (e) { setError(e.message || 'Failed to save. Please try again.') }
     setSaving(false)
   }

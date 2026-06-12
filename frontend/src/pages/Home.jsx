@@ -31,7 +31,7 @@ const mockFee = (idx) => [800, 700, 550, 900, 600, 750][idx % 6]
 const mockRating = (idx) => [4.9, 4.8, 4.6, 4.9, 4.7, 4.5][idx % 6]
 
 function BookingModal({ doctor, idx, onClose, onBooked }) {
-  const user = JSON.parse(sessionStorage.getItem('user') || '{}')
+  const user = JSON.parse(localStorage.getItem('user') || '{}')
   const today = new Date().toISOString().split('T')[0]
   const [date, setDate] = useState(today)
   const [slot, setSlot] = useState(TIME_SLOTS[0])
@@ -168,7 +168,7 @@ function DoctorCard({ doctor, idx, onBook, distanceMap }) {
 
 function Home() {
   const navigate = useNavigate()
-  const user = JSON.parse(sessionStorage.getItem('user') || '{}')
+  const user = JSON.parse(localStorage.getItem('user') || '{}')
   const [doctors, setDoctors] = useState([])
   const [loadingDoctors, setLoadingDoctors] = useState(true)
   const [previousDoctors, setPreviousDoctors] = useState([])

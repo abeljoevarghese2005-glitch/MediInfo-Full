@@ -7,7 +7,7 @@ import { supabase } from '../lib/supabase'
 
 function Profile() {
   const navigate = useNavigate()
-  const [user, setUser] = useState(JSON.parse(sessionStorage.getItem('user') || '{}'))
+  const [user, setUser] = useState(JSON.parse(localStorage.getItem('user') || '{}'))
   const [activeTab, setActiveTab] = useState('profile')
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState({ full_name: user.full_name, phone: user.phone })
@@ -19,8 +19,8 @@ function Profile() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
-    sessionStorage.removeItem('token')
-    sessionStorage.removeItem('user')
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
     navigate('/')
   }
 
@@ -37,7 +37,7 @@ function Profile() {
         .single()
       if (updateError) throw updateError
       const updatedUser = { ...user, ...data }
-      sessionStorage.setItem('user', JSON.stringify(updatedUser))
+      localStorage.setItem('user', JSON.stringify(updatedUser))
       setUser(updatedUser)
       setEditing(false)
       setSuccess('Profile updated successfully!')
