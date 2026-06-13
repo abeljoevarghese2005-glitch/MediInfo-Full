@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TopBar from '../components/TopBar'
 import Sidebar from '../components/Sidebar'
@@ -6,7 +6,8 @@ import { SidebarProvider } from '../components/SidebarContext'
 import LocationBar from '../components/LocationBar'
 import { supabase } from '../lib/supabase'
 
-const TIME_SLOTS = ['10:30', '13:00', '16:00', '09:00', '11:00', '14:00']
+// Hardcoded slots kept here for Person A to replace with doctor availability fetch
+const TIME_SLOTS = ['09:00', '10:30', '11:00', '13:00', '14:00', '16:00']
 
 const SPECIALIZATIONS = [
   'All', 'General Physician', 'Cardiologist', 'Dermatologist',
@@ -20,9 +21,12 @@ const getInitials = (name) => name?.split(' ').map(n => n[0]).join('').toUpperCa
 function Doctors() {
   const navigate = useNavigate()
   const user = JSON.parse(localStorage.getItem('user') || '{}')
+
   const [doctors, setDoctors] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('All')
+  const [userLocation, setUserLocation] = useState(null)
+
   const [selectedDoctor, setSelectedDoctor] = useState(null)
   const [selectedDate, setSelectedDate] = useState('')
   const [selectedTime, setSelectedTime] = useState('')
@@ -30,47 +34,70 @@ function Doctors() {
   const [paying, setPaying] = useState(false)
   const [success, setSuccess] = useState('')
   const [error, setError] = useState('')
-  const [distanceMap, setDistanceMap] = useState({})
 
   const today = new Date().toISOString().split('T')[0]
 
-  useEffect(() => { fetchDoctors() }, [filter])
+  // Keep a ref so fetchDoctors can always see the latest location
+  // without needing it as a dependency that causes infinite loops
+  const locationRef = useRef(userLocation)
+  useEffect(() => { locationRef.current = userLocation }, [userLocation])
 
-  const handleLocationReady = useCallback(async (loc) => {
-  if (!loc) return
-  try {
-    const { data: { session } } = await supabase.auth.getSession()
-    const token = session?.access_token || ''
-    const spec = filter === 'All' ? '' : `&specialization=${filter}`
-    const res = await fetch(
-      `https://xfuzwuraowhaxqnfolzg.supabase.co/functions/v1/nearby-doctors?lat=${loc.lat}&lng=${loc.lng}&radius=100${spec}`,
-      { headers: { 'Authorization': `Bearer ${token}` } }
-    )
-    const data = await res.json()
-    const map = {}
-    data.forEach(d => { map[d.id] = d.distance_km })
-    setDistanceMap(map)
-  } catch {}
-}, [filter])
-
-  const fetchDoctors = async () => {
+  // Single fetch function — uses nearby-doctors Edge Function when location is available,
+  // falls back to direct Supabase query when not
+  const fetchDoctors = useCallback(async (loc, spec) => {
     setLoading(true)
-    let query = supabase
-      .from('users')
-      .select('id, full_name, specialization, years_of_experience, consultation_fee, phone')
-      .eq('role', 'doctor')
-
-    if (filter !== 'All') {
-      query = query.eq('specialization', filter)
+    try {
+      if (loc) {
+        // Fetch from Edge Function — returns doctors sorted by distance
+        const { data: { session } } = await supabase.auth.getSession()
+        const token = session?.access_token || ''
+        const specParam = spec && spec !== 'All' ? `&specialization=${encodeURIComponent(spec)}` : ''
+        const res = await fetch(
+          `https://xfuzwuraowhaxqnfolzg.supabase.co/functions/v1/nearby-doctors?lat=${loc.lat}&lng=${loc.lng}&radius=100${specParam}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        )
+        if (!res.ok) throw new Error('Edge function error')
+        const data = await res.json()
+        // Edge Function returns { id, full_name, specialization, years_of_experience,
+        //   consultation_fee, phone, distance_km }
+        setDoctors(Array.isArray(data) ? data : [])
+      } else {
+        // No location — fall back to direct Supabase query, no distance info
+        let query = supabase
+          .from('users')
+          .select('id, full_name, specialization, years_of_experience, consultation_fee, phone')
+          .eq('role', 'doctor')
+        if (spec && spec !== 'All') query = query.eq('specialization', spec)
+        const { data, error: dbErr } = await query
+        setDoctors(dbErr ? [] : (data || []))
+      }
+    } catch {
+      // On any error fall back to direct query
+      let query = supabase
+        .from('users')
+        .select('id, full_name, specialization, years_of_experience, consultation_fee, phone')
+        .eq('role', 'doctor')
+      if (spec && spec !== 'All') query = query.eq('specialization', spec)
+      const { data } = await query
+      setDoctors(data || [])
     }
-
-    const { data, error } = await query
-    setDoctors(error ? [] : data)
     setLoading(false)
-  }
+  }, [])
+
+  // Re-fetch when filter changes, using whatever location we currently have
+  useEffect(() => {
+    fetchDoctors(locationRef.current, filter)
+  }, [filter, fetchDoctors])
+
+  // Called by LocationBar when location is detected or set manually
+  // Using useCallback with stable reference so LocationBar useEffect doesn't loop
+  const handleLocationReady = useCallback((loc) => {
+    setUserLocation(loc)
+    fetchDoctors(loc, filter)
+  }, [filter, fetchDoctors])
 
   const handleBook = async () => {
-    if (!selectedDate || !selectedTime) { setError('Please select date and time'); return }
+    if (!selectedDate || !selectedTime) { setError('Please select a date and time slot'); return }
     setPaying(true)
     setError('')
     try {
@@ -119,6 +146,7 @@ function Doctors() {
               </div>
             )}
 
+            {/* Specialization filter pills */}
             <div className="flex gap-2 overflow-x-auto pb-2 mb-6 scrollbar-hide">
               {SPECIALIZATIONS.map(spec => (
                 <button key={spec} onClick={() => setFilter(spec)}
@@ -130,16 +158,20 @@ function Doctors() {
               ))}
             </div>
 
+            {/* Doctor list */}
             {loading ? (
-              <div className="text-center py-16 text-gray-400">Loading doctors...</div>
+              <div className="text-center py-16 text-gray-400">Loading doctors…</div>
             ) : doctors.length === 0 ? (
               <div className="text-center py-16">
                 <p className="text-4xl mb-3">🩺</p>
                 <p className="text-gray-500">No doctors found</p>
-                <p className="text-gray-400 text-sm mt-1">Try a different specialization</p>
+                <p className="text-gray-400 text-sm mt-1">Try a different specialization or expand your search area</p>
               </div>
             ) : (
               <div className="space-y-4 max-w-2xl">
+                {userLocation && (
+                  <p className="text-xs text-gray-400 mb-1">Sorted by distance from your location</p>
+                )}
                 {doctors.map(doctor => (
                   <div key={doctor.id} className="bg-white rounded-2xl shadow-sm p-5">
                     <div className="flex items-center gap-4">
@@ -150,16 +182,22 @@ function Doctors() {
                         <h3 className="font-semibold text-gray-800">Dr. {doctor.full_name}</h3>
                         <p className="text-cyan-600 text-sm">{doctor.specialization || 'General Physician'}</p>
                         <p className="text-gray-400 text-xs mt-0.5">📞 {doctor.phone}</p>
-                        {distanceMap[doctor.id] != null && (
+                        {doctor.distance_km != null && (
                           <p className="text-cyan-500 text-xs font-semibold mt-0.5">
-                            📍 {distanceMap[doctor.id].toFixed(1)} km away
+                            📍 {Number(doctor.distance_km).toFixed(1)} km away
                           </p>
                         )}
                       </div>
                       <div className="text-right shrink-0">
                         <p className="text-cyan-600 font-bold text-sm">₹{doctor.consultation_fee || 500}</p>
                         <button
-                          onClick={() => { setSelectedDoctor(doctor); setError(''); setSelectedDate(''); setSelectedTime(''); setIssue('') }}
+                          onClick={() => {
+                            setSelectedDoctor(doctor)
+                            setError('')
+                            setSelectedDate('')
+                            setSelectedTime('')
+                            setIssue('')
+                          }}
                           className="mt-1 bg-cyan-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-cyan-600">
                           Book
                         </button>
@@ -170,6 +208,7 @@ function Doctors() {
               </div>
             )}
 
+            {/* Booking modal */}
             {selectedDoctor && (
               <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 px-4 pb-6 sm:pb-0">
                 <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
@@ -178,6 +217,7 @@ function Doctors() {
                     <button onClick={() => setSelectedDoctor(null)} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
                   </div>
 
+                  {/* Doctor summary */}
                   <div className="flex items-center gap-3 bg-cyan-50 rounded-xl p-3 mb-4">
                     <div className={`w-10 h-10 ${getColor(selectedDoctor.full_name)} rounded-full flex items-center justify-center text-white font-bold shrink-0`}>
                       {getInitials(selectedDoctor.full_name)}
@@ -192,6 +232,7 @@ function Doctors() {
                     </div>
                   </div>
 
+                  {/* Date */}
                   <div className="mb-4">
                     <label className="text-xs font-semibold text-gray-500 mb-1 block">Select Date</label>
                     <input type="date" min={today} value={selectedDate}
@@ -199,13 +240,16 @@ function Doctors() {
                       className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-gray-800 text-sm" />
                   </div>
 
+                  {/* Time slots — Person A will replace TIME_SLOTS with doctor availability */}
                   <div className="mb-4">
                     <label className="text-xs font-semibold text-gray-500 mb-2 block">Select Time Slot</label>
                     <div className="grid grid-cols-4 gap-2">
                       {TIME_SLOTS.map(slot => (
                         <button key={slot} onClick={() => setSelectedTime(slot)}
                           className={`py-2 rounded-lg text-xs font-medium transition-all ${
-                            selectedTime === slot ? 'bg-cyan-500 text-white' : 'bg-gray-50 text-gray-700 hover:bg-cyan-50'
+                            selectedTime === slot
+                              ? 'bg-cyan-500 text-white'
+                              : 'bg-gray-50 text-gray-700 hover:bg-cyan-50'
                           }`}>
                           {slot}
                         </button>
@@ -213,10 +257,11 @@ function Doctors() {
                     </div>
                   </div>
 
+                  {/* Issue */}
                   <div className="mb-4">
                     <label className="text-xs font-semibold text-gray-500 mb-1 block">Describe your issue (optional)</label>
                     <textarea value={issue} onChange={e => setIssue(e.target.value)}
-                      placeholder="e.g. Fever and headache for 2 days..." rows={2}
+                      placeholder="e.g. Fever and headache for 2 days…" rows={2}
                       className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 resize-none" />
                   </div>
 
@@ -224,7 +269,7 @@ function Doctors() {
 
                   <button onClick={handleBook} disabled={paying}
                     className="w-full bg-cyan-500 text-white py-3 rounded-xl font-bold hover:bg-cyan-600 disabled:opacity-60 flex items-center justify-center gap-2">
-                    {paying ? 'Booking...' : `📅 Request Appointment — ₹${selectedDoctor.consultation_fee ?? 500}`}
+                    {paying ? 'Booking…' : `📅 Request Appointment — ₹${selectedDoctor.consultation_fee ?? 500}`}
                   </button>
                 </div>
               </div>
