@@ -3,7 +3,13 @@ import TopBar from '../components/TopBar'
 import Sidebar from '../components/Sidebar'
 import { SidebarProvider } from '../components/SidebarContext'
 import { supabase } from '../lib/supabase'
-import { subscribeToPush, unsubscribeFromPush } from '../hooks/usePushNotifications'
+import {
+  scheduleReminderNotifications,
+  cancelReminderNotifications,
+  scheduleAppointmentNotifications,
+  checkNotifPermission,
+  requestNotifPermission,
+} from '../hooks/useLocalNotifications'
 
 const frequencyOptions = ['daily', 'twice daily', 'three times daily', 'weekly', 'as needed']
 const avatarColors = ['bg-cyan-500','bg-purple-500','bg-green-500','bg-orange-500','bg-pink-500','bg-blue-500']
@@ -29,6 +35,14 @@ function StatusBadge({ active }) {
   )
 }
 
+function formatTime(t) {
+  if (!t) return ''
+  const [h, m] = t.split(':').map(Number)
+  const suffix = h >= 12 ? 'PM' : 'AM'
+  const hour = h > 12 ? h - 12 : h === 0 ? 12 : h
+  return `${hour}:${m.toString().padStart(2,'0')} ${suffix}`
+}
+
 function Reminders() {
   const user = JSON.parse(localStorage.getItem('user') || '{}')
   const [tab, setTab] = useState('medicine')
@@ -36,8 +50,7 @@ function Reminders() {
   const [appointments, setAppointments] = useState([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
-  const [pushEnabled, setPushEnabled] = useState(false)
-  const [pushLoading, setPushLoading] = useState(false)
+  const [notifPermission, setNotifPermission] = useState('prompt') // 'granted' | 'denied' | 'prompt'
   const [takenToday, setTakenToday] = useState(() => {
     try { return JSON.parse(localStorage.getItem('takenToday') || '{}') } catch { return {} }
   })
@@ -50,24 +63,26 @@ function Reminders() {
   useEffect(() => {
     fetchReminders()
     fetchAppointments()
-    checkPushStatus()
-
-    navigator.serviceWorker?.addEventListener('message', (event) => {
-      if (event.data?.type === 'MARK_TAKEN') {
-        toggleTaken(event.data.reminderId)
-      }
-    })
+    handleCheckNotifPermission()
   }, [])
 
-  const checkPushStatus = async () => {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return
-    try {
-      const reg = await navigator.serviceWorker.getRegistration()
-      if (reg) {
-        const sub = await reg.pushManager.getSubscription()
-        setPushEnabled(!!sub && Notification.permission === 'granted')
+  // Schedule appointment notifications whenever appointments load
+  useEffect(() => {
+    appointments.forEach(a => {
+      if (a.status === 'confirmed') {
+        scheduleAppointmentNotifications(a)
       }
-    } catch {}
+    })
+  }, [appointments])
+
+  const handleCheckNotifPermission = async () => {
+    const status = await checkNotifPermission()
+    setNotifPermission(status)
+  }
+
+  const handleRequestPermission = async () => {
+    const granted = await requestNotifPermission()
+    setNotifPermission(granted ? 'granted' : 'denied')
   }
 
   const fetchReminders = async () => {
@@ -102,24 +117,10 @@ function Reminders() {
     } catch { setAppointments([]) }
   }
 
-  const handleEnablePush = async () => {
-    setPushLoading(true)
-    const success = await subscribeToPush(user.id)
-    setPushEnabled(success)
-    setPushLoading(false)
-  }
-
-  const handleDisablePush = async () => {
-    setPushLoading(true)
-    await unsubscribeFromPush(user.id)
-    setPushEnabled(false)
-    setPushLoading(false)
-  }
-
   const handleSubmit = async () => {
     if (!form.medicine_name || !form.start_date) return
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('medication_reminders')
         .insert({
           user_id: user.id,
@@ -131,7 +132,14 @@ function Reminders() {
           end_date: form.end_date || null,
           notes: form.notes || null,
         })
+        .select()
+        .single()
+
       if (error) throw error
+
+      // Schedule local notifications immediately after saving
+      await scheduleReminderNotifications(data)
+
       setForm({ medicine_name:'', dosage:'', frequency:'daily', reminder_time:'08:00', start_date:'', end_date:'', notes:'' })
       setShowForm(false)
       fetchReminders()
@@ -142,6 +150,9 @@ function Reminders() {
 
   const handleDelete = async (id) => {
     try {
+      // Cancel scheduled notifications first
+      await cancelReminderNotifications(id)
+
       const { error } = await supabase
         .from('medication_reminders')
         .delete()
@@ -164,17 +175,8 @@ function Reminders() {
     return !!takenToday[`${id}_${today}`]
   }
 
-  const formatTime = (t) => {
-    if (!t) return ''
-    const [h, m] = t.split(':').map(Number)
-    const suffix = h >= 12 ? 'PM' : 'AM'
-    const hour = h > 12 ? h - 12 : h === 0 ? 12 : h
-    return `${hour}:${m.toString().padStart(2,'0')} ${suffix}`
-  }
-
   const activeCount = reminders.filter(isActive).length
   const takenCount = reminders.filter(r => isTakenToday(r.id)).length
-  const pushSupported = ('serviceWorker' in navigator) && ('PushManager' in window)
 
   return (
     <SidebarProvider>
@@ -199,45 +201,36 @@ function Reminders() {
               )}
             </div>
 
-            {pushSupported && !pushEnabled && (
+            {/* Notification permission banner */}
+            {notifPermission !== 'granted' && (
               <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 mb-5 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <span className="text-2xl">🔔</span>
                   <div>
-                    <p className="text-sm font-bold text-amber-800">Enable push notifications</p>
-                    <p className="text-xs text-amber-600 mt-0.5">Get alerts even when the app is closed</p>
+                    <p className="text-sm font-bold text-amber-800">Allow notifications</p>
+                    <p className="text-xs text-amber-600 mt-0.5">
+                      {notifPermission === 'denied'
+                        ? 'Notifications blocked — enable in device Settings → Apps → MediInfo'
+                        : 'Get medicine reminders at exactly the right time'}
+                    </p>
                   </div>
                 </div>
-                <button
-                  onClick={handleEnablePush}
-                  disabled={pushLoading}
-                  className="bg-amber-500 text-white text-xs font-bold px-4 py-2 rounded-xl hover:bg-amber-600 shrink-0 disabled:opacity-60"
-                >
-                  {pushLoading ? 'Enabling...' : 'Enable'}
-                </button>
+                {notifPermission !== 'denied' && (
+                  <button
+                    onClick={handleRequestPermission}
+                    className="bg-amber-500 text-white text-xs font-bold px-4 py-2 rounded-xl hover:bg-amber-600 shrink-0"
+                  >
+                    Allow
+                  </button>
+                )}
               </div>
             )}
 
-            {pushEnabled && (
-              <div className="bg-green-50 border border-green-200 rounded-2xl px-4 py-3 mb-5 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2 text-sm text-green-700">
-                  <span>✅</span>
-                  <span className="font-semibold">Push notifications active</span>
-                  <span className="text-green-500 text-xs">— you'll be alerted even when app is closed</span>
-                </div>
-                <button
-                  onClick={handleDisablePush}
-                  disabled={pushLoading}
-                  className="text-xs text-red-400 hover:text-red-600 font-medium shrink-0"
-                >
-                  Disable
-                </button>
-              </div>
-            )}
-
-            {!pushSupported && (
-              <div className="bg-gray-100 border border-gray-200 rounded-2xl px-4 py-3 mb-5 text-sm text-gray-500">
-                ℹ️ Push notifications are not supported in this browser. Use Chrome or Edge for best experience.
+            {notifPermission === 'granted' && (
+              <div className="bg-green-50 border border-green-200 rounded-2xl px-4 py-3 mb-5 flex items-center gap-2 text-sm text-green-700">
+                <span>✅</span>
+                <span className="font-semibold">Notifications active</span>
+                <span className="text-green-500 text-xs">— reminders fire at exactly the scheduled time</span>
               </div>
             )}
 
@@ -417,8 +410,13 @@ function Reminders() {
                               <p className="text-cyan-500 text-xs">{a.specialization || 'General Physician'}</p>
                               <div className="flex gap-3 text-xs text-gray-400 mt-1">
                                 <span>📅 {formatDate(a.appointment_date)}</span>
-                                {a.appointment_time && <span>⏰ {a.appointment_time}</span>}
+                                {a.appointment_time && <span>⏰ {formatTime(a.appointment_time)}</span>}
                               </div>
+                              {a.status === 'confirmed' && (
+                                <span className="inline-block mt-1 text-xs bg-green-100 text-green-600 font-semibold px-2 py-0.5 rounded-full">
+                                  ✓ Reminder set
+                                </span>
+                              )}
                               {a.issue && <p className="text-xs text-gray-400 italic mt-1">"{a.issue}"</p>}
                             </div>
                           </div>

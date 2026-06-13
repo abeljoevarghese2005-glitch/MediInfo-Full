@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import TopBar from '../components/TopBar'
 import Sidebar from '../components/Sidebar'
 import { SidebarProvider } from '../components/SidebarContext'
 import { supabase } from '../lib/supabase'
+import { LocalNotifications } from '@capacitor/local-notifications'
 
 const TRAVEL_OPTIONS = ['10m', '15m', '20m', '30m']
 
@@ -13,6 +14,46 @@ const avatarColors = [
 ]
 const getColor = (name) => avatarColors[(name?.charCodeAt(0) || 0) % avatarColors.length]
 const getInitials = (name) => name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'D'
+
+// Parse "HH:MM" time string into total minutes from midnight
+function timeToMinutes(timeStr) {
+  if (!timeStr) return 0
+  const [h, m] = timeStr.split(':').map(Number)
+  return h * 60 + m
+}
+
+// Add minutes to a "HH:MM" string, returns new "HH:MM" string
+function addMinutesToTime(timeStr, mins) {
+  const total = timeToMinutes(timeStr) + mins
+  const h = Math.floor(total / 60) % 24
+  const m = total % 60
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+}
+
+// Format "HH:MM" → "8:30 AM"
+function formatTime(t) {
+  if (!t) return ''
+  const [h, m] = t.split(':').map(Number)
+  const suffix = h >= 12 ? 'PM' : 'AM'
+  const hour = h > 12 ? h - 12 : h === 0 ? 12 : h
+  return `${hour}:${String(m).padStart(2, '0')} ${suffix}`
+}
+
+// Travel option string ("20m") → integer minutes
+function travelToMinutes(opt, custom) {
+  if (custom) return parseInt(custom) || 0
+  return parseInt(opt) || 20
+}
+
+// Generate stable integer notification ID
+function makeNotifId(str) {
+  let hash = 0
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i)
+    hash |= 0
+  }
+  return Math.abs(hash)
+}
 
 function LiveQueue() {
   const navigate = useNavigate()
@@ -25,18 +66,33 @@ function LiveQueue() {
   const [loading, setLoading] = useState(
     !location.state?.appointment || location.state?.appointment?.status !== 'confirmed'
   )
+
+  // Real queue data
+  const [queuePosition, setQueuePosition] = useState(null)   // patients ahead of me
+  const [totalAhead, setTotalAhead] = useState(null)          // same as queuePosition (patients before me)
+  const [waitMinutes, setWaitMinutes] = useState(null)        // calculated from duration_minutes
+  const [estimatedTurnTime, setEstimatedTurnTime] = useState(null) // "HH:MM" when my turn is
+
   const [travelTime, setTravelTime] = useState('20m')
   const [customMinutes, setCustomMinutes] = useState('')
   const [notified, setNotified] = useState(false)
+  const [notifyError, setNotifyError] = useState('')
 
-  const queuePosition = 4
-  const waitMinutes = queuePosition * 6
-  const totalSlots = 12
-  const progress = Math.round(((totalSlots - queuePosition) / totalSlots) * 100)
+  const channelRef = useRef(null)
 
   useEffect(() => {
     if (!location.state?.appointment) {
       fetchNextAppointment()
+    } else {
+      // Already have appointment from navigation state, just load queue data
+      fetchQueueData(location.state.appointment)
+    }
+
+    return () => {
+      // Cleanup Realtime subscription on unmount
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current)
+      }
     }
   }, [])
 
@@ -54,13 +110,14 @@ function LiveQueue() {
         .order('appointment_time', { ascending: true })
 
       if (!error && data?.length) {
-        const appt = data[0]
-        setAppointment({
-          ...appt,
-          doctor_name: appt.users?.full_name,
-          specialization: appt.users?.specialization,
-          clinic_name: appt.users?.clinic_name,
-        })
+        const appt = {
+          ...data[0],
+          doctor_name: data[0].users?.full_name,
+          specialization: data[0].users?.specialization,
+          clinic_name: data[0].users?.clinic_name,
+        }
+        setAppointment(appt)
+        await fetchQueueData(appt)
       } else {
         setAppointment(null)
       }
@@ -69,6 +126,136 @@ function LiveQueue() {
     }
     setLoading(false)
   }
+
+  const fetchQueueData = async (appt) => {
+    if (!appt) return
+    try {
+      // Fetch all confirmed appointments for the same doctor on the same date,
+      // ordered by appointment_time. This gives us the real queue.
+      const { data: queueData, error } = await supabase
+        .from('appointments')
+        .select('id, appointment_time, duration_minutes, status')
+        .eq('doctor_id', appt.doctor_id)
+        .eq('appointment_date', appt.appointment_date)
+        .in('status', ['confirmed', 'in_progress'])
+        .order('appointment_time', { ascending: true })
+
+      if (error || !queueData) return
+
+      // Find my position in the queue
+      const myIndex = queueData.findIndex(q => q.id === appt.id)
+      if (myIndex === -1) return
+
+      const patientsAhead = myIndex // 0-indexed = number of people before me
+      setQueuePosition(patientsAhead)
+      setTotalAhead(patientsAhead)
+
+      // Calculate total wait time = sum of duration_minutes for all appointments before mine
+      const totalWait = queueData
+        .slice(0, myIndex)
+        .reduce((sum, q) => sum + (q.duration_minutes || 15), 0)
+
+      setWaitMinutes(totalWait)
+
+      // Estimate what time it'll be my turn
+      if (appt.appointment_time) {
+        // My turn starts at my appointment_time (slots are pre-assigned by time)
+        // But we also show how long the queue before me will actually take
+        const turnTime = addMinutesToTime(
+          queueData[0].appointment_time, // queue started from first patient's time
+          queueData.slice(0, myIndex).reduce((sum, q) => sum + (q.duration_minutes || 15), 0)
+        )
+        setEstimatedTurnTime(turnTime)
+      }
+
+      // Subscribe to Realtime updates for this doctor's appointments today
+      subscribeToQueue(appt)
+    } catch (err) {
+      console.error('fetchQueueData error:', err)
+    }
+  }
+
+  const subscribeToQueue = (appt) => {
+    // Remove any existing subscription first
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current)
+    }
+
+    const channel = supabase
+      .channel(`queue_${appt.doctor_id}_${appt.appointment_date}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'appointments',
+          filter: `doctor_id=eq.${appt.doctor_id}`,
+        },
+        () => {
+          // Any change to this doctor's appointments → refresh queue data
+          fetchQueueData(appt)
+        }
+      )
+      .subscribe()
+
+    channelRef.current = channel
+  }
+
+  const handleNotifyWhenToLeave = async () => {
+    setNotifyError('')
+    if (!estimatedTurnTime) {
+      setNotifyError('Queue position not available yet.')
+      return
+    }
+
+    try {
+      const perm = await LocalNotifications.requestPermissions()
+      if (perm.display !== 'granted') {
+        setNotifyError('Please allow notifications in device settings.')
+        return
+      }
+
+      const travelMins = travelToMinutes(travelTime, customMinutes)
+      const today = appointment.appointment_date
+
+      // Parse estimated turn time into a Date object
+      const [turnH, turnM] = estimatedTurnTime.split(':').map(Number)
+      const turnDate = new Date()
+      turnDate.setFullYear(...today.split('-').map(Number))
+      turnDate.setHours(turnH, turnM, 0, 0)
+
+      // Notify at (estimated turn time - travel time)
+      const notifyAt = new Date(turnDate.getTime() - travelMins * 60 * 1000)
+
+      if (notifyAt <= new Date()) {
+        setNotifyError('Your turn is too soon — leave now!')
+        setNotified(true)
+        return
+      }
+
+      await LocalNotifications.schedule({
+        notifications: [{
+          id: makeNotifId(`leave_${appointment.id}`),
+          title: '🚗 Time to Leave!',
+          body: `Your appointment with Dr. ${appointment.doctor_name} is in ~${travelMins} min. Leave now!`,
+          schedule: { at: notifyAt },
+          sound: 'default',
+          extra: { appointmentId: appointment.id },
+        }]
+      })
+
+      setNotified(true)
+    } catch (err) {
+      setNotifyError('Could not schedule notification. Please try again.')
+      console.error(err)
+    }
+  }
+
+  // Progress bar: 0 patients ahead = 100%, many ahead = lower %
+  const maxExpectedQueue = 10
+  const progress = queuePosition !== null
+    ? Math.round(((maxExpectedQueue - Math.min(queuePosition, maxExpectedQueue)) / maxExpectedQueue) * 100)
+    : 0
 
   if (loading) return (
     <SidebarProvider>
@@ -129,20 +316,45 @@ function LiveQueue() {
                 Back
               </button>
 
+              {/* Queue position card */}
               <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 mb-4 text-center">
                 <p className="text-xs font-bold text-cyan-500 uppercase tracking-widest mb-3">
                   You're in the queue
                 </p>
-                <div className="text-7xl font-black text-cyan-500 leading-none mb-2">
-                  {queuePosition}
-                </div>
-                <p className="text-gray-500 text-sm mb-4">{queuePosition} patients before you</p>
-                <p className="text-xl font-black text-gray-900 mb-1">Approx. {waitMinutes} min wait</p>
-                <p className="text-gray-400 text-xs mb-5">based on current pace</p>
+
+                {queuePosition === null ? (
+                  <p className="text-gray-400 text-sm py-4">Calculating position...</p>
+                ) : queuePosition === 0 ? (
+                  <>
+                    <div className="text-5xl mb-2">🎉</div>
+                    <p className="text-xl font-black text-green-500 mb-1">You're next!</p>
+                    <p className="text-gray-400 text-sm mb-4">Head to the clinic now</p>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-7xl font-black text-cyan-500 leading-none mb-2">
+                      {queuePosition}
+                    </div>
+                    <p className="text-gray-500 text-sm mb-4">
+                      {queuePosition === 1 ? '1 patient' : `${queuePosition} patients`} before you
+                    </p>
+                    <p className="text-xl font-black text-gray-900 mb-1">
+                      ~{waitMinutes} min wait
+                    </p>
+                    {estimatedTurnTime && (
+                      <p className="text-cyan-500 text-sm font-semibold mb-1">
+                        Your turn around {formatTime(estimatedTurnTime)}
+                      </p>
+                    )}
+                    <p className="text-gray-400 text-xs mb-5">based on actual appointment durations</p>
+                  </>
+                )}
+
                 <div className="flex items-center justify-center gap-1.5 mb-6">
                   <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                  <span className="text-green-500 text-xs font-semibold">Doctor is on time</span>
+                  <span className="text-green-500 text-xs font-semibold">Live — updates automatically</span>
                 </div>
+
                 <div>
                   <div className="flex justify-between text-xs text-gray-400 mb-1.5">
                     <span>Checked in</span>
@@ -157,11 +369,22 @@ function LiveQueue() {
                 </div>
               </div>
 
-              <div className="bg-green-50 border border-green-100 rounded-2xl px-5 py-4 mb-4">
-                <p className="font-bold text-gray-800 text-sm mb-0.5">Relax, you still have time</p>
-                <p className="text-gray-500 text-xs">We will let you know when to start moving.</p>
-              </div>
+              {/* Relax banner */}
+              {queuePosition !== null && queuePosition > 2 && (
+                <div className="bg-green-50 border border-green-100 rounded-2xl px-5 py-4 mb-4">
+                  <p className="font-bold text-gray-800 text-sm mb-0.5">Relax, you still have time</p>
+                  <p className="text-gray-500 text-xs">Set your travel time below and we'll tell you exactly when to leave.</p>
+                </div>
+              )}
 
+              {queuePosition === 0 && (
+                <div className="bg-cyan-50 border border-cyan-200 rounded-2xl px-5 py-4 mb-4">
+                  <p className="font-bold text-cyan-700 text-sm mb-0.5">🏃 Head to the clinic now!</p>
+                  <p className="text-cyan-500 text-xs">You're next in line — don't keep the doctor waiting.</p>
+                </div>
+              )}
+
+              {/* Travel time + notify */}
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-5 py-4 mb-4">
                 <div className="flex items-center gap-2 mb-1">
                   <svg className="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -169,12 +392,12 @@ function LiveQueue() {
                   </svg>
                   <p className="font-bold text-gray-800 text-sm">Set your travel time</p>
                 </div>
-                <p className="text-gray-400 text-xs mb-3 ml-6">Tap to select — saved instantly.</p>
+                <p className="text-gray-400 text-xs mb-3 ml-6">We'll notify you at the right time to leave.</p>
                 <div className="flex gap-2 mb-3">
                   {TRAVEL_OPTIONS.map(opt => (
                     <button
                       key={opt}
-                      onClick={() => { setTravelTime(opt); setCustomMinutes('') }}
+                      onClick={() => { setTravelTime(opt); setCustomMinutes(''); setNotified(false); setNotifyError('') }}
                       className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all duration-150 ${
                         travelTime === opt && !customMinutes
                           ? 'bg-cyan-500 text-white shadow-sm scale-105'
@@ -190,17 +413,24 @@ function LiveQueue() {
                   min="1"
                   max="120"
                   value={customMinutes}
-                  onChange={e => { setCustomMinutes(e.target.value); setTravelTime('') }}
+                  onChange={e => { setCustomMinutes(e.target.value); setTravelTime(''); setNotified(false); setNotifyError('') }}
                   placeholder="Or enter custom minutes"
                   className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-cyan-400 placeholder-gray-300"
                 />
               </div>
 
+              {notifyError && (
+                <div className="bg-red-50 border border-red-200 text-red-600 text-xs px-4 py-2.5 rounded-xl mb-3">
+                  {notifyError}
+                </div>
+              )}
+
               <button
-                onClick={() => setNotified(true)}
+                onClick={handleNotifyWhenToLeave}
+                disabled={notified}
                 className={`w-full py-4 rounded-2xl font-bold text-sm mb-2 transition-all ${
                   notified
-                    ? 'bg-green-500 text-white'
+                    ? 'bg-green-500 text-white cursor-default'
                     : 'bg-gradient-to-r from-cyan-500 to-cyan-400 text-white hover:from-cyan-600 hover:to-cyan-500 shadow-md'
                 }`}
               >
@@ -209,7 +439,7 @@ function LiveQueue() {
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
-                    You'll be notified!
+                    You'll be notified when to leave!
                   </span>
                 ) : (
                   <span className="flex items-center justify-center gap-2">
@@ -221,9 +451,13 @@ function LiveQueue() {
                 )}
               </button>
               <p className="text-center text-gray-400 text-xs mb-5">
-                We'll notify you before your turn — no need to keep checking.
+                {notified && estimatedTurnTime
+                  ? `Notification set for ${travelToMinutes(travelTime, customMinutes)} min before your estimated turn at ${formatTime(estimatedTurnTime)}`
+                  : "We'll notify you before your turn — no need to keep checking."
+                }
               </p>
 
+              {/* Doctor info */}
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-5 py-4 mb-4">
                 <div className="flex items-center gap-3">
                   <div className={`w-11 h-11 ${getColor(appointment.doctor_name)} rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0`}>
@@ -241,14 +475,17 @@ function LiveQueue() {
                       </p>
                     )}
                     <p className="text-gray-400 text-xs mt-0.5">
-                      📅 {appointment.appointment_date} &nbsp;🕐 {appointment.appointment_time}
+                      📅 {appointment.appointment_date} &nbsp;🕐 {formatTime(appointment.appointment_time)}
                     </p>
                   </div>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <button className="py-3 rounded-2xl border border-gray-200 text-gray-600 text-sm font-semibold hover:bg-gray-50 transition-colors">
+                <button
+                  onClick={() => navigate('/doctors')}
+                  className="py-3 rounded-2xl border border-gray-200 text-gray-600 text-sm font-semibold hover:bg-gray-50 transition-colors"
+                >
                   Reschedule
                 </button>
                 <button

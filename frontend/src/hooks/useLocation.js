@@ -1,22 +1,25 @@
 import { useState, useEffect, useCallback } from 'react'
 
 const STORAGE_KEY = 'mediinfo_user_location'
+
 const getStored = () => {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) }
   catch { return null }
 }
 
 export function useLocation() {
-  const [location, setLocation] = useState(getStored)
-  const [status, setStatus] = useState(() => getStored() ? 'manual' : 'idle')
+  const stored = getStored()
+  const [location, setLocation] = useState(stored ? { lat: stored.lat, lng: stored.lng } : null)
+  const [status, setStatus] = useState(() => stored?.source || 'idle')
   const [error, setError] = useState(null)
 
   const save = useCallback((lat, lng, source = 'manual') => {
-    const loc = { lat, lng }
-    setLocation(loc)
+    const loc = { lat, lng, source }
+    setLocation({ lat, lng })
     setStatus(source)
     setError(null)
     localStorage.setItem(STORAGE_KEY, JSON.stringify(loc))
+
     const token = localStorage.getItem('token')
     if (token) {
       fetch(
@@ -27,16 +30,27 @@ export function useLocation() {
   }, [])
 
   const detect = useCallback(() => {
-    if (!navigator.geolocation) { setError('Geolocation not supported.'); return }
+    if (!navigator.geolocation) {
+      setError('Geolocation not supported on this device.')
+      return
+    }
     setStatus('detecting')
+    setError(null)
     navigator.geolocation.getCurrentPosition(
       (pos) => save(pos.coords.latitude, pos.coords.longitude, 'auto'),
-      () => { setError('Could not detect location. Enter it manually.'); setStatus(getStored() ? 'manual' : 'idle') },
+      () => {
+        setError('Could not detect location. Enter your area name instead.')
+        const prev = getStored()
+        setStatus(prev?.source || 'idle')
+      },
       { timeout: 8000, maximumAge: 300_000 }
     )
   }, [save])
 
-  useEffect(() => { if (!getStored()) detect() }, []) // eslint-disable-line
+  // Auto-detect on first load only if nothing is stored
+  useEffect(() => {
+    if (!getStored()) detect()
+  }, []) // eslint-disable-line
 
   return { location, status, error, detect, save }
 }
