@@ -13,14 +13,32 @@ const greeting = () => {
   return 'Good evening,'
 }
 
-const getWeekDays = () => {
+// Returns 7 days starting from the given Monday-anchored weekStart date
+const getWeekDays = (weekStart) => {
   const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
-  const today = new Date()
+  const todayStr = new Date().toISOString().split('T')[0]
   return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(today)
-    d.setDate(today.getDate() + i)
-    return { label: days[d.getDay()], date: d.getDate(), isToday: i === 0 }
+    const d = new Date(weekStart)
+    d.setDate(weekStart.getDate() + i)
+    const dateStr = d.toISOString().split('T')[0]
+    return {
+      label: days[d.getDay()],
+      date: d.getDate(),
+      dateStr,
+      isToday: dateStr === todayStr,
+      fullDate: new Date(d),
+    }
   })
+}
+
+// Get the Monday of the week containing a given date
+const getWeekStart = (date) => {
+  const d = new Date(date)
+  const day = d.getDay() // 0=Sun
+  const diff = day === 0 ? -6 : 1 - day // shift to Monday
+  d.setDate(d.getDate() + diff)
+  d.setHours(0, 0, 0, 0)
+  return d
 }
 
 function StatCard({ icon, value, label, sub, subColor = 'text-cyan-500' }) {
@@ -88,7 +106,41 @@ function DoctorDashboard() {
   const [filter, setFilter] = useState('pending')
   const [search, setSearch] = useState('')
   const [nearbyPatients, setNearbyPatients] = useState([])
-  const weekDays = getWeekDays()
+
+  // Calendar state
+  const todayStr = new Date().toISOString().split('T')[0]
+  const [weekStart, setWeekStart] = useState(() => getWeekStart(new Date()))
+  const [selectedDateStr, setSelectedDateStr] = useState(todayStr)
+  const weekDays = getWeekDays(weekStart)
+
+  // Week label for display
+  const weekLabel = (() => {
+    const end = new Date(weekStart)
+    end.setDate(weekStart.getDate() + 6)
+    const opts = { day: 'numeric', month: 'short' }
+    return `${weekStart.toLocaleDateString('en-IN', opts)} – ${end.toLocaleDateString('en-IN', opts)}`
+  })()
+
+  const goToPrevWeek = () => {
+    setWeekStart(prev => {
+      const d = new Date(prev)
+      d.setDate(d.getDate() - 7)
+      return d
+    })
+  }
+
+  const goToNextWeek = () => {
+    setWeekStart(prev => {
+      const d = new Date(prev)
+      d.setDate(d.getDate() + 7)
+      return d
+    })
+  }
+
+  const goToToday = () => {
+    setWeekStart(getWeekStart(new Date()))
+    setSelectedDateStr(todayStr)
+  }
 
   useEffect(() => {
     if (user.role !== 'doctor') { navigate('/home'); return }
@@ -128,11 +180,7 @@ function DoctorDashboard() {
       .order('appointment_date', { ascending: true })
 
     if (!error && data) {
-      const normalized = data.map(a => ({
-        ...a,
-        patient_name: a.users?.full_name,
-      }))
-      setAppointments(normalized)
+      setAppointments(data.map(a => ({ ...a, patient_name: a.users?.full_name })))
     }
     setLoading(false)
   }
@@ -140,12 +188,7 @@ function DoctorDashboard() {
   const handleConfirm = async (id) => {
     setActing(id)
     const { error } = await supabase.from('appointments').update({ status: 'confirmed' }).eq('id', id)
-    if (error) {
-      console.error('Confirm error:', error)
-      alert(JSON.stringify(error))
-    } else {
-      setAppointments(prev => prev.map(a => a.id === id ? { ...a, status: 'confirmed' } : a))
-    }
+    if (!error) setAppointments(prev => prev.map(a => a.id === id ? { ...a, status: 'confirmed' } : a))
     setActing(null)
   }
 
@@ -168,13 +211,25 @@ function DoctorDashboard() {
     { key: 'all', label: `All (${appointments.length})` },
   ]
 
+  // Appointments filtered by selected day + status/search
   const displayed = appointments.filter(a => {
+    const matchDate = a.appointment_date === selectedDateStr
     const matchFilter = filter === 'all' || a.status === filter
     const matchSearch = !search ||
       a.patient_name?.toLowerCase().includes(search.toLowerCase()) ||
       (a.issue || '').toLowerCase().includes(search.toLowerCase())
-    return matchFilter && matchSearch
+    return matchDate && matchFilter && matchSearch
   })
+
+  // Count per day for calendar dot indicators
+  const countForDate = (dateStr) => appointments.filter(a => a.appointment_date === dateStr).length
+
+  // Label for selected day in the appointments panel
+  const selectedDayLabel = (() => {
+    if (selectedDateStr === todayStr) return 'Today'
+    const d = new Date(selectedDateStr)
+    return d.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short' })
+  })()
 
   return (
     <SidebarProvider>
@@ -234,10 +289,12 @@ function DoctorDashboard() {
             </div>
 
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+
+              {/* Appointments panel — filtered by selected day */}
               <div className="xl:col-span-2 bg-white rounded-2xl shadow-sm overflow-hidden">
                 <div className="p-5 border-b border-gray-100 flex items-center justify-between">
                   <div>
-                    <h2 className="text-base font-bold text-gray-800">Appointments</h2>
+                    <h2 className="text-base font-bold text-gray-800">Appointments — {selectedDayLabel}</h2>
                     <p className="text-xs text-gray-400">Real-time updates via Supabase</p>
                   </div>
                   <button onClick={fetchAppointments} className="text-xs text-gray-500 border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-gray-50">
@@ -269,7 +326,7 @@ function DoctorDashboard() {
                     <div className="flex items-center justify-center py-16 text-gray-300">Loading…</div>
                   ) : displayed.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-16 text-gray-300">
-                      <p className="text-sm">No {filter === 'all' ? '' : filter} appointments</p>
+                      <p className="text-sm">No {filter === 'all' ? '' : filter} appointments on {selectedDayLabel}</p>
                     </div>
                   ) : (
                     displayed.map(appt => (
@@ -280,6 +337,8 @@ function DoctorDashboard() {
               </div>
 
               <div className="space-y-4">
+
+                {/* Profile card */}
                 <div className="bg-white rounded-2xl shadow-sm p-5">
                   <h3 className="text-sm font-bold text-gray-800 mb-3">Profile</h3>
                   <div className="space-y-2.5">
@@ -310,20 +369,62 @@ function DoctorDashboard() {
                   </div>
                 </div>
 
+                {/* Calendar card — full navigation */}
                 <div className="bg-white rounded-2xl shadow-sm p-5">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-sm font-bold text-gray-800">This week</h3>
+                  {/* Week navigation header */}
+                  <div className="flex items-center justify-between mb-3">
+                    <button onClick={goToPrevWeek}
+                      className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors text-sm">
+                      ‹
+                    </button>
+                    <div className="text-center">
+                      <h3 className="text-xs font-bold text-gray-800">{weekLabel}</h3>
+                    </div>
+                    <button onClick={goToNextWeek}
+                      className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors text-sm">
+                      ›
+                    </button>
                   </div>
+
+                  {/* Day grid */}
                   <div className="grid grid-cols-7 gap-1">
-                    {weekDays.map((d, i) => (
-                      <div key={i} className={`flex flex-col items-center py-2 rounded-xl text-xs ${d.isToday ? 'bg-cyan-500 text-white' : 'text-gray-400 hover:bg-gray-50'}`}>
-                        <span className="font-semibold text-[10px]">{d.label}</span>
-                        <span className={`font-bold text-sm mt-0.5 ${d.isToday ? 'text-white' : 'text-gray-700'}`}>{d.date}</span>
-                      </div>
-                    ))}
+                    {weekDays.map((d, i) => {
+                      const isSelected = d.dateStr === selectedDateStr
+                      const count = countForDate(d.dateStr)
+                      return (
+                        <button
+                          key={i}
+                          onClick={() => setSelectedDateStr(d.dateStr)}
+                          className={`flex flex-col items-center py-2 rounded-xl text-xs transition-colors relative ${
+                            isSelected
+                              ? 'bg-cyan-500 text-white shadow-sm'
+                              : d.isToday
+                              ? 'bg-cyan-50 text-cyan-600 ring-1 ring-cyan-200'
+                              : 'text-gray-400 hover:bg-gray-50'
+                          }`}>
+                          <span className="font-semibold text-[10px]">{d.label}</span>
+                          <span className={`font-bold text-sm mt-0.5 ${isSelected ? 'text-white' : d.isToday ? 'text-cyan-600' : 'text-gray-700'}`}>
+                            {d.date}
+                          </span>
+                          {/* Dot indicator for days with appointments */}
+                          {count > 0 && (
+                            <span className={`w-1 h-1 rounded-full mt-0.5 ${isSelected ? 'bg-white' : 'bg-cyan-400'}`} />
+                          )}
+                        </button>
+                      )
+                    })}
                   </div>
+
+                  {/* Today shortcut */}
+                  {selectedDateStr !== todayStr && (
+                    <button onClick={goToToday}
+                      className="w-full mt-3 text-xs text-cyan-500 font-semibold py-1.5 rounded-lg hover:bg-cyan-50 transition-colors">
+                      Back to today
+                    </button>
+                  )}
                 </div>
 
+                {/* CTA */}
                 <div className="bg-gradient-to-br from-cyan-500 to-cyan-700 rounded-2xl p-5 text-white">
                   <p className="font-bold text-sm mb-1">Boost your visibility</p>
                   <p className="text-xs opacity-80 leading-snug mb-3">Keep your availability updated to get more bookings.</p>

@@ -10,12 +10,80 @@ function Toast({ toasts, onDismiss }) {
     <div className="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none">
       {toasts.map(t => (
         <div key={t.id}
-          className="flex items-start gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-medium pointer-events-auto max-w-xs bg-cyan-600 text-white">
-          <span className="text-base leading-none mt-0.5">🔔</span>
+          className={`flex items-start gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-medium pointer-events-auto max-w-xs ${t.type === 'error' ? 'bg-red-500' : 'bg-cyan-600'} text-white`}>
+          <span className="text-base leading-none mt-0.5">{t.type === 'error' ? '⚠️' : '🔔'}</span>
           <span className="flex-1">{t.message}</span>
           <button onClick={() => onDismiss(t.id)} className="opacity-70 hover:opacity-100 leading-none mt-0.5">✕</button>
         </div>
       ))}
+    </div>
+  )
+}
+
+// Cancel confirmation modal
+function CancelModal({ appointment, onConfirm, onClose }) {
+  const [reason, setReason] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const presets = [
+    'Emergency came up',
+    'Doctor unwell today',
+    'Clinic closed unexpectedly',
+    'Rescheduling required',
+  ]
+
+  const handleSubmit = async () => {
+    if (!reason.trim()) return
+    setSubmitting(true)
+    await onConfirm(appointment.id, reason.trim())
+    setSubmitting(false)
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-black text-gray-900">Cancel Appointment</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg leading-none">✕</button>
+        </div>
+
+        <div className="bg-red-50 rounded-xl px-4 py-3 text-sm">
+          <p className="font-semibold text-gray-800">{appointment.patient_name}</p>
+          <p className="text-gray-400 text-xs mt-0.5">{appointment.appointment_date} · {appointment.appointment_time}</p>
+        </div>
+
+        <div>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Reason for cancellation</p>
+          <div className="flex flex-wrap gap-2 mb-3">
+            {presets.map(p => (
+              <button key={p} onClick={() => setReason(p)}
+                className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${reason === p ? 'bg-red-500 text-white border-red-500' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
+                {p}
+              </button>
+            ))}
+          </div>
+          <textarea
+            value={reason}
+            onChange={e => setReason(e.target.value)}
+            placeholder="Or type a custom reason…"
+            rows={3}
+            className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-300 resize-none"
+          />
+        </div>
+
+        <p className="text-xs text-gray-400">The patient will be notified with this reason.</p>
+
+        <div className="flex gap-3 pt-1">
+          <button onClick={onClose} className="flex-1 py-2.5 border border-gray-200 text-gray-500 text-sm font-semibold rounded-xl hover:bg-gray-50">
+            Keep Appointment
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={!reason.trim() || submitting}
+            className="flex-1 py-2.5 bg-red-500 text-white text-sm font-bold rounded-xl hover:bg-red-600 disabled:opacity-50 transition-colors">
+            {submitting ? 'Cancelling…' : 'Cancel & Notify Patient'}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -30,12 +98,13 @@ function DoctorAppointments() {
   const [search, setSearch] = useState('')
   const [toasts, setToasts] = useState([])
   const [lastUpdated, setLastUpdated] = useState(null)
+  const [cancelTarget, setCancelTarget] = useState(null) // appointment to cancel
   const prevAppointments = useRef([])
   const toastCounter = useRef(0)
 
-  const addToast = (message) => {
+  const addToast = (message, type = 'info') => {
     const id = ++toastCounter.current
-    setToasts(prev => [...prev, { id, message }])
+    setToasts(prev => [...prev, { id, message, type }])
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 6000)
   }
 
@@ -46,7 +115,7 @@ function DoctorAppointments() {
 
     const { data, error } = await supabase
       .from('appointments')
-      .select('*, users!appointments_patient_id_fkey(full_name)')
+      .select('*, users!appointments_patient_id_fkey(full_name, fcm_token)')
       .eq('doctor_id', user.id)
       .gte('appointment_date', now.toISOString().split('T')[0])
       .lte('appointment_date', limit.toISOString().split('T')[0])
@@ -57,6 +126,7 @@ function DoctorAppointments() {
     const normalized = data.map(a => ({
       ...a,
       patient_name: a.users?.full_name,
+      patient_fcm_token: a.users?.fcm_token,
     }))
 
     // Detect new bookings for toast
@@ -79,7 +149,6 @@ function DoctorAppointments() {
     if (user.role !== 'doctor') { navigate('/home'); return }
     fetchAppointments()
 
-    // Real-time — replaces polling
     const channel = supabase
       .channel('doctor-appts-list')
       .on('postgres_changes', {
@@ -105,10 +174,57 @@ function DoctorAppointments() {
     setActing(null)
   }
 
+  // Cancel a confirmed appointment + send push notification to patient
+  const handleCancelConfirmed = async (id, reason) => {
+    setActing(id)
+    try {
+      // 1. Update status in Supabase
+      const { error } = await supabase
+        .from('appointments')
+        .update({ status: 'cancelled', cancellation_reason: reason })
+        .eq('id', id)
+
+      if (error) throw error
+
+      // 2. Update local state
+      setAppointments(prev => prev.map(a => a.id === id ? { ...a, status: 'cancelled', cancellation_reason: reason } : a))
+
+      // 3. Send push notification via Supabase Edge Function
+      const appt = appointments.find(a => a.id === id)
+      if (appt?.patient_fcm_token) {
+        const { data: { session } } = await supabase.auth.getSession()
+        await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-notification`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session?.access_token}`,
+            },
+            body: JSON.stringify({
+              token: appt.patient_fcm_token,
+              title: 'Appointment Cancelled',
+              body: `Your appointment on ${appt.appointment_date} at ${appt.appointment_time} was cancelled. Reason: ${reason}`,
+              data: { type: 'appointment_cancelled', appointment_id: String(id) },
+            }),
+          }
+        )
+      }
+
+      addToast(`Appointment cancelled. Patient notified.`)
+      setCancelTarget(null)
+    } catch (err) {
+      console.error('Cancel error:', err)
+      addToast('Failed to cancel appointment. Please try again.', 'error')
+    }
+    setActing(null)
+  }
+
   const statusStyles = {
     confirmed: 'bg-green-100 text-green-700',
     cancelled: 'bg-red-100 text-red-600',
     pending: 'bg-amber-100 text-amber-700',
+    completed: 'bg-gray-100 text-gray-500',
   }
 
   const pendingCount = appointments.filter(a => a.status === 'pending').length
@@ -130,7 +246,6 @@ function DoctorAppointments() {
     return new Date(dateStr).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short' })
   }
 
-  // Group by date
   const groups = displayed.reduce((acc, appt) => {
     const key = appt.appointment_date
     if (!acc[key]) acc[key] = []
@@ -144,6 +259,16 @@ function DoctorAppointments() {
       <div className="min-h-screen bg-[#f0f4f8] flex">
         <DoctorSidebar />
         <Toast toasts={toasts} onDismiss={(id) => setToasts(prev => prev.filter(t => t.id !== id))} />
+
+        {/* Cancel modal */}
+        {cancelTarget && (
+          <CancelModal
+            appointment={cancelTarget}
+            onConfirm={handleCancelConfirmed}
+            onClose={() => setCancelTarget(null)}
+          />
+        )}
+
         <div className="lg:ml-56 flex-1 flex flex-col">
           <DoctorTopBar />
           <div className="flex-1 px-4 sm:px-6 lg:px-8 py-6 space-y-5">
@@ -236,11 +361,16 @@ function DoctorAppointments() {
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-semibold text-gray-800 truncate">{appt.patient_name}</p>
                                 <p className="text-xs text-gray-400 truncate">{appt.issue || 'General consultation'}</p>
+                                {/* Show cancellation reason if cancelled */}
+                                {appt.status === 'cancelled' && appt.cancellation_reason && (
+                                  <p className="text-xs text-red-400 truncate mt-0.5">Reason: {appt.cancellation_reason}</p>
+                                )}
                               </div>
                               <div className="text-right shrink-0">
                                 <p className="text-sm font-bold text-gray-700">{appt.appointment_time}</p>
                               </div>
-                              {appt.status === 'pending' ? (
+
+                              {appt.status === 'pending' && (
                                 <div className="flex gap-2 shrink-0">
                                   <button onClick={() => handleConfirm(appt.id)} disabled={acting === appt.id}
                                     className="px-3 py-1.5 bg-green-500 text-white text-xs font-semibold rounded-lg hover:bg-green-600 disabled:opacity-50">
@@ -251,7 +381,24 @@ function DoctorAppointments() {
                                     {acting === appt.id ? '…' : 'Reject'}
                                   </button>
                                 </div>
-                              ) : (
+                              )}
+
+                              {appt.status === 'confirmed' && (
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold capitalize ${statusStyles.confirmed}`}>
+                                    Accepted
+                                  </span>
+                                  {/* Emergency cancel button */}
+                                  <button
+                                    onClick={() => setCancelTarget(appt)}
+                                    disabled={acting === appt.id}
+                                    className="px-3 py-1.5 border border-red-200 text-red-500 text-xs font-semibold rounded-lg hover:bg-red-50 disabled:opacity-50 transition-colors">
+                                    Cancel
+                                  </button>
+                                </div>
+                              )}
+
+                              {(appt.status === 'cancelled' || appt.status === 'completed') && (
                                 <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold capitalize shrink-0 ${statusStyles[appt.status] || 'bg-gray-100 text-gray-500'}`}>
                                   {appt.status}
                                 </span>
