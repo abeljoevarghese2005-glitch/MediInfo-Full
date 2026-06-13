@@ -11,6 +11,23 @@ const getInitials = (name) => name?.split(' ').map(n => n[0]).join('').toUpperCa
 const formatDate = (dateStr) =>
   new Date(dateStr).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
 
+const DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+
+function generateSlots(start, end, duration = 15) {
+  const slots = []
+  const [sh, sm] = start.split(':').map(Number)
+  const [eh, em] = end.split(':').map(Number)
+  let current = sh * 60 + sm
+  const endMin = eh * 60 + em
+  while (current + duration <= endMin) {
+    const h = Math.floor(current / 60)
+    const m = current % 60
+    slots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`)
+    current += duration
+  }
+  return slots
+}
+
 function Toast({ toasts, onDismiss }) {
   return (
     <div className="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none">
@@ -29,6 +46,148 @@ function Toast({ toasts, onDismiss }) {
   )
 }
 
+function RescheduleModal({ appointment, onClose, onSuccess, addToast }) {
+  const today = new Date().toISOString().split('T')[0]
+  const [newDate, setNewDate] = useState('')
+  const [availableSlots, setAvailableSlots] = useState([])
+  const [bookedSlots, setBookedSlots] = useState([])
+  const [newTime, setNewTime] = useState('')
+  const [slotsLoading, setSlotsLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (newDate) fetchSlots(newDate)
+    else { setAvailableSlots([]); setBookedSlots([]) }
+  }, [newDate])
+
+  const fetchSlots = async (date) => {
+    setSlotsLoading(true)
+    setNewTime('')
+    try {
+      const dayName = DAYS[new Date(date).getDay()]
+      const { data: avail } = await supabase
+        .from('doctor_availability')
+        .select('start_time, end_time, slot_duration')
+        .eq('doctor_id', appointment.doctor_id)
+        .eq('day_of_week', dayName)
+        .eq('is_available', true)
+        .single()
+
+      if (!avail) { setAvailableSlots([]); setSlotsLoading(false); return }
+
+      const slots = generateSlots(
+        avail.start_time.slice(0, 5),
+        avail.end_time.slice(0, 5),
+        avail.slot_duration || 15
+      )
+      setAvailableSlots(slots)
+
+      const { data: existing } = await supabase
+        .from('appointments')
+        .select('appointment_time')
+        .eq('doctor_id', appointment.doctor_id)
+        .eq('appointment_date', date)
+        .neq('id', appointment.id)
+        .in('status', ['pending', 'confirmed', 'accepted'])
+
+      setBookedSlots(existing ? existing.map(a => a.appointment_time.slice(0, 5)) : [])
+    } catch {
+      setAvailableSlots([])
+    }
+    setSlotsLoading(false)
+  }
+
+  const handleReschedule = async () => {
+    if (!newDate || !newTime) return
+    setSaving(true)
+    try {
+      const { error } = await supabase
+        .from('appointments')
+        .update({
+          appointment_date: newDate,
+          appointment_time: newTime,
+          status: 'pending',
+        })
+        .eq('id', appointment.id)
+
+      if (error) throw error
+      addToast(`Appointment rescheduled to ${formatDate(newDate)} at ${newTime}. A rescheduling fee may apply.`, 'info')
+      onSuccess()
+      onClose()
+    } catch (err) {
+      addToast('Failed to reschedule. Please try again.', 'cancelled')
+    }
+    setSaving(false)
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 px-4 pb-6 sm:pb-0">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-bold text-gray-800 text-lg">Reschedule Appointment</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+        </div>
+
+        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4 text-sm text-amber-700">
+          ⚠️ Rescheduling resets your appointment to pending. A rescheduling fee may be deducted by the clinic.
+        </div>
+
+        <div className="flex items-center gap-3 bg-cyan-50 rounded-xl p-3 mb-4">
+          <div className={`w-10 h-10 ${getColor(appointment.doctor_name)} rounded-full flex items-center justify-center text-white font-bold shrink-0`}>
+            {getInitials(appointment.doctor_name)}
+          </div>
+          <div>
+            <p className="font-semibold text-gray-800 text-sm">{appointment.doctor_name}</p>
+            <p className="text-cyan-600 text-xs">{appointment.specialization || 'General Physician'}</p>
+            <p className="text-gray-400 text-xs">Currently: {formatDate(appointment.appointment_date)} at {appointment.appointment_time}</p>
+          </div>
+        </div>
+
+        <div className="mb-4">
+          <label className="text-xs font-semibold text-gray-500 mb-1 block">New Date</label>
+          <input type="date" min={today} value={newDate}
+            onChange={e => setNewDate(e.target.value)}
+            className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-gray-800 text-sm" />
+        </div>
+
+        <div className="mb-5">
+          <label className="text-xs font-semibold text-gray-500 mb-2 block">New Time Slot</label>
+          {!newDate ? (
+            <p className="text-gray-400 text-xs">Select a date first</p>
+          ) : slotsLoading ? (
+            <p className="text-gray-400 text-xs">Loading slots...</p>
+          ) : availableSlots.length === 0 ? (
+            <p className="text-red-400 text-xs">No availability on this day</p>
+          ) : (
+            <div className="grid grid-cols-4 gap-2">
+              {availableSlots.map(slot => {
+                const isBooked = bookedSlots.includes(slot)
+                const isSelected = newTime === slot
+                return (
+                  <button key={slot} disabled={isBooked}
+                    onClick={() => !isBooked && setNewTime(slot)}
+                    className={`py-2 rounded-lg text-xs font-medium transition-all ${
+                      isBooked ? 'bg-gray-100 text-gray-300 cursor-not-allowed line-through'
+                      : isSelected ? 'bg-cyan-500 text-white'
+                      : 'bg-gray-50 text-gray-700 hover:bg-cyan-50'
+                    }`}>
+                    {slot}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        <button onClick={handleReschedule} disabled={saving || !newDate || !newTime}
+          className="w-full bg-cyan-500 text-white py-3 rounded-xl font-bold hover:bg-cyan-600 disabled:opacity-60">
+          {saving ? 'Rescheduling...' : '📅 Confirm Reschedule'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function MyAppointments() {
   const navigate = useNavigate()
   const user = JSON.parse(localStorage.getItem('user') || '{}')
@@ -37,6 +196,7 @@ function MyAppointments() {
   const [cancelling, setCancelling] = useState(null)
   const [toasts, setToasts] = useState([])
   const [lastUpdated, setLastUpdated] = useState(null)
+  const [rescheduling, setRescheduling] = useState(null)
   const prevAppointments = useRef([])
   const toastCounter = useRef(0)
 
@@ -65,7 +225,6 @@ function MyAppointments() {
       specialization: a.users?.specialization,
     }))
 
-    // Detect status changes for toasts
     if (prevAppointments.current.length > 0) {
       normalized.forEach(newAppt => {
         const old = prevAppointments.current.find(a => a.id === newAppt.id)
@@ -74,7 +233,7 @@ function MyAppointments() {
         if (newAppt.status === 'confirmed')
           addToast(`Your appointment with ${doc} has been confirmed! 🎉`, 'confirmed')
         else if (newAppt.status === 'cancelled')
-          addToast(`Your appointment with ${doc} was rejected by the clinic.`, 'cancelled')
+          addToast(`Your appointment with ${doc} was cancelled by the clinic.`, 'cancelled')
       })
     }
 
@@ -86,20 +245,13 @@ function MyAppointments() {
 
   useEffect(() => {
     fetchAppointments()
-
-    // Real-time subscription — replaces polling
     const channel = supabase
       .channel('appointments-changes')
       .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'appointments',
+        event: '*', schema: 'public', table: 'appointments',
         filter: `patient_id=eq.${user.id}`,
-      }, () => {
-        fetchAppointments()
-      })
+      }, () => { fetchAppointments() })
       .subscribe()
-
     return () => supabase.removeChannel(channel)
   }, [])
 
@@ -132,6 +284,14 @@ function MyAppointments() {
       <div className="min-h-screen bg-gray-50 flex">
         <Sidebar />
         <Toast toasts={toasts} onDismiss={(id) => setToasts(prev => prev.filter(t => t.id !== id))} />
+        {rescheduling && (
+          <RescheduleModal
+            appointment={rescheduling}
+            onClose={() => setRescheduling(null)}
+            onSuccess={fetchAppointments}
+            addToast={addToast}
+          />
+        )}
         <div className="lg:ml-56 flex-1 flex flex-col">
           <TopBar />
           <div className="flex-1 px-8 py-8">
@@ -206,6 +366,10 @@ function MyAppointments() {
                                 <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
                                 Join Live Queue
                               </button>
+                              <button onClick={() => setRescheduling(appt)}
+                                className="px-4 py-2.5 rounded-xl border border-cyan-200 text-cyan-600 text-sm font-semibold hover:bg-cyan-50">
+                                Reschedule
+                              </button>
                               <button onClick={() => handleCancel(appt.id)} disabled={cancelling === appt.id}
                                 className="px-4 py-2.5 rounded-xl border border-red-200 text-red-500 text-sm font-semibold hover:bg-red-50 disabled:opacity-50">
                                 {cancelling === appt.id ? '...' : 'Cancel'}
@@ -216,6 +380,10 @@ function MyAppointments() {
                               <div className="flex-1 flex items-center gap-2 bg-amber-50 border border-amber-100 text-amber-600 py-2.5 px-4 rounded-xl text-sm font-medium">
                                 ⏳ Awaiting approval
                               </div>
+                              <button onClick={() => setRescheduling(appt)}
+                                className="px-4 py-2.5 rounded-xl border border-cyan-200 text-cyan-600 text-sm font-semibold hover:bg-cyan-50">
+                                Reschedule
+                              </button>
                               <button onClick={() => handleCancel(appt.id)} disabled={cancelling === appt.id}
                                 className="px-4 py-2.5 rounded-xl border border-red-200 text-red-500 text-sm font-semibold hover:bg-red-50 disabled:opacity-50">
                                 {cancelling === appt.id ? '...' : 'Cancel'}

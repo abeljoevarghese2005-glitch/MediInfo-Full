@@ -6,8 +6,6 @@ import { SidebarProvider } from '../components/SidebarContext'
 import LocationBar from '../components/LocationBar'
 import { supabase } from '../lib/supabase'
 
-const TIME_SLOTS = ['10:30', '13:00', '16:00', '09:00', '11:00', '14:00']
-
 const SPECIALIZATIONS = [
   'All', 'General Physician', 'Cardiologist', 'Dermatologist',
   'Neurologist', 'Orthopedic', 'Pediatrician', 'Psychiatrist', 'ENT'
@@ -16,6 +14,23 @@ const SPECIALIZATIONS = [
 const avatarColors = ['bg-cyan-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-500', 'bg-pink-500', 'bg-blue-500']
 const getColor = (name) => avatarColors[(name?.charCodeAt(0) || 0) % avatarColors.length]
 const getInitials = (name) => name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'D'
+
+const DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+
+function generateSlots(start, end, duration = 15) {
+  const slots = []
+  const [sh, sm] = start.split(':').map(Number)
+  const [eh, em] = end.split(':').map(Number)
+  let current = sh * 60 + sm
+  const endMin = eh * 60 + em
+  while (current + duration <= endMin) {
+    const h = Math.floor(current / 60)
+    const m = current % 60
+    slots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`)
+    current += duration
+  }
+  return slots
+}
 
 function Doctors() {
   const navigate = useNavigate()
@@ -31,27 +46,83 @@ function Doctors() {
   const [success, setSuccess] = useState('')
   const [error, setError] = useState('')
   const [distanceMap, setDistanceMap] = useState({})
+  const [availableSlots, setAvailableSlots] = useState([])
+  const [bookedSlots, setBookedSlots] = useState([])
+  const [slotsLoading, setSlotsLoading] = useState(false)
 
   const today = new Date().toISOString().split('T')[0]
 
   useEffect(() => { fetchDoctors() }, [filter])
 
+  useEffect(() => {
+    if (selectedDoctor && selectedDate) {
+      fetchSlots(selectedDoctor, selectedDate)
+    } else {
+      setAvailableSlots([])
+      setBookedSlots([])
+    }
+  }, [selectedDoctor, selectedDate])
+
+  const fetchSlots = async (doctor, date) => {
+    setSlotsLoading(true)
+    try {
+      const dayName = DAYS[new Date(date).getDay()]
+
+      // fetch doctor availability for this day
+      const { data: avail } = await supabase
+        .from('doctor_availability')
+        .select('start_time, end_time, slot_duration')
+        .eq('doctor_id', doctor.id)
+        .eq('day_of_week', dayName)
+        .eq('is_available', true)
+        .single()
+
+      if (!avail) {
+        setAvailableSlots([])
+        setBookedSlots([])
+        setSlotsLoading(false)
+        return
+      }
+
+      const slots = generateSlots(
+        avail.start_time.slice(0, 5),
+        avail.end_time.slice(0, 5),
+        avail.slot_duration || 15
+      )
+      setAvailableSlots(slots)
+
+      // fetch already booked slots for this doctor + date
+      const { data: existing } = await supabase
+        .from('appointments')
+        .select('appointment_time')
+        .eq('doctor_id', doctor.id)
+        .eq('appointment_date', date)
+        .in('status', ['pending', 'confirmed', 'accepted'])
+
+      setBookedSlots(existing ? existing.map(a => a.appointment_time.slice(0, 5)) : [])
+    } catch {
+      setAvailableSlots([])
+      setBookedSlots([])
+    }
+    setSlotsLoading(false)
+  }
+
   const handleLocationReady = useCallback(async (loc) => {
-  if (!loc) return
-  try {
-    const { data: { session } } = await supabase.auth.getSession()
-    const token = session?.access_token || ''
-    const spec = filter === 'All' ? '' : `&specialization=${filter}`
-    const res = await fetch(
-      `https://xfuzwuraowhaxqnfolzg.supabase.co/functions/v1/nearby-doctors?lat=${loc.lat}&lng=${loc.lng}&radius=100${spec}`,
-      { headers: { 'Authorization': `Bearer ${token}` } }
-    )
-    const data = await res.json()
-    const map = {}
-    data.forEach(d => { map[d.id] = d.distance_km })
-    setDistanceMap(map)
-  } catch {}
-}, [filter])
+    if (!loc) return
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token || ''
+      const spec = filter === 'All' ? '' : `&specialization=${filter}`
+      const res = await fetch(
+        `https://xfuzwuraowhaxqnfolzg.supabase.co/functions/v1/nearby-doctors?lat=${loc.lat}&lng=${loc.lng}&radius=100${spec}`,
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      )
+      const data = await res.json()
+      const map = {}
+      data.forEach(d => { map[d.id] = d.distance_km })
+      setDistanceMap(map)
+    } catch {}
+  }, [filter])
 
   const fetchDoctors = async () => {
     setLoading(true)
@@ -59,11 +130,7 @@ function Doctors() {
       .from('users')
       .select('id, full_name, specialization, years_of_experience, consultation_fee, phone')
       .eq('role', 'doctor')
-
-    if (filter !== 'All') {
-      query = query.eq('specialization', filter)
-    }
-
+    if (filter !== 'All') query = query.eq('specialization', filter)
     const { data, error } = await query
     setDoctors(error ? [] : data)
     setLoading(false)
@@ -71,9 +138,26 @@ function Doctors() {
 
   const handleBook = async () => {
     if (!selectedDate || !selectedTime) { setError('Please select date and time'); return }
+    if (bookedSlots.includes(selectedTime)) { setError('This slot is already booked'); return }
     setPaying(true)
     setError('')
     try {
+      // check if this patient already booked this slot
+      const { data: existing } = await supabase
+        .from('appointments')
+        .select('id')
+        .eq('doctor_id', selectedDoctor.id)
+        .eq('patient_id', user.id)
+        .eq('appointment_date', selectedDate)
+        .eq('appointment_time', selectedTime)
+        .in('status', ['pending', 'confirmed', 'accepted'])
+
+      if (existing && existing.length > 0) {
+        setError('You already have an appointment at this time')
+        setPaying(false)
+        return
+      }
+
       const { error: bookError } = await supabase.from('appointments').insert({
         patient_id: user.id,
         doctor_id: selectedDoctor.id,
@@ -201,16 +285,35 @@ function Doctors() {
 
                   <div className="mb-4">
                     <label className="text-xs font-semibold text-gray-500 mb-2 block">Select Time Slot</label>
-                    <div className="grid grid-cols-4 gap-2">
-                      {TIME_SLOTS.map(slot => (
-                        <button key={slot} onClick={() => setSelectedTime(slot)}
-                          className={`py-2 rounded-lg text-xs font-medium transition-all ${
-                            selectedTime === slot ? 'bg-cyan-500 text-white' : 'bg-gray-50 text-gray-700 hover:bg-cyan-50'
-                          }`}>
-                          {slot}
-                        </button>
-                      ))}
-                    </div>
+                    {!selectedDate ? (
+                      <p className="text-gray-400 text-xs">Please select a date first</p>
+                    ) : slotsLoading ? (
+                      <p className="text-gray-400 text-xs">Loading available slots...</p>
+                    ) : availableSlots.length === 0 ? (
+                      <p className="text-red-400 text-xs">No availability on this day</p>
+                    ) : (
+                      <div className="grid grid-cols-4 gap-2">
+                        {availableSlots.map(slot => {
+                          const isBooked = bookedSlots.includes(slot)
+                          const isSelected = selectedTime === slot
+                          return (
+                            <button
+                              key={slot}
+                              disabled={isBooked}
+                              onClick={() => !isBooked && setSelectedTime(slot)}
+                              className={`py-2 rounded-lg text-xs font-medium transition-all ${
+                                isBooked
+                                  ? 'bg-gray-100 text-gray-300 cursor-not-allowed line-through'
+                                  : isSelected
+                                  ? 'bg-cyan-500 text-white'
+                                  : 'bg-gray-50 text-gray-700 hover:bg-cyan-50'
+                              }`}>
+                              {slot}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
                   </div>
 
                   <div className="mb-4">
@@ -222,7 +325,7 @@ function Doctors() {
 
                   {error && <div className="bg-red-50 text-red-600 px-3 py-2 rounded-lg text-sm mb-4">❌ {error}</div>}
 
-                  <button onClick={handleBook} disabled={paying}
+                  <button onClick={handleBook} disabled={paying || !selectedTime}
                     className="w-full bg-cyan-500 text-white py-3 rounded-xl font-bold hover:bg-cyan-600 disabled:opacity-60 flex items-center justify-center gap-2">
                     {paying ? 'Booking...' : `📅 Request Appointment — ₹${selectedDoctor.consultation_fee ?? 500}`}
                   </button>

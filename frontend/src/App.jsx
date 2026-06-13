@@ -1,6 +1,7 @@
-import { lazy, Suspense } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { lazy, Suspense, useEffect } from 'react'
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from './lib/supabase'
+import { App as CapApp } from '@capacitor/app'
 
 const Landing = lazy(() => import('./pages/Landing'))
 const Login = lazy(() => import('./pages/Login'))
@@ -49,9 +50,31 @@ supabase.auth.onAuthStateChange((event, session) => {
   }
 })
 
+const HOME_ROUTES = ['/home', '/doctor-dashboard']
+
+function BackButtonHandler() {
+  const navigate = useNavigate()
+  const location = useLocation()
+
+  useEffect(() => {
+    const handler = CapApp.addListener('backButton', () => {
+      const isHome = HOME_ROUTES.includes(location.pathname)
+      if (isHome) {
+        CapApp.exitApp()
+      } else {
+        navigate(-1)
+      }
+    })
+    return () => { handler.then(h => h.remove()) }
+  }, [location, navigate])
+
+  return null
+}
+
 function App() {
   return (
     <BrowserRouter>
+      <BackButtonHandler />
       <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>Loading...</div>}>
         <Routes>
           <Route path="/" element={<Landing />} />
