@@ -190,6 +190,28 @@ function DoctorProfile() {
         .select()
         .single()
       if (error) throw error
+
+      // Sync doctor_availability table so booking slots are always up to date
+      const availRows = []
+      for (const day of DAYS) {
+        const d = editAvail[day]
+        if (d.enabled && d.ranges?.length > 0) {
+          const range = d.ranges[0]
+          availRows.push({
+            doctor_id: user.id,
+            day_of_week: day,
+            start_time: range.start,
+            end_time: range.end,
+            slot_duration: form.time_per_patient,
+            is_available: true,
+          })
+        }
+      }
+      await supabase.from('doctor_availability').delete().eq('doctor_id', user.id)
+      if (availRows.length > 0) {
+        await supabase.from('doctor_availability').insert(availRows)
+      }
+
       const newAvail = normalizeAvail(JSON.stringify(editAvail))
       setProfile({ ...updated, availability: JSON.stringify(editAvail) })
       setAvail(newAvail)
