@@ -71,7 +71,8 @@ function Doctors() {
   const fetchSlots = async (doctor, date) => {
     setSlotsLoading(true)
     try {
-      const dayName = DAYS[new Date(date).getDay()]
+      const [year, month, day] = date.split('-').map(Number)
+const dayName = DAYS[new Date(year, month - 1, day).getDay()]
 
       // fetch doctor availability for this day
       const { data: avail } = await supabase
