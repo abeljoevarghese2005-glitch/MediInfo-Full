@@ -38,7 +38,6 @@ function AIChat() {
     setLoading(true)
 
     try {
-      // Build conversation history for the Edge Function (stateless — send full history)
       const conversationHistory = updatedMessages.map(msg => ({
         role: msg.role === 'ai' ? 'assistant' : 'user',
         content: msg.text,
@@ -88,18 +87,18 @@ function AIChat() {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen bg-gray-50 flex">
+      <div className="min-h-screen bg-gray-50 flex overflow-x-hidden">
         <Sidebar />
-        <div className="lg:ml-56 flex-1 flex flex-col">
+        <div className="lg:ml-56 flex-1 flex flex-col min-w-0">
           <TopBar />
 
-          <div className="flex-1 flex flex-col p-8 gap-4 max-w-3xl w-full">
+          <div className="flex-1 flex flex-col p-4 sm:p-8 gap-4 max-w-3xl w-full mx-auto">
 
             <div className="bg-white rounded-2xl shadow-sm p-4 flex items-center gap-3">
-              <div className="w-10 h-10 bg-cyan-500 rounded-full flex items-center justify-center text-white text-lg">
+              <div className="w-10 h-10 bg-cyan-500 rounded-full flex items-center justify-center text-white text-lg shrink-0">
                 🤖
               </div>
-              <div>
+              <div className="min-w-0">
                 <h1 className="font-bold text-gray-800 text-lg">MediInfo AI</h1>
                 <p className="text-gray-500 text-sm">Powered by Gemini · Ask about any medicine</p>
               </div>
@@ -112,7 +111,7 @@ function AIChat() {
                 value={medicineInput}
                 onChange={e => setMedicineInput(e.target.value)}
                 placeholder="e.g. Paracetamol, Ibuprofen (optional)"
-                className="flex-1 text-sm outline-none text-gray-700 placeholder-gray-400"
+                className="flex-1 text-sm outline-none text-gray-700 placeholder-gray-400 min-w-0"
               />
             </div>
 
@@ -125,7 +124,7 @@ function AIChat() {
                     </div>
                   )}
                   <div
-                    className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm leading-relaxed ${
+                    className={`max-w-[75vw] sm:max-w-[80%] px-4 py-3 rounded-2xl text-sm leading-relaxed break-words overflow-hidden ${
                       msg.role === 'user'
                         ? 'bg-cyan-500 text-white rounded-tr-none'
                         : 'bg-gray-100 text-gray-800 rounded-tl-none'
@@ -159,12 +158,12 @@ function AIChat() {
                 onKeyDown={handleKeyDown}
                 placeholder="Ask about side effects, dosage, interactions..."
                 rows={2}
-                className="flex-1 outline-none text-gray-700 placeholder-gray-400 resize-none text-sm pt-1"
+                className="flex-1 outline-none text-gray-700 placeholder-gray-400 resize-none text-sm pt-1 min-w-0"
               />
               <button
                 onClick={handleSend}
                 disabled={loading || !input.trim()}
-                className="bg-cyan-500 hover:bg-cyan-600 disabled:bg-gray-300 text-white px-4 py-2 rounded-xl font-medium text-sm transition-colors"
+                className="bg-cyan-500 hover:bg-cyan-600 disabled:bg-gray-300 text-white px-4 py-2 rounded-xl font-medium text-sm transition-colors shrink-0"
               >
                 Send
               </button>

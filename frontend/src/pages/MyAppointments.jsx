@@ -64,7 +64,8 @@ function RescheduleModal({ appointment, onClose, onSuccess, addToast }) {
     setSlotsLoading(true)
     setNewTime('')
     try {
-      const dayName = DAYS[new Date(date).getDay()]
+      const [year, month, day] = date.split('-').map(Number)
+      const dayName = DAYS[new Date(year, month - 1, day).getDay()]
       const { data: avail } = await supabase
         .from('doctor_availability')
         .select('start_time, end_time, slot_duration')
@@ -281,7 +282,7 @@ function MyAppointments() {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen bg-gray-50 flex">
+      <div className="min-h-screen bg-gray-50 flex overflow-x-hidden">
         <Sidebar />
         <Toast toasts={toasts} onDismiss={(id) => setToasts(prev => prev.filter(t => t.id !== id))} />
         {rescheduling && (
@@ -292,9 +293,9 @@ function MyAppointments() {
             addToast={addToast}
           />
         )}
-        <div className="lg:ml-56 flex-1 flex flex-col">
+        <div className="lg:ml-56 flex-1 flex flex-col min-w-0">
           <TopBar />
-          <div className="flex-1 px-8 py-8">
+          <div className="flex-1 px-4 sm:px-8 py-8">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h1 className="text-2xl font-black text-gray-900">My Appointments</h1>
@@ -343,26 +344,26 @@ function MyAppointments() {
                         <div key={appt.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
                           <div className="flex items-start justify-between mb-3">
                             <div className="flex items-center gap-3">
-                              <div className={`w-11 h-11 ${getColor(appt.doctor_name)} rounded-full flex items-center justify-center text-white font-bold text-sm`}>
+                              <div className={`w-11 h-11 ${getColor(appt.doctor_name)} rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0`}>
                                 {getInitials(appt.doctor_name)}
                               </div>
-                              <div>
-                                <p className="font-bold text-gray-900 text-sm">{appt.doctor_name}</p>
+                              <div className="min-w-0">
+                                <p className="font-bold text-gray-900 text-sm truncate">{appt.doctor_name}</p>
                                 <p className="text-cyan-500 text-xs">{appt.specialization || 'General Physician'}</p>
-                                <div className="flex items-center gap-2 mt-1 text-xs text-gray-400">
+                                <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-gray-400">
                                   <span>📅 {formatDate(appt.appointment_date)}</span>
                                   <span>🕐 {appt.appointment_time}</span>
                                 </div>
                               </div>
                             </div>
-                            <span className={`px-3 py-1 rounded-full text-xs font-semibold capitalize ${getStatusStyle(appt.status)}`}>
+                            <span className={`px-3 py-1 rounded-full text-xs font-semibold capitalize shrink-0 ml-2 ${getStatusStyle(appt.status)}`}>
                               {appt.status}
                             </span>
                           </div>
                           {appt.status === 'confirmed' ? (
-                            <div className="flex gap-2">
+                            <div className="flex flex-wrap gap-2">
                               <button onClick={() => navigate('/live-queue', { state: { appointment: appt } })}
-                                className="flex-1 bg-cyan-500 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-cyan-600 flex items-center justify-center gap-2">
+                                className="flex-1 min-w-[120px] bg-cyan-500 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-cyan-600 flex items-center justify-center gap-2">
                                 <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
                                 Join Live Queue
                               </button>
@@ -376,8 +377,8 @@ function MyAppointments() {
                               </button>
                             </div>
                           ) : (
-                            <div className="flex gap-2 items-center">
-                              <div className="flex-1 flex items-center gap-2 bg-amber-50 border border-amber-100 text-amber-600 py-2.5 px-4 rounded-xl text-sm font-medium">
+                            <div className="flex flex-wrap gap-2 items-center">
+                              <div className="flex-1 min-w-[120px] flex items-center gap-2 bg-amber-50 border border-amber-100 text-amber-600 py-2.5 px-4 rounded-xl text-sm font-medium">
                                 ⏳ Awaiting approval
                               </div>
                               <button onClick={() => setRescheduling(appt)}
@@ -403,19 +404,19 @@ function MyAppointments() {
                         <div key={appt.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 opacity-60">
                           <div className="flex items-start justify-between">
                             <div className="flex items-center gap-3">
-                              <div className={`w-11 h-11 ${getColor(appt.doctor_name)} rounded-full flex items-center justify-center text-white font-bold text-sm`}>
+                              <div className={`w-11 h-11 ${getColor(appt.doctor_name)} rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0`}>
                                 {getInitials(appt.doctor_name)}
                               </div>
-                              <div>
-                                <p className="font-bold text-gray-900 text-sm">{appt.doctor_name}</p>
+                              <div className="min-w-0">
+                                <p className="font-bold text-gray-900 text-sm truncate">{appt.doctor_name}</p>
                                 <p className="text-cyan-500 text-xs">{appt.specialization || 'General Physician'}</p>
-                                <div className="flex items-center gap-2 mt-1 text-xs text-gray-400">
+                                <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-gray-400">
                                   <span>📅 {formatDate(appt.appointment_date)}</span>
                                   <span>🕐 {appt.appointment_time}</span>
                                 </div>
                               </div>
                             </div>
-                            <span className={`px-3 py-1 rounded-full text-xs font-semibold capitalize ${getStatusStyle(appt.status)}`}>
+                            <span className={`px-3 py-1 rounded-full text-xs font-semibold capitalize shrink-0 ml-2 ${getStatusStyle(appt.status)}`}>
                               {appt.status}
                             </span>
                           </div>
