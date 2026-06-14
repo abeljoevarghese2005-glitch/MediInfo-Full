@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from 'react'
+import { lazy, Suspense, useEffect, useRef } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from './lib/supabase'
 import { App as CapApp } from '@capacitor/app'
@@ -19,6 +19,8 @@ const DoctorDashboard = lazy(() => import('./pages/DoctorDashboard'))
 const DoctorAppointments = lazy(() => import('./pages/DoctorAppointments'))
 const DoctorLiveQueue = lazy(() => import('./pages/DoctorLiveQueue'))
 const DoctorProfile = lazy(() => import('./pages/DoctorProfile'))
+
+const HOME_ROUTES = ['/home', '/doctor-dashboard']
 
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem('token')
@@ -41,32 +43,80 @@ const DoctorRoute = ({ children }) => {
   return children
 }
 
+// Keep session alive across app restores
 supabase.auth.onAuthStateChange((event, session) => {
   if (event === 'SIGNED_OUT' || !session) {
     localStorage.removeItem('token')
     localStorage.removeItem('user')
   } else if (session) {
     localStorage.setItem('token', session.access_token)
+    if (!localStorage.getItem('user') && session.user) {
+      supabase
+        .from('users')
+        .select('*')
+        .eq('id', session.user.id)
+        .single()
+        .then(({ data }) => {
+          if (data) localStorage.setItem('user', JSON.stringify(data))
+        })
+    }
   }
 })
 
-const HOME_ROUTES = ['/home', '/doctor-dashboard']
+// Restore session from Supabase on cold start
+supabase.auth.getSession().then(({ data: { session } }) => {
+  if (session) {
+    localStorage.setItem('token', session.access_token)
+    if (!localStorage.getItem('user')) {
+      supabase
+        .from('users')
+        .select('*')
+        .eq('id', session.user.id)
+        .single()
+        .then(({ data }) => {
+          if (data) localStorage.setItem('user', JSON.stringify(data))
+        })
+    }
+  }
+})
 
 function BackButtonHandler() {
   const navigate = useNavigate()
+  const locationRef = useRef(window.location.pathname)
   const location = useLocation()
 
+  // Keep ref in sync so the listener always has latest path
   useEffect(() => {
-    const handler = CapApp.addListener('backButton', () => {
-      const isHome = HOME_ROUTES.includes(location.pathname)
+    locationRef.current = location.pathname
+  }, [location.pathname])
+
+  useEffect(() => {
+    let backHandle = null
+    let resumeHandle = null
+
+    // Back button — use ref so it always sees current path
+    CapApp.addListener('backButton', () => {
+      const isHome = HOME_ROUTES.includes(locationRef.current)
       if (isHome) {
         CapApp.exitApp()
       } else {
         navigate(-1)
       }
-    })
-    return () => { handler.then(h => h.remove()) }
-  }, [location, navigate])
+    }).then(h => { backHandle = h })
+
+    // Resume — restore session without logging out
+    CapApp.addListener('resume', async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
+        localStorage.setItem('token', session.access_token)
+      }
+    }).then(h => { resumeHandle = h })
+
+    return () => {
+      if (backHandle) backHandle.remove()
+      if (resumeHandle) resumeHandle.remove()
+    }
+  }, [navigate])
 
   return null
 }
