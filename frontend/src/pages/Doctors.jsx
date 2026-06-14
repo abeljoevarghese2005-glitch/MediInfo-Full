@@ -54,8 +54,6 @@ function Doctors() {
 
   const today = new Date().toISOString().split('T')[0]
 
-  // Keep a ref so fetchDoctors can always see the latest location
-  // without needing it as a dependency that causes infinite loops
   const locationRef = useRef(userLocation)
   useEffect(() => { locationRef.current = userLocation }, [userLocation])
 
@@ -72,9 +70,8 @@ function Doctors() {
     setSlotsLoading(true)
     try {
       const [year, month, day] = date.split('-').map(Number)
-const dayName = DAYS[new Date(year, month - 1, day).getDay()]
+      const dayName = DAYS[new Date(year, month - 1, day).getDay()]
 
-      // fetch doctor availability for this day
       const { data: avail } = await supabase
         .from('doctor_availability')
         .select('start_time, end_time, slot_duration')
@@ -97,7 +94,6 @@ const dayName = DAYS[new Date(year, month - 1, day).getDay()]
       )
       setAvailableSlots(slots)
 
-      // fetch already booked slots for this doctor + date
       const { data: existing } = await supabase
         .from('appointments')
         .select('appointment_time')
@@ -113,13 +109,10 @@ const dayName = DAYS[new Date(year, month - 1, day).getDay()]
     setSlotsLoading(false)
   }
 
-  // Single fetch function — uses nearby-doctors Edge Function when location is available,
-  // falls back to direct Supabase query when not
   const fetchDoctors = useCallback(async (loc, spec) => {
     setLoading(true)
     try {
       if (loc) {
-        // Fetch from Edge Function — returns doctors sorted by distance
         const { data: { session } } = await supabase.auth.getSession()
         const token = session?.access_token || ''
         const specParam = spec && spec !== 'All' ? `&specialization=${encodeURIComponent(spec)}` : ''
@@ -131,7 +124,6 @@ const dayName = DAYS[new Date(year, month - 1, day).getDay()]
         const data = await res.json()
         setDoctors(Array.isArray(data) ? data : [])
       } else {
-        // No location — fall back to direct Supabase query, no distance info
         let query = supabase
           .from('users')
           .select('id, full_name, specialization, years_of_experience, consultation_fee, phone')
@@ -141,7 +133,6 @@ const dayName = DAYS[new Date(year, month - 1, day).getDay()]
         setDoctors(dbErr ? [] : (data || []))
       }
     } catch {
-      // On any error fall back to direct query
       let query = supabase
         .from('users')
         .select('id, full_name, specialization, years_of_experience, consultation_fee, phone')
@@ -153,12 +144,10 @@ const dayName = DAYS[new Date(year, month - 1, day).getDay()]
     setLoading(false)
   }, [])
 
-  // Re-fetch when filter changes, using whatever location we currently have
   useEffect(() => {
     fetchDoctors(locationRef.current, filter)
   }, [filter, fetchDoctors])
 
-  // Called by LocationBar when location is detected or set manually
   const handleLocationReady = useCallback((loc) => {
     setUserLocation(loc)
     fetchDoctors(loc, filter)
@@ -170,7 +159,6 @@ const dayName = DAYS[new Date(year, month - 1, day).getDay()]
     setPaying(true)
     setError('')
     try {
-      // check if this patient already booked this slot
       const { data: existing } = await supabase
         .from('appointments')
         .select('id')
@@ -206,6 +194,12 @@ const dayName = DAYS[new Date(year, month - 1, day).getDay()]
     }
     setPaying(false)
   }
+
+  // Calculate slot grid height: each row is ~40px + 8px gap, show 4 rows
+  const ROW_HEIGHT = 40
+  const GAP = 8
+  const VISIBLE_ROWS = 4
+  const slotGridMaxHeight = VISIBLE_ROWS * ROW_HEIGHT + (VISIBLE_ROWS - 1) * GAP
 
   return (
     <SidebarProvider>
@@ -293,7 +287,7 @@ const dayName = DAYS[new Date(year, month - 1, day).getDay()]
 
             {selectedDoctor && (
               <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 px-4 pb-6 sm:pb-0">
-                <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+                <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto">
                   <div className="flex items-center justify-between mb-4">
                     <h2 className="font-bold text-gray-800 text-lg">Book Appointment</h2>
                     <button onClick={() => setSelectedDoctor(null)} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
@@ -329,27 +323,37 @@ const dayName = DAYS[new Date(year, month - 1, day).getDay()]
                     ) : availableSlots.length === 0 ? (
                       <p className="text-red-400 text-xs">No availability on this day</p>
                     ) : (
-                      <div className="grid grid-cols-4 gap-2">
-                        {availableSlots.map(slot => {
-                          const isBooked = bookedSlots.includes(slot)
-                          const isSelected = selectedTime === slot
-                          return (
-                            <button
-                              key={slot}
-                              disabled={isBooked}
-                              onClick={() => !isBooked && setSelectedTime(slot)}
-                              className={`py-2 rounded-lg text-xs font-medium transition-all ${
-                                isBooked
-                                  ? 'bg-gray-100 text-gray-300 cursor-not-allowed line-through'
-                                  : isSelected
-                                  ? 'bg-cyan-500 text-white'
-                                  : 'bg-gray-50 text-gray-700 hover:bg-cyan-50'
-                              }`}>
-                              {slot}
-                            </button>
-                          )
-                        })}
-                      </div>
+                      <>
+                        <div
+                          className="overflow-y-auto pr-1"
+                          style={{ maxHeight: `${slotGridMaxHeight}px` }}
+                        >
+                          <div className="grid grid-cols-4 gap-2">
+                            {availableSlots.map(slot => {
+                              const isBooked = bookedSlots.includes(slot)
+                              const isSelected = selectedTime === slot
+                              return (
+                                <button
+                                  key={slot}
+                                  disabled={isBooked}
+                                  onClick={() => !isBooked && setSelectedTime(slot)}
+                                  className={`py-2 rounded-lg text-xs font-medium transition-all ${
+                                    isBooked
+                                      ? 'bg-gray-100 text-gray-300 cursor-not-allowed line-through'
+                                      : isSelected
+                                      ? 'bg-cyan-500 text-white'
+                                      : 'bg-gray-50 text-gray-700 hover:bg-cyan-50'
+                                  }`}>
+                                  {slot}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        </div>
+                        {availableSlots.length > 16 && (
+                          <p className="text-xs text-gray-400 mt-1 text-center">Scroll to see more slots</p>
+                        )}
+                      </>
                     )}
                   </div>
 
