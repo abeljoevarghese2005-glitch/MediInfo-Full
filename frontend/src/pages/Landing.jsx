@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import { supabase } from '../lib/supabase'
 
 const specialties = [
   { icon: '🫀', name: 'Cardiologist' },
@@ -35,6 +36,20 @@ function Landing() {
   const [query, setQuery] = useState('')
   const navigate = useNavigate()
 
+  // Redirect to home if already logged in
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        const user = JSON.parse(localStorage.getItem('user') || '{}')
+        if (user.role === 'doctor') {
+          navigate('/doctor-dashboard', { replace: true })
+        } else {
+          navigate('/home', { replace: true })
+        }
+      }
+    })
+  }, [])
+
   const handleSearch = (e) => {
     e.preventDefault()
     if (query.trim()) navigate(`/search?q=${query}`)
@@ -67,7 +82,6 @@ function Landing() {
 
       {/* ── Hero ── */}
       <section className="relative overflow-hidden bg-gradient-to-br from-cyan-50 via-white to-blue-50 px-6 pt-20 pb-24">
-        {/* Decorative blobs */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-100 rounded-full opacity-40 blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-72 h-72 bg-blue-100 rounded-full opacity-30 blur-3xl translate-y-1/2 -translate-x-1/2 pointer-events-none" />
 
@@ -91,7 +105,6 @@ function Landing() {
             Connect with verified specialists, book appointments instantly, and manage your health — all in one place, built for India.
           </p>
 
-          {/* Search bar */}
           <form onSubmit={handleSearch} className="max-w-2xl mx-auto mb-8">
             <div className="flex gap-2 bg-white rounded-2xl shadow-lg border border-gray-100 p-2">
               <div className="flex items-center gap-2 flex-1 px-3">
@@ -106,23 +119,17 @@ function Landing() {
                   className="flex-1 py-3 text-gray-700 focus:outline-none text-sm bg-transparent"
                 />
               </div>
-              <button
-                type="submit"
-                className="bg-cyan-500 text-white px-6 py-3 rounded-xl font-semibold text-sm hover:bg-cyan-600 transition-colors shrink-0"
-              >
+              <button type="submit"
+                className="bg-cyan-500 text-white px-6 py-3 rounded-xl font-semibold text-sm hover:bg-cyan-600 transition-colors shrink-0">
                 Search
               </button>
             </div>
           </form>
 
-          {/* Quick specialty pills */}
           <div className="flex flex-wrap justify-center gap-2">
             {['Cardiologist', 'Dermatologist', 'General Physician', 'Pediatrician'].map(s => (
-              <button
-                key={s}
-                onClick={() => navigate(`/doctors?specialty=${s}`)}
-                className="px-4 py-2 bg-white border border-gray-200 rounded-full text-sm text-gray-600 hover:border-cyan-400 hover:text-cyan-500 transition-colors shadow-sm"
-              >
+              <button key={s} onClick={() => navigate(`/doctors?specialty=${s}`)}
+                className="px-4 py-2 bg-white border border-gray-200 rounded-full text-sm text-gray-600 hover:border-cyan-400 hover:text-cyan-500 transition-colors shadow-sm">
                 {s}
               </button>
             ))}
@@ -151,11 +158,8 @@ function Landing() {
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {specialties.map(({ icon, name }) => (
-              <button
-                key={name}
-                onClick={() => navigate(`/doctors?specialty=${name}`)}
-                className="bg-white rounded-2xl p-6 text-center hover:shadow-md hover:border-cyan-200 border border-gray-100 transition-all group"
-              >
+              <button key={name} onClick={() => navigate(`/doctors?specialty=${name}`)}
+                className="bg-white rounded-2xl p-6 text-center hover:shadow-md hover:border-cyan-200 border border-gray-100 transition-all group">
                 <div className="text-3xl mb-3">{icon}</div>
                 <div className="text-sm font-semibold text-gray-700 group-hover:text-cyan-500 transition-colors">{name}</div>
               </button>
@@ -217,17 +221,12 @@ function Landing() {
         <h2 className="text-3xl md:text-4xl font-black mb-4">Ready to take charge of your health?</h2>
         <p className="text-cyan-100 mb-8 text-lg">Join thousands of patients booking smarter with MediInfo.</p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Link
-            to="/register"
-            className="bg-white text-cyan-600 font-bold px-8 py-4 rounded-xl hover:bg-gray-50 transition-colors shadow-sm"
-          >
+          <Link to="/register"
+            className="bg-white text-cyan-600 font-bold px-8 py-4 rounded-xl hover:bg-gray-50 transition-colors shadow-sm">
             Create Free Account
           </Link>
-          <Link
-            to="/register"
-            onClick={() => {}}
-            className="border-2 border-white text-white font-bold px-8 py-4 rounded-xl hover:bg-cyan-400 transition-colors"
-          >
+          <Link to="/register"
+            className="border-2 border-white text-white font-bold px-8 py-4 rounded-xl hover:bg-cyan-400 transition-colors">
             Register as Doctor →
           </Link>
         </div>
@@ -248,5 +247,5 @@ function Landing() {
     </div>
   )
 }
-  
+
 export default Landing

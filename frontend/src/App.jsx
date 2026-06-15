@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
-import { supabase } from './lib/supabase'
+import { supabase, initSupabaseStorage } from './lib/supabase'
 import { App as CapApp } from '@capacitor/app'
 
 const Landing = lazy(() => import('./pages/Landing'))
@@ -92,7 +92,6 @@ const DoctorRoute = ({ children }) => {
   return children
 }
 
-// Keep session alive across app restores
 supabase.auth.onAuthStateChange((event, session) => {
   if (event === 'SIGNED_OUT' || !session) {
     localStorage.removeItem('token')
@@ -151,6 +150,10 @@ function BackButtonHandler() {
 }
 
 function App() {
+  useEffect(() => {
+    initSupabaseStorage()
+  }, [])
+
   return (
     <BrowserRouter>
       <BackButtonHandler />

@@ -4,26 +4,42 @@ import { Preferences } from '@capacitor/preferences'
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-// Custom storage using Capacitor Preferences — persists across app close on Android
-const CapacitorStorage = {
-  getItem: async (key) => {
-    const { value } = await Preferences.get({ key })
-    return value
-  },
-  setItem: async (key, value) => {
-    await Preferences.set({ key, value })
-    // also mirror to localStorage for synchronous reads
+const memoryCache = {}
+
+export async function initSupabaseStorage() {
+  try {
+    const { keys } = await Preferences.keys()
+    await Promise.all(
+      keys.map(async (key) => {
+        const { value } = await Preferences.get({ key })
+        if (value !== null) {
+          memoryCache[key] = value
+          localStorage.setItem(key, value)
+        }
+      })
+    )
+  } catch (e) {
+    console.warn('Failed to preload Preferences:', e)
+  }
+}
+
+const SyncStorage = {
+  getItem: (key) => memoryCache[key] ?? localStorage.getItem(key) ?? null,
+  setItem: (key, value) => {
+    memoryCache[key] = value
     localStorage.setItem(key, value)
+    Preferences.set({ key, value }).catch(() => {})
   },
-  removeItem: async (key) => {
-    await Preferences.remove({ key })
+  removeItem: (key) => {
+    delete memoryCache[key]
     localStorage.removeItem(key)
+    Preferences.remove({ key }).catch(() => {})
   },
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    storage: CapacitorStorage,
+    storage: SyncStorage,
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: false,

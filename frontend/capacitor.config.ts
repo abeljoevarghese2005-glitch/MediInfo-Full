@@ -5,7 +5,10 @@ const config: CapacitorConfig = {
   appName: 'MediInfo',
   webDir: 'dist',
   server: {
-    androidScheme: 'https',  // keeps Supabase Auth cookies working
+    androidScheme: 'https',
+  },
+  android: {
+    allowMixedContent: true,
   },
 };
 
