@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from './lib/supabase'
 import { App as CapApp } from '@capacitor/app'
@@ -22,24 +22,73 @@ const DoctorProfile = lazy(() => import('./pages/DoctorProfile'))
 
 const HOME_ROUTES = ['/home', '/doctor-dashboard']
 
+const Loading = () => (
+  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+    Loading...
+  </div>
+)
+
 const ProtectedRoute = ({ children }) => {
-  const token = localStorage.getItem('token')
-  return token ? children : <Navigate to="/login" />
+  const [checking, setChecking] = useState(true)
+  const [authed, setAuthed] = useState(false)
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        localStorage.setItem('token', session.access_token)
+        setAuthed(true)
+      }
+      setChecking(false)
+    })
+  }, [])
+
+  if (checking) return <Loading />
+  return authed ? children : <Navigate to="/login" />
 }
 
 const PatientRoute = ({ children }) => {
-  const token = localStorage.getItem('token')
-  if (!token) return <Navigate to="/login" />
-  const user = JSON.parse(localStorage.getItem('user') || '{}')
-  if (user.role === 'doctor') return <Navigate to="/doctor-dashboard" />
+  const [checking, setChecking] = useState(true)
+  const [authed, setAuthed] = useState(false)
+  const [isDoctor, setIsDoctor] = useState(false)
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        localStorage.setItem('token', session.access_token)
+        const user = JSON.parse(localStorage.getItem('user') || '{}')
+        setIsDoctor(user.role === 'doctor')
+        setAuthed(true)
+      }
+      setChecking(false)
+    })
+  }, [])
+
+  if (checking) return <Loading />
+  if (!authed) return <Navigate to="/login" />
+  if (isDoctor) return <Navigate to="/doctor-dashboard" />
   return children
 }
 
 const DoctorRoute = ({ children }) => {
-  const token = localStorage.getItem('token')
-  if (!token) return <Navigate to="/login" />
-  const user = JSON.parse(localStorage.getItem('user') || '{}')
-  if (user.role !== 'doctor') return <Navigate to="/home" />
+  const [checking, setChecking] = useState(true)
+  const [authed, setAuthed] = useState(false)
+  const [isDoctor, setIsDoctor] = useState(false)
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        localStorage.setItem('token', session.access_token)
+        const user = JSON.parse(localStorage.getItem('user') || '{}')
+        setIsDoctor(user.role === 'doctor')
+        setAuthed(true)
+      }
+      setChecking(false)
+    })
+  }, [])
+
+  if (checking) return <Loading />
+  if (!authed) return <Navigate to="/login" />
+  if (!isDoctor) return <Navigate to="/home" />
   return children
 }
 
@@ -63,29 +112,11 @@ supabase.auth.onAuthStateChange((event, session) => {
   }
 })
 
-// Restore session from Supabase on cold start
-supabase.auth.getSession().then(({ data: { session } }) => {
-  if (session) {
-    localStorage.setItem('token', session.access_token)
-    if (!localStorage.getItem('user')) {
-      supabase
-        .from('users')
-        .select('*')
-        .eq('id', session.user.id)
-        .single()
-        .then(({ data }) => {
-          if (data) localStorage.setItem('user', JSON.stringify(data))
-        })
-    }
-  }
-})
-
 function BackButtonHandler() {
   const navigate = useNavigate()
   const locationRef = useRef(window.location.pathname)
   const location = useLocation()
 
-  // Keep ref in sync so the listener always has latest path
   useEffect(() => {
     locationRef.current = location.pathname
   }, [location.pathname])
@@ -94,7 +125,6 @@ function BackButtonHandler() {
     let backHandle = null
     let resumeHandle = null
 
-    // Back button — use ref so it always sees current path
     CapApp.addListener('backButton', () => {
       const isHome = HOME_ROUTES.includes(locationRef.current)
       if (isHome) {
@@ -104,7 +134,6 @@ function BackButtonHandler() {
       }
     }).then(h => { backHandle = h })
 
-    // Resume — restore session without logging out
     CapApp.addListener('resume', async () => {
       const { data: { session } } = await supabase.auth.getSession()
       if (session) {
@@ -125,7 +154,7 @@ function App() {
   return (
     <BrowserRouter>
       <BackButtonHandler />
-      <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>Loading...</div>}>
+      <Suspense fallback={<Loading />}>
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
