@@ -1,3 +1,189 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ============================================================
+   MEDIINFO LANDING — THEME TOKENS
+   (scoped with --mi- prefix so nothing here collides with
+   existing app styles or the primary/secondary tailwind colors)
+   ============================================================ */
+
+:root {
+  --mi-background: oklch(0.985 0.006 95);
+  --mi-foreground: oklch(0.24 0.025 258);
+
+  --mi-card: oklch(1 0 0);
+  --mi-card-foreground: oklch(0.24 0.025 258);
+
+  --mi-muted: oklch(0.955 0.012 95);
+  --mi-muted-foreground: oklch(0.52 0.02 258);
+
+  --mi-border: oklch(0.9 0.012 95);
+
+  --mi-primary: oklch(0.53 0.1 196);
+  --mi-primary-foreground: oklch(0.99 0.005 200);
+
+  --mi-accent: oklch(0.93 0.045 196);
+  --mi-accent-foreground: oklch(0.32 0.07 196);
+
+  --mi-grad-1: oklch(0.72 0.17 148);
+  --mi-grad-2: oklch(0.66 0.12 196);
+  --mi-grad-3: oklch(0.78 0.13 222);
+  --mi-grad-4: oklch(0.62 0.19 263);
+}
+
+.dark {
+  --mi-background: oklch(0.19 0.018 258);
+  --mi-foreground: oklch(0.96 0.008 95);
+
+  --mi-card: oklch(0.225 0.02 258);
+  --mi-card-foreground: oklch(0.96 0.008 95);
+
+  --mi-muted: oklch(0.27 0.02 258);
+  --mi-muted-foreground: oklch(0.68 0.02 95);
+
+  --mi-border: oklch(0.33 0.02 258);
+
+  --mi-primary: oklch(0.68 0.12 196);
+  --mi-primary-foreground: oklch(0.16 0.02 258);
+
+  --mi-accent: oklch(0.3 0.05 196);
+  --mi-accent-foreground: oklch(0.86 0.05 196);
+
+  --mi-grad-1: oklch(0.78 0.18 148);
+  --mi-grad-2: oklch(0.74 0.12 196);
+  --mi-grad-3: oklch(0.82 0.12 222);
+  --mi-grad-4: oklch(0.7 0.18 263);
+}
+
+/* ============================================================
+   LANDING-ONLY UTILITY CLASSES
+   ============================================================ */
+
+.mi-reveal-wrap {
+  display: block;
+  overflow: hidden;
+}
+
+.mi-reveal-up {
+  display: block;
+}
+
+.mi-gradient-text {
+  display: inline-block;
+  background-image: linear-gradient(
+    90deg,
+    var(--mi-grad-1),
+    var(--mi-grad-2),
+    var(--mi-grad-3),
+    var(--mi-grad-4),
+    var(--mi-grad-1)
+  );
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.mi-clock-float {
+  display: inline-block;
+}
+
+.mi-clock-hour,
+.mi-clock-minute {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* Stagger delays consumed by data-reveal-stagger containers */
+.mi-delay-1 { animation-delay: 0.08s; transition-delay: 0.08s; --i: 1; }
+.mi-delay-2 { animation-delay: 0.16s; transition-delay: 0.16s; --i: 2; }
+.mi-delay-3 { animation-delay: 0.24s; transition-delay: 0.24s; --i: 3; }
+.mi-delay-4 { animation-delay: 0.32s; transition-delay: 0.32s; --i: 4; }
+.mi-delay-5 { animation-delay: 0.4s;  transition-delay: 0.4s;  --i: 5; }
+.mi-delay-6 { animation-delay: 0.48s; transition-delay: 0.48s; --i: 6; }
+.mi-delay-7 { animation-delay: 0.56s; transition-delay: 0.56s; --i: 7; }
+.mi-delay-8 { animation-delay: 0.64s; transition-delay: 0.64s; --i: 8; }
+
+/* Scroll reveal */
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: calc(var(--i, 0) * 80ms);
+}
+
+[data-reveal].is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Specialty card: 3D tilt + sheen sweep */
+.mi-tilt-card {
+  transform-style: preserve-3d;
+  transform: perspective(900px) rotateX(var(--mi-rx, 0deg)) rotateY(var(--mi-ry, 0deg));
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  will-change: transform;
+}
+
+.mi-tilt-card:hover {
+  box-shadow: 0 18px 40px -18px rgba(0, 0, 0, 0.25);
+}
+
+.mi-sheen {
+  position: absolute;
+  inset: -50% -50%;
+  background: linear-gradient(
+    115deg,
+    transparent 35%,
+    rgba(255, 255, 255, 0.35) 50%,
+    transparent 65%
+  );
+  transform: translateX(-120%) rotate(8deg);
+  transition: transform 0.7s ease;
+  pointer-events: none;
+}
+
+.dark .mi-sheen {
+  background: linear-gradient(
+    115deg,
+    transparent 35%,
+    rgba(255, 255, 255, 0.08) 50%,
+    transparent 65%
+  );
+}
+
+.mi-tilt-card:hover .mi-sheen {
+  transform: translateX(120%) rotate(8deg);
+}
+
+/* Landing page scroll behavior — scoped via body class so it doesn't
+   change anchor/scroll behavior across the rest of the app */
+body.mi-landing {
+  scroll-behavior: smooth;
+  scroll-padding-top: 80px;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .mi-landing *, .mi-landing *::before, .mi-landing *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .mi-landing [data-reveal] {
+    opacity: 1;
+    transform: none;
+  }
+
+  .mi-landing .mi-tilt-card {
+    transform: none !important;
+  }
+
+  .mi-landing .mi-sheen {
+    display: none;
+  }
+}
