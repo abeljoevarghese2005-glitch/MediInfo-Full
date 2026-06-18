@@ -76,12 +76,25 @@ function RescheduleModal({ appointment, onClose, onSuccess, addToast }) {
 
       if (!avail) { setAvailableSlots([]); setSlotsLoading(false); return }
 
-      const slots = generateSlots(
+      const rawSlots = generateSlots(
         avail.start_time.slice(0, 5),
         avail.end_time.slice(0, 5),
         avail.slot_duration || 15
       )
-      setAvailableSlots(slots)
+
+      // Grey out past slots when date is today
+      if (date === today) {
+        const now = new Date()
+        const bufferMs = 15 * 60 * 1000
+        setAvailableSlots(rawSlots.map(slot => {
+          const [h, m] = slot.split(':').map(Number)
+          const slotTime = new Date()
+          slotTime.setHours(h, m, 0, 0)
+          return { time: slot, past: slotTime.getTime() <= now.getTime() + bufferMs }
+        }))
+      } else {
+        setAvailableSlots(rawSlots.map(slot => ({ time: slot, past: false })))
+      }
 
       const { data: existing } = await supabase
         .from('appointments')
@@ -161,18 +174,19 @@ function RescheduleModal({ appointment, onClose, onSuccess, addToast }) {
             <p className="text-red-400 text-xs">No availability on this day</p>
           ) : (
             <div className="grid grid-cols-4 gap-2">
-              {availableSlots.map(slot => {
-                const isBooked = bookedSlots.includes(slot)
-                const isSelected = newTime === slot
+              {availableSlots.map(({ time, past }) => {
+                const isBooked = bookedSlots.includes(time)
+                const isSelected = newTime === time
+                const isDisabled = isBooked || past
                 return (
-                  <button key={slot} disabled={isBooked}
-                    onClick={() => !isBooked && setNewTime(slot)}
+                  <button key={time} disabled={isDisabled}
+                    onClick={() => !isDisabled && setNewTime(time)}
                     className={`py-2 rounded-lg text-xs font-medium transition-all ${
-                      isBooked ? 'bg-gray-100 text-gray-300 cursor-not-allowed line-through'
+                      isDisabled ? 'bg-gray-100 text-gray-300 cursor-not-allowed line-through'
                       : isSelected ? 'bg-cyan-500 text-white'
                       : 'bg-gray-50 text-gray-700 hover:bg-cyan-50'
                     }`}>
-                    {slot}
+                    {time}
                   </button>
                 )
               })}
@@ -274,10 +288,21 @@ function MyAppointments() {
 
   const getStatusStyle = (status) => {
     switch (status) {
-      case 'confirmed': return 'bg-green-100 text-green-700'
-      case 'cancelled': return 'bg-red-100 text-red-600'
-      default: return 'bg-amber-100 text-amber-700'
+      case 'confirmed':
+      case 'accepted':
+        return 'bg-green-100 text-green-700'
+      case 'cancelled':
+        return 'bg-red-100 text-red-600'
+      case 'completed':
+        return 'bg-gray-100 text-gray-500'
+      default:
+        return 'bg-amber-100 text-amber-700'
     }
+  }
+
+  const getStatusLabel = (status) => {
+    if (status === 'accepted') return 'confirmed'
+    return status
   }
 
   return (
@@ -357,10 +382,10 @@ function MyAppointments() {
                               </div>
                             </div>
                             <span className={`px-3 py-1 rounded-full text-xs font-semibold capitalize shrink-0 ml-2 ${getStatusStyle(appt.status)}`}>
-                              {appt.status}
+                              {getStatusLabel(appt.status)}
                             </span>
                           </div>
-                          {appt.status === 'confirmed' ? (
+                          {(appt.status === 'confirmed' || appt.status === 'accepted') ? (
                             <div className="flex flex-wrap gap-2">
                               <button onClick={() => navigate('/live-queue', { state: { appointment: appt } })}
                                 className="flex-1 min-w-[120px] bg-cyan-500 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-cyan-600 flex items-center justify-center gap-2">
@@ -417,7 +442,7 @@ function MyAppointments() {
                               </div>
                             </div>
                             <span className={`px-3 py-1 rounded-full text-xs font-semibold capitalize shrink-0 ml-2 ${getStatusStyle(appt.status)}`}>
-                              {appt.status}
+                              {getStatusLabel(appt.status)}
                             </span>
                           </div>
                         </div>

@@ -87,12 +87,24 @@ function Doctors() {
         return
       }
 
-      const slots = generateSlots(
+      const rawSlots = generateSlots(
         avail.start_time.slice(0, 5),
         avail.end_time.slice(0, 5),
         avail.slot_duration || 15
       )
-      setAvailableSlots(slots)
+
+      if (date === today) {
+        const now = new Date()
+        const bufferMs = 15 * 60 * 1000
+        setAvailableSlots(rawSlots.map(slot => {
+          const [h, m] = slot.split(':').map(Number)
+          const slotTime = new Date()
+          slotTime.setHours(h, m, 0, 0)
+          return { time: slot, past: slotTime.getTime() <= now.getTime() + bufferMs }
+        }))
+      } else {
+        setAvailableSlots(rawSlots.map(slot => ({ time: slot, past: false })))
+      }
 
       const { data: existing } = await supabase
         .from('appointments')
@@ -195,7 +207,6 @@ function Doctors() {
     setPaying(false)
   }
 
-  // Calculate slot grid height: each row is ~40px + 8px gap, show 4 rows
   const ROW_HEIGHT = 40
   const GAP = 8
   const VISIBLE_ROWS = 4
@@ -329,22 +340,23 @@ function Doctors() {
                           style={{ maxHeight: `${slotGridMaxHeight}px` }}
                         >
                           <div className="grid grid-cols-4 gap-2">
-                            {availableSlots.map(slot => {
-                              const isBooked = bookedSlots.includes(slot)
-                              const isSelected = selectedTime === slot
+                            {availableSlots.map(({ time, past }) => {
+                              const isBooked = bookedSlots.includes(time)
+                              const isSelected = selectedTime === time
+                              const isDisabled = isBooked || past
                               return (
                                 <button
-                                  key={slot}
-                                  disabled={isBooked}
-                                  onClick={() => !isBooked && setSelectedTime(slot)}
+                                  key={time}
+                                  disabled={isDisabled}
+                                  onClick={() => !isDisabled && setSelectedTime(time)}
                                   className={`py-2 rounded-lg text-xs font-medium transition-all ${
-                                    isBooked
+                                    isDisabled
                                       ? 'bg-gray-100 text-gray-300 cursor-not-allowed line-through'
                                       : isSelected
                                       ? 'bg-cyan-500 text-white'
                                       : 'bg-gray-50 text-gray-700 hover:bg-cyan-50'
                                   }`}>
-                                  {slot}
+                                  {time}
                                 </button>
                               )
                             })}
