@@ -95,7 +95,7 @@ function Doctors() {
 
       if (date === today) {
         const now = new Date()
-        const bufferMs = 15 * 60 * 1000
+        const bufferMs = 0
         setAvailableSlots(rawSlots.map(slot => {
           const [h, m] = slot.split(':').map(Number)
           const slotTime = new Date()
