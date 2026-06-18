@@ -52,7 +52,7 @@ function Doctors() {
   const [bookedSlots, setBookedSlots] = useState([])
   const [slotsLoading, setSlotsLoading] = useState(false)
 
-  const today = new Date().toISOString().split('T')[0]
+  const today = new Date().toLocaleDateString('en-CA')
 
   const locationRef = useRef(userLocation)
   useEffect(() => { locationRef.current = userLocation }, [userLocation])

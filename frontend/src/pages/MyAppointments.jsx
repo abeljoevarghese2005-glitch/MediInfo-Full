@@ -47,7 +47,7 @@ function Toast({ toasts, onDismiss }) {
 }
 
 function RescheduleModal({ appointment, onClose, onSuccess, addToast }) {
-  const today = new Date().toISOString().split('T')[0]
+  const today = new Date().toLocaleDateString('en-CA')
   const [newDate, setNewDate] = useState('')
   const [availableSlots, setAvailableSlots] = useState([])
   const [bookedSlots, setBookedSlots] = useState([])
@@ -281,9 +281,8 @@ function MyAppointments() {
     setCancelling(null)
   }
 
-  const today = new Date().toISOString().split('T')[0]
+  const today = new Date().toLocaleDateString('en-CA')
 
-  // completed appointments always go to past, regardless of date
   const upcoming = appointments.filter(a =>
     a.status !== 'cancelled' &&
     a.status !== 'completed' &&
