@@ -82,7 +82,6 @@ function RescheduleModal({ appointment, onClose, onSuccess, addToast }) {
         avail.slot_duration || 15
       )
 
-      // Grey out past slots when date is today
       if (date === today) {
         const now = new Date()
         const bufferMs = 15 * 60 * 1000
@@ -283,8 +282,18 @@ function MyAppointments() {
   }
 
   const today = new Date().toISOString().split('T')[0]
-  const upcoming = appointments.filter(a => a.status !== 'cancelled' && a.appointment_date >= today)
-  const past = appointments.filter(a => a.status === 'cancelled' || a.appointment_date < today)
+
+  // completed appointments always go to past, regardless of date
+  const upcoming = appointments.filter(a =>
+    a.status !== 'cancelled' &&
+    a.status !== 'completed' &&
+    a.appointment_date >= today
+  )
+  const past = appointments.filter(a =>
+    a.status === 'cancelled' ||
+    a.status === 'completed' ||
+    a.appointment_date < today
+  )
 
   const getStatusStyle = (status) => {
     switch (status) {
