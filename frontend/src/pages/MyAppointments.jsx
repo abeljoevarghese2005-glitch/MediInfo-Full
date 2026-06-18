@@ -289,11 +289,17 @@ function MyAppointments() {
     a.status !== 'completed' &&
     a.appointment_date >= today
   )
-  const past = appointments.filter(a =>
+  const past = appointments
+  .filter(a =>
     a.status === 'cancelled' ||
     a.status === 'completed' ||
     a.appointment_date < today
   )
+  .sort((a, b) => {
+    const dateA = `${a.appointment_date} ${a.appointment_time}`
+    const dateB = `${b.appointment_date} ${b.appointment_time}`
+    return dateB.localeCompare(dateA)
+  })
 
   const getStatusStyle = (status) => {
     switch (status) {
