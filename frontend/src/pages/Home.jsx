@@ -32,7 +32,7 @@ const mockRating = (idx) => [4.9, 4.8, 4.6, 4.9, 4.7, 4.5][idx % 6]
 
 function BookingModal({ doctor, idx, onClose, onBooked }) {
   const user = JSON.parse(localStorage.getItem('user') || '{}')
-  const today = new Date().toISOString().split('T')[0]
+  const today = new Date().toLocaleDateString('en-CA')
   const [date, setDate] = useState(today)
   const [slot, setSlot] = useState(TIME_SLOTS[0])
   const [issue, setIssue] = useState('')
@@ -149,7 +149,7 @@ function DoctorCard({ doctor, idx, onBook, distanceMap }) {
         <span>{doctor.years_of_experience ? `${doctor.years_of_experience} yrs` : '5 yrs'}</span>
         <span>
           {distanceMap[doctor.id] != null
-            ? <span className="text-cyan-600 font-semibold">{distanceMap[doctor.id].toFixed(1)} km</span>
+            ? <span className="text-cyan-600 font-semibold">{Number(distanceMap[doctor.id]).toFixed(1)} km</span>
             : <span className="text-gray-300">— km</span>}
         </span>
         <span>₹{doctor.consultation_fee ?? mockFee(idx)}</span>
@@ -185,23 +185,31 @@ function Home() {
   }, [])
 
   const handleLocationReady = useCallback(async (loc) => {
-  if (!loc) return
-  setNearbyLoading(true)
-  try {
-    const { data: { session } } = await supabase.auth.getSession()
-    const token = session?.access_token || ''
-    const res = await fetch(
-      `https://xfuzwuraowhaxqnfolzg.supabase.co/functions/v1/nearby-doctors?lat=${loc.lat}&lng=${loc.lng}&radius=50`,
-      { headers: { 'Authorization': `Bearer ${token}` } }
-    )
-    const data = await res.json()
-    const map = {}
-    data.forEach(d => { map[d.id] = d.distance_km })
-    setDistanceMap(map)
-    setDoctors(prev => [...prev].sort((a, b) => (map[a.id] ?? Infinity) - (map[b.id] ?? Infinity)))
-  } catch {}
-  setNearbyLoading(false)
-}, [])
+    if (!loc) return
+    setNearbyLoading(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token || ''
+      const res = await fetch(
+        `https://xfuzwuraowhaxqnfolzg.supabase.co/functions/v1/nearby-doctors?lat=${loc.lat}&lng=${loc.lng}&radius=50`,
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      )
+      const data = await res.json()
+      if (Array.isArray(data) && data.length > 0) {
+        // ✅ Build distance map
+        const map = {}
+        data.forEach(d => { map[d.id] = d.distance_km })
+        setDistanceMap(map)
+        // ✅ Replace doctors list with edge function result (already has distance),
+        //    sorted nearest first, capped at 4 for home screen
+        const sorted = [...data]
+          .sort((a, b) => (a.distance_km ?? Infinity) - (b.distance_km ?? Infinity))
+          .slice(0, 4)
+        setDoctors(sorted)
+      }
+    } catch {}
+    setNearbyLoading(false)
+  }, [])
 
   const fetchDoctors = async () => {
     setLoadingDoctors(true)
@@ -210,7 +218,7 @@ function Home() {
       .select('id, full_name, specialization, years_of_experience, consultation_fee, phone')
       .eq('role', 'doctor')
       .limit(4)
-    setDoctors(error ? [] : data)
+    setDoctors(error ? [] : (data || []))
     setLoadingDoctors(false)
   }
 
@@ -283,7 +291,6 @@ function Home() {
               </div>
             )}
 
-            {/* Nearby Doctors */}
             <div className="mb-8">
               <div className="flex items-center justify-between mb-3">
                 <div>
@@ -315,7 +322,6 @@ function Home() {
               )}
             </div>
 
-            {/* Previously Visited */}
             <div>
               <div className="mb-3">
                 <h2 className="text-base font-bold text-gray-900">🔄 Previously Visited</h2>

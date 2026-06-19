@@ -32,6 +32,19 @@ function generateSlots(start, end, duration = 15) {
   return slots
 }
 
+// ✅ Haversine formula to compute distance in km between two lat/lng points
+function getDistanceKm(lat1, lng1, lat2, lng2) {
+  const R = 6371
+  const dLat = ((lat2 - lat1) * Math.PI) / 180
+  const dLng = ((lng2 - lng1) * Math.PI) / 180
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+    Math.cos((lat2 * Math.PI) / 180) *
+    Math.sin(dLng / 2) * Math.sin(dLng / 2)
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
 function Doctors() {
   const navigate = useNavigate()
   const user = JSON.parse(localStorage.getItem('user') || '{}')
@@ -134,24 +147,49 @@ function Doctors() {
         )
         if (!res.ok) throw new Error('Edge function error')
         const data = await res.json()
-        setDoctors(Array.isArray(data) ? data : [])
+        if (Array.isArray(data)) {
+          // ✅ Sort by distance_km ascending as a safety net in case edge function doesn't sort
+          const sorted = [...data].sort((a, b) => (a.distance_km ?? Infinity) - (b.distance_km ?? Infinity))
+          setDoctors(sorted)
+        } else {
+          setDoctors([])
+        }
       } else {
+        // No location — fetch from DB, no distance available
         let query = supabase
           .from('users')
-          .select('id, full_name, specialization, years_of_experience, consultation_fee, phone')
+          .select('id, full_name, specialization, years_of_experience, consultation_fee, phone, latitude, longitude')
           .eq('role', 'doctor')
         if (spec && spec !== 'All') query = query.eq('specialization', spec)
         const { data, error: dbErr } = await query
         setDoctors(dbErr ? [] : (data || []))
       }
     } catch {
+      // ✅ Fallback: fetch from DB, compute distance manually if location available
       let query = supabase
         .from('users')
-        .select('id, full_name, specialization, years_of_experience, consultation_fee, phone')
+        .select('id, full_name, specialization, years_of_experience, consultation_fee, phone, latitude, longitude')
         .eq('role', 'doctor')
       if (spec && spec !== 'All') query = query.eq('specialization', spec)
       const { data } = await query
-      setDoctors(data || [])
+      if (data) {
+        const loc = locationRef.current
+        if (loc) {
+          // ✅ Compute distance manually and sort
+          const withDistance = data.map(d => ({
+            ...d,
+            distance_km: d.latitude && d.longitude
+              ? getDistanceKm(loc.lat, loc.lng, d.latitude, d.longitude)
+              : null
+          }))
+          withDistance.sort((a, b) => (a.distance_km ?? Infinity) - (b.distance_km ?? Infinity))
+          setDoctors(withDistance)
+        } else {
+          setDoctors(data)
+        }
+      } else {
+        setDoctors([])
+      }
     }
     setLoading(false)
   }, [])
