@@ -37,6 +37,15 @@ const navItems = [
   {
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+    ),
+    label: 'Prescriptions', path: '/my-prescriptions'
+  },
+  {
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
       </svg>
     ),
@@ -119,12 +128,10 @@ function Sidebar() {
 
   return (
     <>
-      {/* Desktop sidebar — always visible on lg+ */}
       <div className="hidden lg:flex w-56 bg-white border-r border-gray-100 flex-col py-6 px-3 fixed top-0 left-0 h-full z-20">
         <SidebarContent onClose={() => {}} />
       </div>
 
-      {/* Mobile backdrop */}
       {isOpen && (
         <div
           className="fixed inset-0 bg-black/40 z-20 lg:hidden"
@@ -132,7 +139,6 @@ function Sidebar() {
         />
       )}
 
-      {/* Mobile drawer */}
       <div
         className={`fixed top-0 left-0 h-full w-64 bg-white z-30 flex flex-col py-6 px-3 shadow-2xl transition-transform duration-300 ease-in-out lg:hidden ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
