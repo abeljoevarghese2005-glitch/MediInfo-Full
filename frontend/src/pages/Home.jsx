@@ -1,6 +1,6 @@
 import Sidebar from '../components/Sidebar'
 import { SidebarProvider } from '../components/SidebarContext'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TopBar from '../components/TopBar'
 import LocationBar from '../components/LocationBar'
@@ -196,12 +196,9 @@ function Home() {
       )
       const data = await res.json()
       if (Array.isArray(data) && data.length > 0) {
-        // ✅ Build distance map
         const map = {}
         data.forEach(d => { map[d.id] = d.distance_km })
         setDistanceMap(map)
-        // ✅ Replace doctors list with edge function result (already has distance),
-        //    sorted nearest first, capped at 4 for home screen
         const sorted = [...data]
           .sort((a, b) => (a.distance_km ?? Infinity) - (b.distance_km ?? Infinity))
           .slice(0, 4)
@@ -243,6 +240,26 @@ function Home() {
     }
     setPreviousDoctors(prev.slice(0, 2))
   }
+
+  // ✅ NEW: Realtime subscription — instant sync when any doctor updates their profile (fee, name, specialization, experience)
+  useEffect(() => {
+    const usersChannel = supabase
+      .channel('home-doctor-profiles')
+      .on('postgres_changes', {
+        event: 'UPDATE', schema: 'public', table: 'users',
+        filter: `role=eq.doctor`,
+      }, (payload) => {
+        setDoctors(prev => prev.map(d =>
+          d.id === payload.new.id ? { ...d, ...payload.new } : d
+        ))
+        setSelectedDoctor(prev => (prev && prev.id === payload.new.id) ? { ...prev, ...payload.new } : prev)
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(usersChannel)
+    }
+  }, [])
 
   const handleSearch = (e) => {
     e.preventDefault()

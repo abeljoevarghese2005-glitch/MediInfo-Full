@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import DoctorTopBar from '../components/DoctorTopBar'
 import DoctorSidebar from '../components/DoctorSidebar'
 import { SidebarProvider } from '../components/SidebarContext'
+import PrescriptionModal from '../components/PrescriptionModal'
 import { supabase } from '../lib/supabase'
 
 const avatarColors = ['bg-cyan-500','bg-purple-500','bg-green-500','bg-orange-500','bg-pink-500','bg-blue-500']
@@ -16,6 +17,8 @@ function DoctorLiveQueue() {
   const [loading, setLoading] = useState(true)
   const [completing, setCompleting] = useState(false)
   const [now, setNow] = useState(new Date())
+  const [prescribeTarget, setPrescribeTarget] = useState(null) // ✅ NEW
+  const [toastMsg, setToastMsg] = useState('') // ✅ NEW
   const intervalRef = useRef(null)
 
   useEffect(() => {
@@ -23,7 +26,6 @@ function DoctorLiveQueue() {
     fetchQueue()
     intervalRef.current = setInterval(() => setNow(new Date()), 1000)
 
-    // Real-time: re-fetch whenever appointments change for this doctor today
     const channel = supabase
       .channel('doctor-live-queue')
       .on('postgres_changes', {
@@ -43,7 +45,7 @@ function DoctorLiveQueue() {
   const fetchQueue = async () => {
     setLoading(true)
     try {
-      const today = new Date().toISOString().split('T')[0]
+      const today = new Date().toLocaleDateString('en-CA')
       const { data, error } = await supabase
         .from('appointments')
         .select('*, users!appointments_patient_id_fkey(full_name)')
@@ -52,14 +54,16 @@ function DoctorLiveQueue() {
         .eq('appointment_date', today)
         .order('appointment_time', { ascending: true })
       if (error) throw error
-      setQueue((data || []).map(a => ({ ...a, patient_name: a.users?.full_name })))
+      setQueue((data || []).map(a => ({
+        ...a,
+        patient_name: a.source === 'walkin' ? a.walkin_name : a.users?.full_name,
+      })))
     } catch {
       setQueue([])
     }
     setLoading(false)
   }
 
-  // Mark current patient as completed in Supabase, which triggers real-time for waiting patients
   const handleDone = async () => {
     if (!current || completing) return
     setCompleting(true)
@@ -69,8 +73,6 @@ function DoctorLiveQueue() {
         .update({ status: 'completed' })
         .eq('id', current.id)
       if (error) throw error
-      // fetchQueue() will be triggered by the real-time channel automatically,
-      // but we also call it directly for immediate local update
       await fetchQueue()
     } catch (err) {
       console.error('Done error:', err)
@@ -93,6 +95,26 @@ function DoctorLiveQueue() {
     <SidebarProvider>
       <div className="min-h-screen bg-[#f0f4f8] flex">
         <DoctorSidebar />
+
+        {/* ✅ NEW: Prescription modal */}
+        {prescribeTarget && (
+          <PrescriptionModal
+            appointment={prescribeTarget}
+            onClose={() => setPrescribeTarget(null)}
+            onSaved={(msg) => {
+              setToastMsg(msg)
+              setTimeout(() => setToastMsg(''), 4000)
+            }}
+          />
+        )}
+
+        {/* ✅ NEW: simple toast */}
+        {toastMsg && (
+          <div className="fixed top-5 right-5 z-50 bg-cyan-600 text-white px-4 py-3 rounded-xl shadow-lg text-sm font-medium">
+            🔔 {toastMsg}
+          </div>
+        )}
+
         <div className="lg:ml-56 flex-1 flex flex-col">
           <DoctorTopBar />
           <div className="flex-1 px-4 sm:px-6 lg:px-8 py-6 space-y-5">
@@ -121,7 +143,6 @@ function DoctorLiveQueue() {
               <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
                 <div className="xl:col-span-2 space-y-4">
 
-                  {/* Progress bar */}
                   <div className="bg-white rounded-2xl shadow-sm p-5">
                     <div className="flex items-center justify-between mb-3">
                       <p className="text-sm font-bold text-gray-700">Queue Progress</p>
@@ -134,7 +155,6 @@ function DoctorLiveQueue() {
                     <p className="text-xs text-gray-400 mt-2">{queue.length} total patients today</p>
                   </div>
 
-                  {/* Current patient card */}
                   {current ? (
                     <div className="bg-gradient-to-br from-cyan-500 to-cyan-700 rounded-2xl shadow-md p-6 text-white">
                       <div className="flex items-center gap-2 mb-4">
@@ -151,22 +171,31 @@ function DoctorLiveQueue() {
                           <p className="text-xs opacity-60 mt-0.5">{formatTime(current.appointment_time)}</p>
                         </div>
                       </div>
-                      <button
-                        onClick={handleDone}
-                        disabled={completing}
-                        className="w-full mt-5 bg-white text-cyan-600 font-bold text-sm py-2.5 rounded-xl hover:bg-cyan-50 transition-colors disabled:opacity-60 flex items-center justify-center gap-2">
-                        {completing ? (
-                          <>
-                            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                            </svg>
-                            Marking done…
-                          </>
-                        ) : (
-                          <>✓ Done — Next Patient</>
-                        )}
-                      </button>
+
+                      {/* ✅ NEW: Prescribe button, only for the current patient whose turn it is */}
+                      <div className="flex gap-2 mt-5">
+                        <button
+                          onClick={() => setPrescribeTarget(current)}
+                          className="flex-1 bg-white/15 border border-white/30 text-white font-bold text-sm py-2.5 rounded-xl hover:bg-white/25 transition-colors">
+                          📝 Prescribe
+                        </button>
+                        <button
+                          onClick={handleDone}
+                          disabled={completing}
+                          className="flex-1 bg-white text-cyan-600 font-bold text-sm py-2.5 rounded-xl hover:bg-cyan-50 transition-colors disabled:opacity-60 flex items-center justify-center gap-2">
+                          {completing ? (
+                            <>
+                              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                              </svg>
+                              Marking done…
+                            </>
+                          ) : (
+                            <>✓ Done — Next Patient</>
+                          )}
+                        </button>
+                      </div>
                     </div>
                   ) : (
                     <div className="bg-white rounded-2xl shadow-sm p-8 text-center text-gray-400">
@@ -176,7 +205,6 @@ function DoctorLiveQueue() {
                     </div>
                   )}
 
-                  {/* Waiting list */}
                   {waiting.length > 0 && (
                     <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
                       <div className="px-5 py-4 border-b border-gray-100">
@@ -199,7 +227,6 @@ function DoctorLiveQueue() {
                   )}
                 </div>
 
-                {/* Sidebar summary */}
                 <div className="space-y-4">
                   <div className="bg-white rounded-2xl shadow-sm p-5 space-y-4">
                     <h3 className="text-sm font-bold text-gray-800">Today's Summary</h3>
@@ -225,8 +252,14 @@ function DoctorLiveQueue() {
                         {done.map(p => (
                           <div key={p.id} className="flex items-center gap-3 px-5 py-3">
                             <div className={`w-8 h-8 rounded-full ${getColor(p.patient_name)} opacity-50 flex items-center justify-center text-white font-bold text-xs shrink-0`}>{getInitials(p.patient_name)}</div>
-                            <p className="text-sm text-gray-400 line-through truncate">{p.patient_name}</p>
-                            <span className="ml-auto text-green-400 text-xs">✓</span>
+                            <p className="text-sm text-gray-400 line-through truncate flex-1">{p.patient_name}</p>
+                            {/* ✅ NEW: allow prescribing for already-completed patients too */}
+                            <button
+                              onClick={() => setPrescribeTarget(p)}
+                              className="text-cyan-500 text-xs font-semibold hover:underline shrink-0">
+                              Prescribe
+                            </button>
+                            <span className="text-green-400 text-xs">✓</span>
                           </div>
                         ))}
                       </div>

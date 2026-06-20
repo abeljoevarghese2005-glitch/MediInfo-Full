@@ -32,7 +32,6 @@ function generateSlots(start, end, duration = 15) {
   return slots
 }
 
-// ✅ Haversine formula to compute distance in km between two lat/lng points
 function getDistanceKm(lat1, lng1, lat2, lng2) {
   const R = 6371
   const dLat = ((lat2 - lat1) * Math.PI) / 180
@@ -69,6 +68,12 @@ function Doctors() {
 
   const locationRef = useRef(userLocation)
   useEffect(() => { locationRef.current = userLocation }, [userLocation])
+
+  // ✅ Keep a ref to the currently selected doctor/date so realtime callbacks always see latest values
+  const selectedDoctorRef = useRef(selectedDoctor)
+  const selectedDateRef = useRef(selectedDate)
+  useEffect(() => { selectedDoctorRef.current = selectedDoctor }, [selectedDoctor])
+  useEffect(() => { selectedDateRef.current = selectedDate }, [selectedDate])
 
   useEffect(() => {
     if (selectedDoctor && selectedDate) {
@@ -148,14 +153,12 @@ function Doctors() {
         if (!res.ok) throw new Error('Edge function error')
         const data = await res.json()
         if (Array.isArray(data)) {
-          // ✅ Sort by distance_km ascending as a safety net in case edge function doesn't sort
           const sorted = [...data].sort((a, b) => (a.distance_km ?? Infinity) - (b.distance_km ?? Infinity))
           setDoctors(sorted)
         } else {
           setDoctors([])
         }
       } else {
-        // No location — fetch from DB, no distance available
         let query = supabase
           .from('users')
           .select('id, full_name, specialization, years_of_experience, consultation_fee, phone, latitude, longitude')
@@ -165,7 +168,6 @@ function Doctors() {
         setDoctors(dbErr ? [] : (data || []))
       }
     } catch {
-      // ✅ Fallback: fetch from DB, compute distance manually if location available
       let query = supabase
         .from('users')
         .select('id, full_name, specialization, years_of_experience, consultation_fee, phone, latitude, longitude')
@@ -175,7 +177,6 @@ function Doctors() {
       if (data) {
         const loc = locationRef.current
         if (loc) {
-          // ✅ Compute distance manually and sort
           const withDistance = data.map(d => ({
             ...d,
             distance_km: d.latitude && d.longitude
@@ -202,6 +203,46 @@ function Doctors() {
     setUserLocation(loc)
     fetchDoctors(loc, filter)
   }, [filter, fetchDoctors])
+
+  // ✅ NEW: Realtime subscriptions — instant sync when doctors update profile or availability
+  useEffect(() => {
+    const availabilityChannel = supabase
+      .channel('patient-doctor-availability')
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'doctor_availability',
+      }, (payload) => {
+        // If the patient currently has a booking modal open for this doctor, re-fetch slots instantly
+        const doc = selectedDoctorRef.current
+        const date = selectedDateRef.current
+        const changedDoctorId = payload.new?.doctor_id || payload.old?.doctor_id
+        if (doc && date && doc.id === changedDoctorId) {
+          fetchSlots(doc, date)
+        }
+      })
+      .subscribe()
+
+    const usersChannel = supabase
+      .channel('patient-doctor-profiles')
+      .on('postgres_changes', {
+        event: 'UPDATE', schema: 'public', table: 'users',
+        filter: `role=eq.doctor`,
+      }, (payload) => {
+        // Update fee/experience/name instantly in the doctors list without a full refetch
+        setDoctors(prev => prev.map(d =>
+          d.id === payload.new.id
+            ? { ...d, ...payload.new, distance_km: d.distance_km } // preserve distance_km, it's not in users table
+            : d
+        ))
+        // Also update the selected doctor in the open modal, if relevant
+        setSelectedDoctor(prev => (prev && prev.id === payload.new.id) ? { ...prev, ...payload.new, distance_km: prev.distance_km } : prev)
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(availabilityChannel)
+      supabase.removeChannel(usersChannel)
+    }
+  }, [])
 
   const handleBook = async () => {
     if (!selectedDate || !selectedTime) { setError('Please select date and time'); return }
