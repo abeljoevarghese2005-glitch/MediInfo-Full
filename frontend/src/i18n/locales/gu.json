@@ -1,0 +1,337 @@
+{
+  "common": {
+    "back": "પાછળ",
+    "loading": "લોડ થઈ રહ્યું છે...",
+    "save": "ફેરફારો સાચવો",
+    "saving": "સાચવી રહ્યું છે...",
+    "cancel": "રદ કરો",
+    "edit": "સંપાદિત કરો",
+    "logout": "લૉગ આઉટ",
+    "error": "કંઈક ખોટું થયું. ફરી પ્રયાસ કરો.",
+    "success": "સફળતાપૂર્વક સાચવ્યું!",
+    "language": "ભાષા",
+    "settings": "સેટિંગ્સ",
+    "today": "આજે",
+    "tomorrow": "આવતીકાલે"
+  },
+  "profile": {
+    "title": "એકાઉન્ટ માહિતી",
+    "fullName": "પૂરું નામ",
+    "phone": "ફોન નંબર",
+    "role": "ભૂમિકા",
+    "userId": "વપરાશકર્તા ID",
+    "security": "સુરક્ષા",
+    "password": "પાસવર્ડ",
+    "passwordManaged": "Supabase Auth દ્વારા સંચાલિત",
+    "phoneLogin": "લૉગિન માટે ઉપયોગ થાય છે",
+    "accountSecured": "તમારું એકાઉન્ટ Supabase Auth વડે સુરક્ષિત છે.",
+    "myReminders": "મારા રિમાઇન્ડર",
+    "aiChat": "AI ચેટ",
+    "profileUpdated": "પ્રોફાઇલ સફળતાપૂર્વક અપડેટ થઈ!",
+    "failedUpdate": "પ્રોફાઇલ અપડેટ કરવામાં નિષ્ફળ",
+    "medicines": "દવાઓ",
+    "aiPowered": "AI સંચાલિત",
+    "madeFor": "બનાવ્યું",
+    "india": "ભારત માટે",
+    "languageTab": "ભાષા",
+    "languageTitle": "એપ ભાષા",
+    "languageSubtitle": "તમારી પસંદની ભાષા પસંદ કરો. એપ તરત અપડેટ થશે.",
+    "languageSaved": "ભાષા અપડેટ થઈ!",
+    "profileTab": "પ્રોફાઇલ",
+    "roles": {
+      "patient": "દર્દી",
+      "doctor": "ડૉક્ટર",
+      "pharmacist": "ફાર્માસિસ્ટ"
+    }
+  },
+  "liveQueue": {
+    "loading": "કતાર લોડ થઈ રહી છે...",
+    "noAppointment": "કોઈ આગામી એપોઇન્ટમેન્ટ નથી",
+    "noAppointmentSub": "લાઇવ કતારમાં જોડાવા માટે એપોઇન્ટમેન્ટ બુક કરો",
+    "bookDoctor": "ડૉક્ટર બુક કરો",
+    "notToday": "તમારી એપોઇન્ટમેન્ટ આજે નથી",
+    "scheduledFor": "નિર્ધારિત તારીખ",
+    "at": "વાગ્યે",
+    "comeBack": "લાઇવ કતારમાં જોડાવા એપોઇન્ટમેન્ટના દિવસે પાછા આવો.",
+    "inQueue": "તમે કતારમાં છો",
+    "calculating": "સ્થિતિ ગણી રહ્યું છે...",
+    "youreNext": "તમે આગળ છો!",
+    "headToClinic": "હવે ક્લિનિક જાઓ",
+    "appointmentAt": "તમારી એપોઇન્ટમેન્ટ",
+    "leaveBy": "આ સમય સુધીમાં નીકળો",
+    "notifyToLeave": "ક્યારે નીકળવું તે અમે જણાવીશું",
+    "patientsAhead_one": "તમારી આગળ {{count}} દર્દી",
+    "patientsAhead_other": "તમારી આગળ {{count}} દર્દીઓ",
+    "minWait": "~{{minutes}} મિનિટ રાહ",
+    "yourTurn": "તમારો વારો આશરે",
+    "basedOn": "વાસ્તવિક એપોઇન્ટમેન્ટ સમયગાળા પર આધારિત",
+    "liveUpdates": "લાઇવ — આપોઆપ અપડેટ થાય છે",
+    "checkedIn": "ચેક ઇન",
+    "yourTurnLabel": "તમારો વારો",
+    "headNow": "હવે ક્લિનિક જાઓ!",
+    "nextInLine": "તમે આગળ છો — ડૉક્ટરને રાહ ન જોવડાવો.",
+    "timeToLeave": "નીકળવાનો સમય!",
+    "basedOnTravel": "તમારા {{minutes}} મિનિટના પ્રવાસ સમય પ્રમાણે, હવે નીકળો.",
+    "relaxTime": "આરામ કરો, હજી સમય છે",
+    "setTravelBelow": "નીચે પ્રવાસ સમય સેટ કરો અને અમે જણાવીશું ક્યારે નીકળવું.",
+    "setTravelTime": "પ્રવાસ સમય સેટ કરો",
+    "notifyRight": "યોગ્ય સમયે જણાવીશું.",
+    "customMinutes": "અથવા કસ્ટમ મિનિટ દાખલ કરો",
+    "notifySet": "{{time}} વાગ્યે {{minutes}} મિનિટ પહેલા સૂચના સેટ કરી",
+    "noNeedToCheck": "તમારા વારા પહેલા જણાવીશું — વારંવાર ચકાસવાની જરૂર નથી.",
+    "tellMeWhen": "ક્યારે નીકળવું તે જણાવો",
+    "notified": "નીકળવાનો સમય જણાવ્યો જશે!",
+    "queueNotAvailable": "કતારની સ્થિતિ હજી ઉપલબ્ધ નથી.",
+    "allowNotif": "ઉપકરણ સેટિંગ્સમાં સૂચનાઓ મંજૂર કરો.",
+    "tooSoon": "તમારો વારો ખૂબ જ ટૂંક સમયમાં — હવે નીકળો!",
+    "notifError": "સૂચના શેડ્યૂલ કરી શકાઈ નહીં. ફરી પ્રયાસ કરો.",
+    "reschedule": "ફરી નિર્ધારિત કરો",
+    "cancelAppt": "રદ કરો",
+    "in": "માં"
+  },
+  "doctors": {
+    "title": "ડૉક્ટર શોધો",
+    "subtitle": "એપોઇન્ટમેન્ટ બ્રાઉઝ કરો અને બુક કરો",
+    "viewAppointments": "એપોઇન્ટમેન્ટ જુઓ",
+    "requestSent": "ડૉ. {{name}} ને એપોઇન્ટમેન્ટની વિનંતી મોકલવામાં આવી! ક્લિનિકની મંજૂરીની રાહ જોવાઈ રહી છે.",
+    "loadingDoctors": "ડૉક્ટરો લોડ થઈ રહ્યા છે…",
+    "noDoctors": "કોઈ ડૉક્ટર મળ્યા નથી",
+    "noDoctorsSub": "અલગ વિશેષતા અજમાવો અથવા શોધ વિસ્તાર વધારો",
+    "sortedByDistance": "તમારા સ્થાનથી અંતર પ્રમાણે ક્રમબદ્ધ",
+    "distanceAway": "{{distance}} કિમી દૂર",
+    "book": "બુક કરો",
+    "bookAppointment": "એપોઇન્ટમેન્ટ બુક કરો",
+    "fee": "ફી",
+    "selectDate": "તારીખ પસંદ કરો",
+    "selectTimeSlot": "સમય સ્લોટ પસંદ કરો",
+    "selectDateFirst": "કૃપા કરી પહેલા તારીખ પસંદ કરો",
+    "loadingSlots": "ઉપલબ્ધ સ્લોટ લોડ થઈ રહ્યા છે...",
+    "noAvailability": "આ દિવસે કોઈ ઉપલબ્ધતા નથી",
+    "scrollMore": "વધુ સ્લોટ જોવા સ્ક્રોલ કરો",
+    "describeIssue": "તમારી સમસ્યાનું વર્ણન કરો (વૈકલ્પિક)",
+    "issuePlaceholder": "દા.ત. 2 દિવસથી તાવ અને માથાનો દુખાવો…",
+    "booking": "બુક થઈ રહ્યું છે…",
+    "requestAppointment": "એપોઇન્ટમેન્ટ વિનંતી — ₹{{fee}}",
+    "selectDateTimeError": "કૃપા કરી તારીખ અને સમય પસંદ કરો",
+    "slotBookedError": "આ સ્લોટ પહેલેથી જ બુક થયેલ છે",
+    "duplicateApptError": "આ સમયે તમારી પાસે પહેલેથી જ એપોઇન્ટમેન્ટ છે",
+    "bookFailError": "એપોઇન્ટમેન્ટ બુક કરવામાં નિષ્ફળ. ફરી પ્રયાસ કરો.",
+    "specializations": {
+      "all": "બધા",
+      "generalPhysician": "જનરલ ફિઝિશિયન",
+      "cardiologist": "હૃદય રોગ નિષ્ણાત",
+      "dermatologist": "ત્વચા રોગ નિષ્ણાત",
+      "neurologist": "ન્યુરોલોજિસ્ટ",
+      "orthopedic": "હાડકાં રોગ નિષ્ણાત",
+      "pediatrician": "બાળ રોગ નિષ્ણાત",
+      "psychiatrist": "મનોચિકિત્સક",
+      "ent": "ઇએનટી"
+    }
+  },
+  "nav": {
+    "menu": "મેનુ",
+    "home": "હોમ",
+    "bookDoctor": "ડૉક્ટર બુક કરો",
+    "myAppointments": "મારી એપોઇન્ટમેન્ટ",
+    "liveQueue": "લાઇવ કતાર",
+    "reminders": "રિમાઇન્ડર",
+    "profile": "પ્રોફાઇલ",
+    "dashboard": "ડેશબોર્ડ"
+  },
+  "topBar": {
+    "aiChat": "AI ચેટ",
+    "openMenu": "મેનુ ખોલો"
+  },
+  "home": {
+    "goodMorning": "સુપ્રભાત,",
+    "goodAfternoon": "શુભ બપોર,",
+    "goodEvening": "શુભ સાંજ,",
+    "greeting": "નમસ્તે {{name}}, આજે અમે તમારી કેવી રીતે મદદ કરી શકીએ?",
+    "searchPlaceholder": "દવાઓ અથવા બીમારીઓ શોધો",
+    "viewAppointments": "એપોઇન્ટમેન્ટ જુઓ →",
+    "nearbyDoctors": "નજીકના ડૉક્ટરો",
+    "sortingByDistance": "અંતર પ્રમાણે ક્રમબદ્ધ થઈ રહ્યું છે…",
+    "sortedByDistance": "તમારા સ્થાનથી અંતર પ્રમાણે ક્રમબદ્ધ",
+    "enableLocation": "અંતર ક્રમ માટે સ્થાન સક્ષમ કરો",
+    "seeAll": "બધા જુઓ →",
+    "noDoctorsFound": "કોઈ ડૉક્ટર મળ્યા નથી",
+    "previouslyVisited": "પહેલા મુલાકાત લીધેલ",
+    "quickRebook": "એક ટેપમાં ઝડપી ફરી બુક કરો",
+    "noPreviousDoctors": "તમે મુલાકાત લીધેલા ડૉક્ટરો અહીં ઝડપી ફરી બુકિંગ માટે દેખાશે.",
+    "rebook": "ફરી બુક કરો",
+    "bookNow": "હમણાં બુક કરો",
+    "yrsExp": "{{years}} વર્ષ",
+    "consultationFee": "પરામર્શ ફી",
+    "issuePlaceholder": "દા.ત. 5 દિવસથી સતત ખાંસી...",
+    "bookFee": "બુક કરો — ₹{{fee}}"
+  },
+  "location": {
+    "detecting": "સ્થાન શોધાઈ રહ્યું છે…",
+    "showingNearby": "નજીકના ડૉક્ટરો બતાવી રહ્યા છીએ",
+    "notSet": "સ્થાન સેટ નથી — અંતર ક્રમ માટે સક્ષમ કરો",
+    "enterAreaPlaceholder": "વિસ્તાર, શહેર દાખલ કરો (દા.ત: અંધેરી, મુંબઈ)",
+    "lookingUp": "શોધાઈ રહ્યું છે…",
+    "setLocation": "સ્થાન સેટ કરો",
+    "autoDetect": "ઓટો-ડિટેક્ટ",
+    "enterArea": "વિસ્તાર દાખલ કરો",
+    "areaNotFound": "વિસ્તાર મળ્યો નથી. અલગ નામ અજમાવો.",
+    "geocodeFailed": "સ્થાન શોધી શકાયું નહીં. તમારું કનેક્શન તપાસો."
+  },
+  "myAppointments": {
+    "title": "મારી અપોઈન્ટમેન્ટ્સ",
+    "subtitle": "તમારી બધી બુકિંગ્સ સંચાલિત કરો",
+    "live": "લાઇવ",
+    "bookNew": "+ નવી બુક કરો",
+    "emptyTitle": "હજુ સુધી કોઈ અપોઈન્ટમેન્ટ નથી",
+    "emptySubtitle": "ડોક્ટર સાથે તમારી પ્રથમ અપોઈન્ટમેન્ટ બુક કરો",
+    "findDoctor": "ડોક્ટર શોધો",
+    "upcoming": "આગામી",
+    "pastAndCancelled": "ભૂતકાળ અને રદ કરેલ",
+    "joinLiveQueue": "લાઇવ કતારમાં જોડાઓ",
+    "reschedule": "ફરીથી શેડ્યૂલ કરો",
+    "awaitingApproval": "મંજૂરીની રાહ જોવાઈ રહી છે",
+    "status": {
+      "confirmed": "પુષ્ટિ થયેલ",
+      "cancelled": "રદ કરેલ",
+      "completed": "પૂર્ણ",
+      "pending": "બાકી"
+    },
+    "modal": {
+      "title": "અપોઈન્ટમેન્ટ ફરીથી શેડ્યૂલ કરો",
+      "warningText": "ફરીથી શેડ્યૂલ કરવાથી તમારી અપોઈન્ટમેન્ટ બાકી સ્થિતિમાં રીસેટ થાય છે. ક્લિનિક દ્વારા ફરીથી શેડ્યૂલિંગ ફી કાપવામાં આવી શકે છે.",
+      "currentlyLabel": "હાલમાં:",
+      "newDateLabel": "નવી તારીખ",
+      "newTimeLabel": "નવો સમય સ્લોટ",
+      "confirmReschedule": "📅 ફરીથી શેડ્યૂલિંગની પુષ્ટિ કરો",
+      "rescheduling": "ફરીથી શેડ્યૂલ કરી રહ્યા છીએ..."
+    },
+    "toast": {
+      "confirmed": "{{doctor}} સાથેની તમારી અપોઈન્ટમેન્ટની પુષ્ટિ થઈ ગઈ છે! 🎉",
+      "cancelledByClinic": "{{doctor}} સાથેની તમારી અપોઈન્ટમેન્ટ ક્લિનિક દ્વારા રદ કરવામાં આવી હતી.",
+      "rescheduled": "અપોઈન્ટમેન્ટ {{date}} ના રોજ {{time}} વાગ્યે ફરીથી શેડ્યૂલ કરવામાં આવી. ફરીથી શેડ્યૂલિંગ ફી લાગુ થઈ શકે છે.",
+      "rescheduleFailed": "ફરીથી શેડ્યૂલિંગ નિષ્ફળ થયું. કૃપા કરી ફરી પ્રયાસ કરો.",
+      "defaultDoctor": "તમારા ડોક્ટર"
+    }
+  },
+  "doctorLiveQueue": {
+    "header": {
+      "title": "લાઇવ ક્યૂ",
+      "subtitle": "આજના પુષ્ટ દર્દીઓ",
+      "refresh": "રિફ્રેશ કરો"
+    },
+    "loading": "ક્યૂ લોડ થઈ રહી છે…",
+    "empty": {
+      "title": "આજે ક્યૂમાં કોઈ દર્દી નથી",
+      "subtitle": "પુષ્ટ થયેલ એપોઇન્ટમેન્ટ્સ અહીં દેખાશે."
+    },
+    "progress": {
+      "title": "ક્યૂ પ્રગતિ",
+      "status": "{{done}} પૂર્ણ · {{remaining}} બાકી",
+      "totalToday": "આજે કુલ {{count}} દર્દીઓ"
+    },
+    "issueFallback": "સામાન્ય સલાહ",
+    "current": {
+      "nowConsulting": "હાલમાં સલાહ ચાલુ છે",
+      "markingDone": "પૂર્ણ કરી રહ્યા છીએ…",
+      "doneNextPatient": "પૂર્ણ — આગળનો દર્દી"
+    },
+    "allSeen": {
+      "title": "બધા દર્દીઓ જોવાઈ ગયા!",
+      "subtitle": "આજની ક્યૂ પૂર્ણ થઈ."
+    },
+    "waiting": {
+      "title": "રાહ જોઈ રહ્યા છે ({{count}})"
+    },
+    "summary": {
+      "title": "આજનો સારાંશ",
+      "totalScheduled": "કુલ નિર્ધારિત",
+      "completed": "પૂર્ણ",
+      "inProgress": "ચાલુ છે",
+      "waiting": "રાહ જોઈ રહ્યા છે"
+    },
+    "completedSection": {
+      "title": "પૂર્ણ ({{count}})"
+    }
+  },
+  "doctorProfile": {
+    "tabs": {
+      "info": "પ્રોફાઇલ"
+    }
+  },
+  "aiChat": {
+    "header": {
+      "title": "મેડીઇન્ફો AI",
+      "subtitle": "Gemini દ્વારા સંચાલિત · કોઈપણ દવા વિશે પૂછો"
+    },
+    "medicineInput": {
+      "label": "દવા(ઓ):",
+      "placeholder": "દા.ત. Paracetamol, Ibuprofen (વૈકલ્પિક)"
+    },
+    "greeting": "નમસ્તે! હું મેડીઇન્ફો AI છું 🤖 દવાઓ વિશે કંઈપણ પૂછો — આડઅસરો, માત્રા, ક્રિયાપ્રતિક્રિયાઓ, ગર્ભાવસ્થા સલામતી અને ઘણું બધું!",
+    "inputPlaceholder": "આડઅસરો, માત્રા, ક્રિયાપ્રતિક્રિયાઓ વિશે પૂછો...",
+    "send": "મોકલો",
+    "disclaimer": "મેડીઇન્ફો AI માત્ર માહિતીના હેતુ માટે છે. હંમેશા ડૉક્ટરની સલાહ લો.",
+    "errorFallback": "કંઈક ખોટું થયું. કૃપા કરી ફરી પ્રયાસ કરો."
+  },
+  "reminders": {
+    "title": "રિમાઇન્ડર",
+    "subtitle": "તમારી દવાઓ અને એપોઇન્ટમેન્ટ પર ધ્યાન રાખો",
+    "add": "ઉમેરો",
+    "errorPrefix": "ભૂલ",
+    "notifBanner": {
+      "title": "સૂચનાઓ ચાલુ કરો",
+      "blocked": "સૂચનાઓ અવરોધિત છે — ડિવાઇસ સેટિંગ્સ → એપ્સ → MediInfo માં સક્રિય કરો",
+      "prompt": "યોગ્ય સમયે દવા રિમાઇન્ડર મેળવો",
+      "allow": "મંજૂરી આપો",
+      "activeTitle": "સૂચનાઓ સક્રિય છે",
+      "activeSub": "રિમાઇન્ડર નિર્ધારિત સમયે જ આવશે"
+    },
+    "stats": {
+      "total": "કુલ",
+      "active": "સક્રિય",
+      "takenToday": "આજે લેવાયું"
+    },
+    "tabs": {
+      "medicine": "દવા",
+      "appointments": "એપોઇન્ટમેન્ટ"
+    },
+    "status": {
+      "active": "સક્રિય",
+      "expired": "સમાપ્ત"
+    },
+    "form": {
+      "newTitle": "નવું દવા રિમાઇન્ડર",
+      "medicineName": "દવાનું નામ",
+      "medicineNamePlaceholder": "દા.ત. Paracetamol",
+      "dosage": "માત્રા",
+      "dosagePlaceholder": "દા.ત. 500mg",
+      "reminderTime": "રિમાઇન્ડર સમય",
+      "frequency": "આવર્તન",
+      "startDate": "શરૂઆતની તારીખ",
+      "endDate": "સમાપ્તિ તારીખ",
+      "notes": "નોંધ",
+      "notesPlaceholder": "દા.ત. ભોજન પછી લો",
+      "save": "રિમાઇન્ડર સાચવો"
+    },
+    "frequencies": {
+      "daily": "દરરોજ",
+      "twiceDaily": "દિવસમાં બે વાર",
+      "threeTimesDaily": "દિવસમાં ત્રણ વાર",
+      "weekly": "સાપ્તાહિક",
+      "asNeeded": "જરૂર પ્રમાણે"
+    },
+    "empty": {
+      "title": "હજુ સુધી કોઈ રિમાઇન્ડર નથી",
+      "subtitle": "શરૂ કરવા માટે \"+ ઉમેરો\" દબાવો"
+    },
+    "markTaken": "લેવાયું ચિહ્નિત કરો",
+    "taken": "લેવાયું",
+    "delete": "દૂર કરો",
+    "appointments": {
+      "emptyTitle": "કોઈ આવનારી એપોઇન્ટમેન્ટ નથી",
+      "emptySubtitle": "રિમાઇન્ડર જોવા માટે ડૉક્ટર બુક કરો",
+      "upcoming": "આવનારી",
+      "reminderSet": "રિમાઇન્ડર સેટ છે"
+    }
+  }
+}

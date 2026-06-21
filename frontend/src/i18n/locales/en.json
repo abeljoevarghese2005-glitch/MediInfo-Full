@@ -1,0 +1,337 @@
+{
+  "common": {
+    "back": "Back",
+    "loading": "Loading...",
+    "save": "Save Changes",
+    "saving": "Saving...",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "logout": "Logout",
+    "error": "Something went wrong. Please try again.",
+    "success": "Saved successfully!",
+    "language": "Language",
+    "settings": "Settings",
+    "today": "Today",
+    "tomorrow": "Tomorrow"
+  },
+  "profile": {
+    "title": "Account Information",
+    "fullName": "Full Name",
+    "phone": "Phone Number",
+    "role": "Role",
+    "userId": "User ID",
+    "security": "Security",
+    "password": "Password",
+    "passwordManaged": "Managed by Supabase Auth",
+    "phoneLogin": "Used for login",
+    "accountSecured": "Your account is secured with Supabase Auth.",
+    "myReminders": "My Reminders",
+    "aiChat": "AI Chat",
+    "profileUpdated": "Profile updated successfully!",
+    "failedUpdate": "Failed to update profile",
+    "medicines": "Medicines",
+    "aiPowered": "AI Powered",
+    "madeFor": "Made for",
+    "india": "India",
+    "languageTab": "Language",
+    "languageTitle": "App Language",
+    "languageSubtitle": "Choose your preferred language. The app will update immediately.",
+    "languageSaved": "Language updated!",
+    "profileTab": "Profile",
+    "roles": {
+      "patient": "Patient",
+      "doctor": "Doctor",
+      "pharmacist": "Pharmacist"
+    }
+  },
+  "liveQueue": {
+    "loading": "Loading queue...",
+    "noAppointment": "No upcoming appointments",
+    "noAppointmentSub": "Book an appointment to join the live queue",
+    "bookDoctor": "Book a Doctor",
+    "notToday": "Your appointment isn't today",
+    "scheduledFor": "Scheduled for",
+    "at": "at",
+    "comeBack": "Come back on the day of your appointment to join the live queue.",
+    "inQueue": "You're in the queue",
+    "calculating": "Calculating position...",
+    "youreNext": "You're next!",
+    "headToClinic": "Head to the clinic now",
+    "appointmentAt": "Your appointment is at",
+    "leaveBy": "Leave by",
+    "notifyToLeave": "We'll notify you when it's time to leave",
+    "patientsAhead_one": "{{count}} patient before you",
+    "patientsAhead_other": "{{count}} patients before you",
+    "minWait": "~{{minutes}} min wait",
+    "yourTurn": "Your turn around",
+    "basedOn": "based on actual appointment durations",
+    "liveUpdates": "Live — updates automatically",
+    "checkedIn": "Checked in",
+    "yourTurnLabel": "Your turn",
+    "headNow": "Head to the clinic now!",
+    "nextInLine": "You're next in line — don't keep the doctor waiting.",
+    "timeToLeave": "Time to leave!",
+    "basedOnTravel": "Based on your {{minutes}}-min travel time, you should head out now.",
+    "relaxTime": "Relax, you still have time",
+    "setTravelBelow": "Set your travel time below and we'll tell you exactly when to leave.",
+    "setTravelTime": "Set your travel time",
+    "notifyRight": "We'll notify you at the right time to leave.",
+    "customMinutes": "Or enter custom minutes",
+    "notifySet": "Notification set for {{minutes}} min before your estimated turn at {{time}}",
+    "noNeedToCheck": "We'll notify you before your turn — no need to keep checking.",
+    "tellMeWhen": "Tell me exactly when to leave",
+    "notified": "You'll be notified when to leave!",
+    "queueNotAvailable": "Queue position not available yet.",
+    "allowNotif": "Please allow notifications in device settings.",
+    "tooSoon": "Your turn is too soon — leave now!",
+    "notifError": "Could not schedule notification. Please try again.",
+    "reschedule": "Reschedule",
+    "cancelAppt": "Cancel",
+    "in": "in"
+  },
+  "doctors": {
+    "title": "Find a Doctor",
+    "subtitle": "Browse and book appointments",
+    "viewAppointments": "View Appointments",
+    "requestSent": "Appointment request sent to Dr. {{name}}! Awaiting clinic approval.",
+    "loadingDoctors": "Loading doctors…",
+    "noDoctors": "No doctors found",
+    "noDoctorsSub": "Try a different specialization or expand your search area",
+    "sortedByDistance": "Sorted by distance from your location",
+    "distanceAway": "{{distance}} km away",
+    "book": "Book",
+    "bookAppointment": "Book Appointment",
+    "fee": "Fee",
+    "selectDate": "Select Date",
+    "selectTimeSlot": "Select Time Slot",
+    "selectDateFirst": "Please select a date first",
+    "loadingSlots": "Loading available slots...",
+    "noAvailability": "No availability on this day",
+    "scrollMore": "Scroll to see more slots",
+    "describeIssue": "Describe your issue (optional)",
+    "issuePlaceholder": "e.g. Fever and headache for 2 days…",
+    "booking": "Booking…",
+    "requestAppointment": "Request Appointment — ₹{{fee}}",
+    "selectDateTimeError": "Please select date and time",
+    "slotBookedError": "This slot is already booked",
+    "duplicateApptError": "You already have an appointment at this time",
+    "bookFailError": "Failed to book appointment. Please try again.",
+    "specializations": {
+      "all": "All",
+      "generalPhysician": "General Physician",
+      "cardiologist": "Cardiologist",
+      "dermatologist": "Dermatologist",
+      "neurologist": "Neurologist",
+      "orthopedic": "Orthopedic",
+      "pediatrician": "Pediatrician",
+      "psychiatrist": "Psychiatrist",
+      "ent": "ENT"
+    }
+  },
+  "nav": {
+    "menu": "Menu",
+    "home": "H  ome",
+    "bookDoctor": "Book a Doctor",
+    "myAppointments": "My Appointments",
+    "liveQueue": "Live Queue",
+    "reminders": "Reminders",
+    "profile": "Profile",
+    "dashboard": "Dashboard"
+  },
+  "topBar": {
+    "aiChat": "AI Chat",
+    "openMenu": "Open menu"
+  },
+  "home": {
+    "goodMorning": "Good morning,",
+    "goodAfternoon": "Good afternoon,",
+    "goodEvening": "Good evening,",
+    "greeting": "Hi {{name}}, how can we help today?",
+    "searchPlaceholder": "Search medicines or conditions",
+    "viewAppointments": "View Appointments →",
+    "nearbyDoctors": "Nearby Doctors",
+    "sortingByDistance": "Sorting by distance…",
+    "sortedByDistance": "Sorted by distance from your location",
+    "enableLocation": "Enable location for distance sorting",
+    "seeAll": "See all →",
+    "noDoctorsFound": "No doctors found",
+    "previouslyVisited": "Previously Visited",
+    "quickRebook": "Quick rebook in one tap",
+    "noPreviousDoctors": "Doctors you visit will show up here for quick rebooking.",
+    "rebook": "Rebook",
+    "bookNow": "Book Now",
+    "yrsExp": "{{years}} yrs",
+    "consultationFee": "Consultation Fee",
+    "issuePlaceholder": "e.g. Persistent cough for 5 days...",
+    "bookFee": "Book — ₹{{fee}}"
+  },
+  "location": {
+    "detecting": "Detecting location…",
+    "showingNearby": "showing nearby doctors",
+    "notSet": "Location not set — enable to sort by distance",
+    "enterAreaPlaceholder": "Enter area, city (e.g. Andheri, Mumbai)",
+    "lookingUp": "Looking up…",
+    "setLocation": "Set location",
+    "autoDetect": "Auto-detect",
+    "enterArea": "Enter area",
+    "areaNotFound": "Area not found. Try a different name.",
+    "geocodeFailed": "Could not look up location. Check your connection."
+  },
+  "myAppointments": {
+    "title": "My Appointments",
+    "subtitle": "Manage all your bookings",
+    "live": "Live",
+    "bookNew": "+ Book New",
+    "emptyTitle": "No appointments yet",
+    "emptySubtitle": "Book your first appointment with a doctor",
+    "findDoctor": "Find a Doctor",
+    "upcoming": "Upcoming",
+    "pastAndCancelled": "Past & Cancelled",
+    "joinLiveQueue": "Join Live Queue",
+    "reschedule": "Reschedule",
+    "awaitingApproval": "Awaiting approval",
+    "status": {
+      "confirmed": "confirmed",
+      "cancelled": "cancelled",
+      "completed": "completed",
+      "pending": "pending"
+    },
+    "modal": {
+      "title": "Reschedule Appointment",
+      "warningText": "Rescheduling resets your appointment to pending. A rescheduling fee may be deducted by the clinic.",
+      "currentlyLabel": "Currently:",
+      "newDateLabel": "New Date",
+      "newTimeLabel": "New Time Slot",
+      "confirmReschedule": "📅 Confirm Reschedule",
+      "rescheduling": "Rescheduling..."
+    },
+    "toast": {
+      "confirmed": "Your appointment with {{doctor}} has been confirmed! 🎉",
+      "cancelledByClinic": "Your appointment with {{doctor}} was cancelled by the clinic.",
+      "rescheduled": "Appointment rescheduled to {{date}} at {{time}}. A rescheduling fee may apply.",
+      "rescheduleFailed": "Failed to reschedule. Please try again.",
+      "defaultDoctor": "your doctor"
+    }
+  },
+  "doctorLiveQueue": {
+    "header": {
+      "title": "Live Queue",
+      "subtitle": "Today's confirmed patients",
+      "refresh": "Refresh"
+    },
+    "loading": "Loading queue…",
+    "empty": {
+      "title": "No patients in queue today",
+      "subtitle": "Confirmed appointments will appear here."
+    },
+    "progress": {
+      "title": "Queue Progress",
+      "status": "{{done}} done · {{remaining}} remaining",
+      "totalToday": "{{count}} total patients today"
+    },
+    "issueFallback": "General consultation",
+    "current": {
+      "nowConsulting": "Now Consulting",
+      "markingDone": "Marking done…",
+      "doneNextPatient": "Done — Next Patient"
+    },
+    "allSeen": {
+      "title": "All patients seen!",
+      "subtitle": "Queue complete for today."
+    },
+    "waiting": {
+      "title": "Waiting ({{count}})"
+    },
+    "summary": {
+      "title": "Today's Summary",
+      "totalScheduled": "Total scheduled",
+      "completed": "Completed",
+      "inProgress": "In progress",
+      "waiting": "Waiting"
+    },
+    "completedSection": {
+      "title": "Completed ({{count}})"
+    }
+  },
+  "doctorProfile": {
+    "tabs": {
+      "info": "Profile"
+    }
+  },
+  "aiChat": {
+    "header": {
+      "title": "MediInfo AI",
+      "subtitle": "Powered by Gemini · Ask about any medicine"
+    },
+    "medicineInput": {
+      "label": "Medicine(s):",
+      "placeholder": "e.g. Paracetamol, Ibuprofen (optional)"
+    },
+    "greeting": "Hello! I'm MediInfo AI 🤖 Ask me anything about medicines — side effects, dosage, interactions, pregnancy safety, and more!",
+    "inputPlaceholder": "Ask about side effects, dosage, interactions...",
+    "send": "Send",
+    "disclaimer": "MediInfo AI is for informational purposes only. Always consult a doctor.",
+    "errorFallback": "Something went wrong. Please try again."
+  },
+  "reminders": {
+    "title": "Reminders",
+    "subtitle": "Stay on top of your medications & appointments",
+    "add": "Add",
+    "errorPrefix": "Error",
+    "notifBanner": {
+      "title": "Allow notifications",
+      "blocked": "Notifications blocked — enable in device Settings → Apps → MediInfo",
+      "prompt": "Get medicine reminders at exactly the right time",
+      "allow": "Allow",
+      "activeTitle": "Notifications active",
+      "activeSub": "reminders fire at exactly the scheduled time"
+    },
+    "stats": {
+      "total": "Total",
+      "active": "Active",
+      "takenToday": "Taken Today"
+    },
+    "tabs": {
+      "medicine": "Medicine",
+      "appointments": "Appointments"
+    },
+    "status": {
+      "active": "Active",
+      "expired": "Expired"
+    },
+    "form": {
+      "newTitle": "New Medicine Reminder",
+      "medicineName": "Medicine Name",
+      "medicineNamePlaceholder": "e.g. Paracetamol",
+      "dosage": "Dosage",
+      "dosagePlaceholder": "e.g. 500mg",
+      "reminderTime": "Reminder Time",
+      "frequency": "Frequency",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "notes": "Notes",
+      "notesPlaceholder": "e.g. Take after meals",
+      "save": "Save Reminder"
+    },
+    "frequencies": {
+      "daily": "daily",
+      "twiceDaily": "twice daily",
+      "threeTimesDaily": "three times daily",
+      "weekly": "weekly",
+      "asNeeded": "as needed"
+    },
+    "empty": {
+      "title": "No reminders yet",
+      "subtitle": "Click \"+ Add\" to get started"
+    },
+    "markTaken": "Mark Taken",
+    "taken": "Taken",
+    "delete": "Delete",
+    "appointments": {
+      "emptyTitle": "No upcoming appointments",
+      "emptySubtitle": "Book a doctor to see reminders here",
+      "upcoming": "Upcoming",
+      "reminderSet": "Reminder set"
+    }
+  }
+}
