@@ -48,7 +48,7 @@ function Toast({ toasts, onDismiss }) {
 }
 
 function RescheduleModal({ appointment, onClose, onSuccess, addToast }) {
-  const { t } = useTranslation()
+const { t } = useTranslation()
   const today = new Date().toLocaleDateString('en-CA')
   const [newDate, setNewDate] = useState('')
   const [availableSlots, setAvailableSlots] = useState([])
@@ -86,7 +86,7 @@ function RescheduleModal({ appointment, onClose, onSuccess, addToast }) {
 
       if (date === today) {
         const now = new Date()
-        const bufferMs = 15 * 60 * 1000
+        const bufferMs = 0
         setAvailableSlots(rawSlots.map(slot => {
           const [h, m] = slot.split(':').map(Number)
           const slotTime = new Date()
@@ -284,9 +284,24 @@ function MyAppointments() {
     setCancelling(null)
   }
 
-  const today = new Date().toISOString().split('T')[0]
-  const upcoming = appointments.filter(a => a.status !== 'cancelled' && a.appointment_date >= today)
-  const past = appointments.filter(a => a.status === 'cancelled' || a.appointment_date < today)
+  const today = new Date().toLocaleDateString('en-CA')
+
+  const upcoming = appointments.filter(a =>
+    a.status !== 'cancelled' &&
+    a.status !== 'completed' &&
+    a.appointment_date >= today
+  )
+  const past = appointments
+  .filter(a =>
+    a.status === 'cancelled' ||
+    a.status === 'completed' ||
+    a.appointment_date < today
+  )
+  .sort((a, b) => {
+    const dateA = `${a.appointment_date} ${a.appointment_time}`
+    const dateB = `${b.appointment_date} ${b.appointment_time}`
+    return dateB.localeCompare(dateA)
+  })
 
   const getStatusStyle = (status) => {
     switch (status) {

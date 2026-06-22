@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import DoctorTopBar from '../components/DoctorTopBar'
 import DoctorSidebar from '../components/DoctorSidebar'
 import { SidebarProvider } from '../components/SidebarContext'
+import PrescriptionModal from '../components/PrescriptionModal'
 import { supabase } from '../lib/supabase'
 
 function Toast({ toasts, onDismiss }) {
@@ -20,7 +21,6 @@ function Toast({ toasts, onDismiss }) {
   )
 }
 
-// Cancel confirmation modal
 function CancelModal({ appointment, onConfirm, onClose }) {
   const [reason, setReason] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -45,12 +45,10 @@ function CancelModal({ appointment, onConfirm, onClose }) {
           <h2 className="text-base font-black text-gray-900">Cancel Appointment</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg leading-none">✕</button>
         </div>
-
         <div className="bg-red-50 rounded-xl px-4 py-3 text-sm">
           <p className="font-semibold text-gray-800">{appointment.patient_name}</p>
           <p className="text-gray-400 text-xs mt-0.5">{appointment.appointment_date} · {appointment.appointment_time}</p>
         </div>
-
         <div>
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Reason for cancellation</p>
           <div className="flex flex-wrap gap-2 mb-3">
@@ -61,26 +59,132 @@ function CancelModal({ appointment, onConfirm, onClose }) {
               </button>
             ))}
           </div>
-          <textarea
-            value={reason}
-            onChange={e => setReason(e.target.value)}
-            placeholder="Or type a custom reason…"
-            rows={3}
-            className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-300 resize-none"
-          />
+          <textarea value={reason} onChange={e => setReason(e.target.value)}
+            placeholder="Or type a custom reason…" rows={3}
+            className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-300 resize-none" />
         </div>
-
         <p className="text-xs text-gray-400">The patient will be notified with this reason.</p>
-
         <div className="flex gap-3 pt-1">
           <button onClick={onClose} className="flex-1 py-2.5 border border-gray-200 text-gray-500 text-sm font-semibold rounded-xl hover:bg-gray-50">
             Keep Appointment
           </button>
-          <button
-            onClick={handleSubmit}
-            disabled={!reason.trim() || submitting}
+          <button onClick={handleSubmit} disabled={!reason.trim() || submitting}
             className="flex-1 py-2.5 bg-red-500 text-white text-sm font-bold rounded-xl hover:bg-red-600 disabled:opacity-50 transition-colors">
             {submitting ? 'Cancelling…' : 'Cancel & Notify Patient'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function WalkInModal({ doctorId, onClose, onSuccess }) {
+  const [name, setName] = useState('')
+  const [age, setAge] = useState('')
+  const [phone, setPhone] = useState('')
+  const [time, setTime] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
+
+  const todayIST = new Date().toLocaleDateString('en-CA')
+
+  const handleSubmit = async () => {
+    if (!name.trim()) { setError('Patient name is required'); return }
+    if (!age || isNaN(age) || age < 1 || age > 120) { setError('Enter a valid age'); return }
+    if (!phone.trim() || phone.length < 10) { setError('Enter a valid phone number'); return }
+    if (!time) { setError('Please select a time slot'); return }
+    setSubmitting(true)
+    setError('')
+    try {
+      const { error: insertError } = await supabase.from('appointments').insert({
+        doctor_id: doctorId,
+        patient_id: null,
+        appointment_date: todayIST,
+        appointment_time: time,
+        status: 'confirmed',
+        source: 'walkin',
+        walkin_name: name.trim(),
+        walkin_age: parseInt(age, 10),
+        walkin_phone: phone.trim(),
+      })
+      if (insertError) throw insertError
+      onSuccess(`Walk-in patient "${name.trim()}" added for ${time}`)
+      onClose()
+    } catch (err) {
+      setError(err.message || 'Failed to add walk-in patient')
+    }
+    setSubmitting(false)
+  }
+
+  const generateTodaySlots = () => {
+    const slots = []
+    const now = new Date()
+    let h = now.getHours()
+    let m = Math.ceil(now.getMinutes() / 15) * 15
+    if (m === 60) { h += 1; m = 0 }
+    const endH = 21
+    while (h < endH || (h === endH && m === 0)) {
+      slots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`)
+      m += 15
+      if (m === 60) { h += 1; m = 0 }
+    }
+    return slots
+  }
+
+  const slots = generateTodaySlots()
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-black text-gray-900">Add Walk-in Patient</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Today · {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg leading-none">✕</button>
+        </div>
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs font-semibold text-gray-500 mb-1 block">Patient Name *</label>
+            <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Full name"
+              className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-cyan-300" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-gray-500 mb-1 block">Age *</label>
+              <input type="number" value={age} onChange={e => setAge(e.target.value)} placeholder="e.g. 35" min={1} max={120}
+                className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-cyan-300" />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-500 mb-1 block">Phone *</label>
+              <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="10-digit number"
+                className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-cyan-300" />
+            </div>
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-gray-500 mb-2 block">Time Slot *</label>
+            {slots.length === 0 ? (
+              <p className="text-xs text-red-400">No slots available for today</p>
+            ) : (
+              <div className="grid grid-cols-4 gap-2 max-h-36 overflow-y-auto pr-1">
+                {slots.map(s => (
+                  <button key={s} onClick={() => setTime(s)}
+                    className={`py-2 rounded-lg text-xs font-medium transition-all ${time === s ? 'bg-cyan-500 text-white' : 'bg-gray-50 text-gray-700 hover:bg-cyan-50'}`}>
+                    {s}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+        {error && <div className="bg-red-50 text-red-600 px-3 py-2 rounded-lg text-xs">❌ {error}</div>}
+        <div className="flex gap-3 pt-1">
+          <button onClick={onClose} className="flex-1 py-2.5 border border-gray-200 text-gray-500 text-sm font-semibold rounded-xl hover:bg-gray-50">
+            Cancel
+          </button>
+          <button onClick={handleSubmit} disabled={submitting}
+            className="flex-1 py-2.5 bg-cyan-500 text-white text-sm font-bold rounded-xl hover:bg-cyan-600 disabled:opacity-50 transition-colors">
+            {submitting ? 'Adding…' : 'Add Patient'}
           </button>
         </div>
       </div>
@@ -98,7 +202,9 @@ function DoctorAppointments() {
   const [search, setSearch] = useState('')
   const [toasts, setToasts] = useState([])
   const [lastUpdated, setLastUpdated] = useState(null)
-  const [cancelTarget, setCancelTarget] = useState(null) // appointment to cancel
+  const [cancelTarget, setCancelTarget] = useState(null)
+  const [showWalkIn, setShowWalkIn] = useState(false)
+  const [prescribeTarget, setPrescribeTarget] = useState(null)
   const prevAppointments = useRef([])
   const toastCounter = useRef(0)
 
@@ -109,27 +215,27 @@ function DoctorAppointments() {
   }
 
   const fetchAppointments = async () => {
-    const now = new Date()
+    const todayIST = new Date().toLocaleDateString('en-CA')
     const limit = new Date()
-    limit.setDate(now.getDate() + 30)
+    limit.setDate(limit.getDate() + 30)
+    const limitIST = limit.toLocaleDateString('en-CA')
 
     const { data, error } = await supabase
       .from('appointments')
       .select('*, users!appointments_patient_id_fkey(full_name, fcm_token)')
       .eq('doctor_id', user.id)
-      .gte('appointment_date', now.toISOString().split('T')[0])
-      .lte('appointment_date', limit.toISOString().split('T')[0])
+      .gte('appointment_date', todayIST)
+      .lte('appointment_date', limitIST)
       .order('appointment_date', { ascending: true })
 
     if (error || !data) { setLoading(false); return }
 
     const normalized = data.map(a => ({
       ...a,
-      patient_name: a.users?.full_name,
+      patient_name: a.source === 'walkin' ? a.walkin_name : a.users?.full_name,
       patient_fcm_token: a.users?.fcm_token,
     }))
 
-    // Detect new bookings for toast
     if (prevAppointments.current.length > 0) {
       const prevIds = new Set(prevAppointments.current.map(a => a.id))
       const newRequests = normalized.filter(a => !prevIds.has(a.id) && a.status === 'pending')
@@ -174,43 +280,29 @@ function DoctorAppointments() {
     setActing(null)
   }
 
-  // Cancel a confirmed appointment + send push notification to patient
   const handleCancelConfirmed = async (id, reason) => {
     setActing(id)
     try {
-      // 1. Update status in Supabase
       const { error } = await supabase
         .from('appointments')
         .update({ status: 'cancelled', cancellation_reason: reason })
         .eq('id', id)
-
       if (error) throw error
-
-      // 2. Update local state
       setAppointments(prev => prev.map(a => a.id === id ? { ...a, status: 'cancelled', cancellation_reason: reason } : a))
-
-      // 3. Send push notification via Supabase Edge Function
       const appt = appointments.find(a => a.id === id)
       if (appt?.patient_fcm_token) {
         const { data: { session } } = await supabase.auth.getSession()
-        await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-notification`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${session?.access_token}`,
-            },
-            body: JSON.stringify({
-              token: appt.patient_fcm_token,
-              title: 'Appointment Cancelled',
-              body: `Your appointment on ${appt.appointment_date} at ${appt.appointment_time} was cancelled. Reason: ${reason}`,
-              data: { type: 'appointment_cancelled', appointment_id: String(id) },
-            }),
-          }
-        )
+        await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-notification`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+          body: JSON.stringify({
+            token: appt.patient_fcm_token,
+            title: 'Appointment Cancelled',
+            body: `Your appointment on ${appt.appointment_date} at ${appt.appointment_time} was cancelled. Reason: ${reason}`,
+            data: { type: 'appointment_cancelled', appointment_id: String(id) },
+          }),
+        })
       }
-
       addToast(`Appointment cancelled. Patient notified.`)
       setCancelTarget(null)
     } catch (err) {
@@ -238,8 +330,11 @@ function DoctorAppointments() {
     return matchFilter && matchSearch
   })
 
-  const todayStr = new Date().toISOString().split('T')[0]
-  const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split('T')[0]
+  const todayStr = new Date().toLocaleDateString('en-CA')
+  const tomorrowDate = new Date()
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1)
+  const tomorrowStr = tomorrowDate.toLocaleDateString('en-CA')
+
   const dayLabel = (dateStr) => {
     if (dateStr === todayStr) return 'Today'
     if (dateStr === tomorrowStr) return 'Tomorrow'
@@ -260,12 +355,20 @@ function DoctorAppointments() {
         <DoctorSidebar />
         <Toast toasts={toasts} onDismiss={(id) => setToasts(prev => prev.filter(t => t.id !== id))} />
 
-        {/* Cancel modal */}
         {cancelTarget && (
-          <CancelModal
-            appointment={cancelTarget}
-            onConfirm={handleCancelConfirmed}
-            onClose={() => setCancelTarget(null)}
+          <CancelModal appointment={cancelTarget} onConfirm={handleCancelConfirmed} onClose={() => setCancelTarget(null)} />
+        )}
+
+        {showWalkIn && (
+          <WalkInModal doctorId={user.id} onClose={() => setShowWalkIn(false)}
+            onSuccess={(msg) => { addToast(msg); fetchAppointments() }} />
+        )}
+
+        {prescribeTarget && (
+          <PrescriptionModal
+            appointment={prescribeTarget}
+            onClose={() => setPrescribeTarget(null)}
+            onSaved={(msg) => { addToast(msg) }}
           />
         )}
 
@@ -279,6 +382,10 @@ function DoctorAppointments() {
                 <p className="text-sm text-gray-400">Upcoming bookings for the next 30 days</p>
               </div>
               <div className="flex items-center gap-3">
+                <button onClick={() => setShowWalkIn(true)}
+                  className="flex items-center gap-1.5 text-sm bg-cyan-500 text-white px-4 py-2 rounded-xl hover:bg-cyan-600 transition-colors font-semibold">
+                  + Walk-in
+                </button>
                 <div className="flex items-center gap-1.5 text-xs text-gray-400">
                   <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
                   Live
@@ -359,9 +466,19 @@ function DoctorAppointments() {
                                 {appt.patient_name?.charAt(0).toUpperCase()}
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm font-semibold text-gray-800 truncate">{appt.patient_name}</p>
-                                <p className="text-xs text-gray-400 truncate">{appt.issue || 'General consultation'}</p>
-                                {/* Show cancellation reason if cancelled */}
+                                <div className="flex items-center gap-2">
+                                  <p className="text-sm font-semibold text-gray-800 truncate">{appt.patient_name}</p>
+                                  {appt.source === 'walkin' && (
+                                    <span className="text-[10px] font-bold bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full shrink-0">
+                                      Walk-in
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-xs text-gray-400 truncate">
+                                  {appt.source === 'walkin'
+                                    ? `Age ${appt.walkin_age} · ${appt.walkin_phone}`
+                                    : appt.issue || 'General consultation'}
+                                </p>
                                 {appt.status === 'cancelled' && appt.cancellation_reason && (
                                   <p className="text-xs text-red-400 truncate mt-0.5">Reason: {appt.cancellation_reason}</p>
                                 )}
@@ -388,19 +505,32 @@ function DoctorAppointments() {
                                   <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold capitalize ${statusStyles.confirmed}`}>
                                     Accepted
                                   </span>
-                                  {/* Emergency cancel button */}
-                                  <button
-                                    onClick={() => setCancelTarget(appt)}
-                                    disabled={acting === appt.id}
+                                  <button onClick={() => setPrescribeTarget(appt)}
+                                    className="px-3 py-1.5 border border-cyan-200 text-cyan-600 text-xs font-semibold rounded-lg hover:bg-cyan-50 transition-colors">
+                                    Prescribe
+                                  </button>
+                                  <button onClick={() => setCancelTarget(appt)} disabled={acting === appt.id}
                                     className="px-3 py-1.5 border border-red-200 text-red-500 text-xs font-semibold rounded-lg hover:bg-red-50 disabled:opacity-50 transition-colors">
                                     Cancel
                                   </button>
                                 </div>
                               )}
 
-                              {(appt.status === 'cancelled' || appt.status === 'completed') && (
-                                <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold capitalize shrink-0 ${statusStyles[appt.status] || 'bg-gray-100 text-gray-500'}`}>
-                                  {appt.status}
+                              {appt.status === 'completed' && (
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold capitalize ${statusStyles.completed}`}>
+                                    completed
+                                  </span>
+                                  <button onClick={() => setPrescribeTarget(appt)}
+                                    className="px-3 py-1.5 border border-cyan-200 text-cyan-600 text-xs font-semibold rounded-lg hover:bg-cyan-50 transition-colors">
+                                    Prescribe
+                                  </button>
+                                </div>
+                              )}
+
+                              {appt.status === 'cancelled' && (
+                                <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold capitalize shrink-0 ${statusStyles.cancelled}`}>
+                                  cancelled
                                 </span>
                               )}
                             </div>

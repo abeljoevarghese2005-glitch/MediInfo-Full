@@ -46,6 +46,18 @@ function generateSlots(start, end, duration = 15) {
   return slots
 }
 
+function getDistanceKm(lat1, lng1, lat2, lng2) {
+  const R = 6371
+  const dLat = ((lat2 - lat1) * Math.PI) / 180
+  const dLng = ((lng2 - lng1) * Math.PI) / 180
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+    Math.cos((lat2 * Math.PI) / 180) *
+    Math.sin(dLng / 2) * Math.sin(dLng / 2)
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
 function Doctors() {
   const navigate = useNavigate()
   const { t } = useTranslation()
@@ -67,10 +79,16 @@ function Doctors() {
   const [bookedSlots, setBookedSlots] = useState([])
   const [slotsLoading, setSlotsLoading] = useState(false)
 
-  const today = new Date().toISOString().split('T')[0]
+  const today = new Date().toLocaleDateString('en-CA')
 
   const locationRef = useRef(userLocation)
   useEffect(() => { locationRef.current = userLocation }, [userLocation])
+
+  // ✅ Keep a ref to the currently selected doctor/date so realtime callbacks always see latest values
+  const selectedDoctorRef = useRef(selectedDoctor)
+  const selectedDateRef = useRef(selectedDate)
+  useEffect(() => { selectedDoctorRef.current = selectedDoctor }, [selectedDoctor])
+  useEffect(() => { selectedDateRef.current = selectedDate }, [selectedDate])
 
   useEffect(() => {
     if (selectedDoctor && selectedDate) {
@@ -110,7 +128,7 @@ function Doctors() {
 
       if (date === today) {
         const now = new Date()
-        const bufferMs = 15 * 60 * 1000
+        const bufferMs = 0
         setAvailableSlots(rawSlots.map(slot => {
           const [h, m] = slot.split(':').map(Number)
           const slotTime = new Date()
@@ -149,11 +167,16 @@ function Doctors() {
         )
         if (!res.ok) throw new Error('Edge function error')
         const data = await res.json()
-        setDoctors(Array.isArray(data) ? data : [])
+        if (Array.isArray(data)) {
+          const sorted = [...data].sort((a, b) => (a.distance_km ?? Infinity) - (b.distance_km ?? Infinity))
+          setDoctors(sorted)
+        } else {
+          setDoctors([])
+        }
       } else {
         let query = supabase
           .from('users')
-          .select('id, full_name, specialization, years_of_experience, consultation_fee, phone')
+          .select('id, full_name, specialization, years_of_experience, consultation_fee, phone, latitude, longitude')
           .eq('role', 'doctor')
         if (spec && spec !== 'All') query = query.eq('specialization', spec)
         const { data, error: dbErr } = await query
@@ -162,11 +185,27 @@ function Doctors() {
     } catch {
       let query = supabase
         .from('users')
-        .select('id, full_name, specialization, years_of_experience, consultation_fee, phone')
+        .select('id, full_name, specialization, years_of_experience, consultation_fee, phone, latitude, longitude')
         .eq('role', 'doctor')
       if (spec && spec !== 'All') query = query.eq('specialization', spec)
       const { data } = await query
-      setDoctors(data || [])
+      if (data) {
+        const loc = locationRef.current
+        if (loc) {
+          const withDistance = data.map(d => ({
+            ...d,
+            distance_km: d.latitude && d.longitude
+              ? getDistanceKm(loc.lat, loc.lng, d.latitude, d.longitude)
+              : null
+          }))
+          withDistance.sort((a, b) => (a.distance_km ?? Infinity) - (b.distance_km ?? Infinity))
+          setDoctors(withDistance)
+        } else {
+          setDoctors(data)
+        }
+      } else {
+        setDoctors([])
+      }
     }
     setLoading(false)
   }, [])
@@ -179,6 +218,46 @@ function Doctors() {
     setUserLocation(loc)
     fetchDoctors(loc, filter)
   }, [filter, fetchDoctors])
+
+  // ✅ NEW: Realtime subscriptions — instant sync when doctors update profile or availability
+  useEffect(() => {
+    const availabilityChannel = supabase
+      .channel('patient-doctor-availability')
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'doctor_availability',
+      }, (payload) => {
+        // If the patient currently has a booking modal open for this doctor, re-fetch slots instantly
+        const doc = selectedDoctorRef.current
+        const date = selectedDateRef.current
+        const changedDoctorId = payload.new?.doctor_id || payload.old?.doctor_id
+        if (doc && date && doc.id === changedDoctorId) {
+          fetchSlots(doc, date)
+        }
+      })
+      .subscribe()
+
+    const usersChannel = supabase
+      .channel('patient-doctor-profiles')
+      .on('postgres_changes', {
+        event: 'UPDATE', schema: 'public', table: 'users',
+        filter: `role=eq.doctor`,
+      }, (payload) => {
+        // Update fee/experience/name instantly in the doctors list without a full refetch
+        setDoctors(prev => prev.map(d =>
+          d.id === payload.new.id
+            ? { ...d, ...payload.new, distance_km: d.distance_km } // preserve distance_km, it's not in users table
+            : d
+        ))
+        // Also update the selected doctor in the open modal, if relevant
+        setSelectedDoctor(prev => (prev && prev.id === payload.new.id) ? { ...prev, ...payload.new, distance_km: prev.distance_km } : prev)
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(availabilityChannel)
+      supabase.removeChannel(usersChannel)
+    }
+  }, [])
 
   const handleBook = async () => {
     if (!selectedDate || !selectedTime) { setError(t('doctors.selectDateTimeError')); return }

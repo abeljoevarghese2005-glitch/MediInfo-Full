@@ -16,10 +16,12 @@ const Profile = lazy(() => import('./pages/Profile'))
 const Doctors = lazy(() => import('./pages/Doctors'))
 const MyAppointments = lazy(() => import('./pages/MyAppointments'))
 const LiveQueue = lazy(() => import('./pages/LiveQueue'))
+const MyPrescriptions = lazy(() => import('./pages/MyPrescriptions'))
 const DoctorDashboard = lazy(() => import('./pages/DoctorDashboard'))
 const DoctorAppointments = lazy(() => import('./pages/DoctorAppointments'))
 const DoctorLiveQueue = lazy(() => import('./pages/DoctorLiveQueue'))
 const DoctorProfile = lazy(() => import('./pages/DoctorProfile'))
+const DoctorPrescriptions = lazy(() => import('./pages/DoctorPrescriptions'))
 
 const HOME_ROUTES = ['/home', '/doctor-dashboard']
 
@@ -170,12 +172,14 @@ function App() {
           <Route path="/reminders" element={<PatientRoute><Reminders /></PatientRoute>} />
           <Route path="/doctors" element={<PatientRoute><Doctors /></PatientRoute>} />
           <Route path="/my-appointments" element={<PatientRoute><MyAppointments /></PatientRoute>} />
+          <Route path="/my-prescriptions" element={<PatientRoute><MyPrescriptions /></PatientRoute>} />
           <Route path="/live-queue" element={<PatientRoute><LiveQueue /></PatientRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
           <Route path="/doctor-dashboard" element={<DoctorRoute><DoctorDashboard /></DoctorRoute>} />
           <Route path="/doctor-appointments" element={<DoctorRoute><DoctorAppointments /></DoctorRoute>} />
           <Route path="/doctor-live-queue" element={<DoctorRoute><DoctorLiveQueue /></DoctorRoute>} />
           <Route path="/doctor-profile" element={<DoctorRoute><DoctorProfile /></DoctorRoute>} />
+          <Route path="/doctor-prescriptions" element={<DoctorRoute><DoctorPrescriptions /></DoctorRoute>} />
         </Routes>
       </Suspense>
     </BrowserRouter>

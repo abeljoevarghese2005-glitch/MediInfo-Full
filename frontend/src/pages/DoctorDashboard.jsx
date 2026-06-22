@@ -16,11 +16,11 @@ const greeting = () => {
 // Returns 7 days starting from the given Monday-anchored weekStart date
 const getWeekDays = (weekStart) => {
   const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
-  const todayStr = new Date().toISOString().split('T')[0]
+  const todayStr = new Date().toLocaleDateString('en-CA') // ✅ FIX: IST-safe
   return Array.from({ length: 7 }, (_, i) => {
     const d = new Date(weekStart)
     d.setDate(weekStart.getDate() + i)
-    const dateStr = d.toISOString().split('T')[0]
+    const dateStr = d.toLocaleDateString('en-CA') // ✅ FIX: IST-safe
     return {
       label: days[d.getDay()],
       date: d.getDate(),
@@ -34,8 +34,8 @@ const getWeekDays = (weekStart) => {
 // Get the Monday of the week containing a given date
 const getWeekStart = (date) => {
   const d = new Date(date)
-  const day = d.getDay() // 0=Sun
-  const diff = day === 0 ? -6 : 1 - day // shift to Monday
+  const day = d.getDay()
+  const diff = day === 0 ? -6 : 1 - day
   d.setDate(d.getDate() + diff)
   d.setHours(0, 0, 0, 0)
   return d
@@ -107,13 +107,12 @@ function DoctorDashboard() {
   const [search, setSearch] = useState('')
   const [nearbyPatients, setNearbyPatients] = useState([])
 
-  // Calendar state
-  const todayStr = new Date().toISOString().split('T')[0]
+  // ✅ FIX: IST-safe today
+  const todayStr = new Date().toLocaleDateString('en-CA')
   const [weekStart, setWeekStart] = useState(() => getWeekStart(new Date()))
   const [selectedDateStr, setSelectedDateStr] = useState(todayStr)
   const weekDays = getWeekDays(weekStart)
 
-  // Week label for display
   const weekLabel = (() => {
     const end = new Date(weekStart)
     end.setDate(weekStart.getDate() + 6)
@@ -199,8 +198,8 @@ function DoctorDashboard() {
     setActing(null)
   }
 
-  const today = new Date().toISOString().split('T')[0]
-  const todayCount = appointments.filter(a => a.appointment_date?.startsWith(today)).length
+  const today = new Date().toLocaleDateString('en-CA') // ✅ FIX: IST-safe
+  const todayCount = appointments.filter(a => a.appointment_date === today).length
   const pendingCount = appointments.filter(a => a.status === 'pending').length
   const confirmedCount = appointments.filter(a => a.status === 'confirmed').length
 
@@ -211,7 +210,6 @@ function DoctorDashboard() {
     { key: 'all', label: `All (${appointments.length})` },
   ]
 
-  // Appointments filtered by selected day + status/search
   const displayed = appointments.filter(a => {
     const matchDate = a.appointment_date === selectedDateStr
     const matchFilter = filter === 'all' || a.status === filter
@@ -221,10 +219,8 @@ function DoctorDashboard() {
     return matchDate && matchFilter && matchSearch
   })
 
-  // Count per day for calendar dot indicators
   const countForDate = (dateStr) => appointments.filter(a => a.appointment_date === dateStr).length
 
-  // Label for selected day in the appointments panel
   const selectedDayLabel = (() => {
     if (selectedDateStr === todayStr) return 'Today'
     const d = new Date(selectedDateStr)
@@ -290,7 +286,6 @@ function DoctorDashboard() {
 
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
 
-              {/* Appointments panel — filtered by selected day */}
               <div className="xl:col-span-2 bg-white rounded-2xl shadow-sm overflow-hidden">
                 <div className="p-5 border-b border-gray-100 flex items-center justify-between">
                   <div>
@@ -338,7 +333,6 @@ function DoctorDashboard() {
 
               <div className="space-y-4">
 
-                {/* Profile card */}
                 <div className="bg-white rounded-2xl shadow-sm p-5">
                   <h3 className="text-sm font-bold text-gray-800 mb-3">Profile</h3>
                   <div className="space-y-2.5">
@@ -369,9 +363,7 @@ function DoctorDashboard() {
                   </div>
                 </div>
 
-                {/* Calendar card — full navigation */}
                 <div className="bg-white rounded-2xl shadow-sm p-5">
-                  {/* Week navigation header */}
                   <div className="flex items-center justify-between mb-3">
                     <button onClick={goToPrevWeek}
                       className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors text-sm">
@@ -386,7 +378,6 @@ function DoctorDashboard() {
                     </button>
                   </div>
 
-                  {/* Day grid */}
                   <div className="grid grid-cols-7 gap-1">
                     {weekDays.map((d, i) => {
                       const isSelected = d.dateStr === selectedDateStr
@@ -406,7 +397,6 @@ function DoctorDashboard() {
                           <span className={`font-bold text-sm mt-0.5 ${isSelected ? 'text-white' : d.isToday ? 'text-cyan-600' : 'text-gray-700'}`}>
                             {d.date}
                           </span>
-                          {/* Dot indicator for days with appointments */}
                           {count > 0 && (
                             <span className={`w-1 h-1 rounded-full mt-0.5 ${isSelected ? 'bg-white' : 'bg-cyan-400'}`} />
                           )}
@@ -415,7 +405,6 @@ function DoctorDashboard() {
                     })}
                   </div>
 
-                  {/* Today shortcut */}
                   {selectedDateStr !== todayStr && (
                     <button onClick={goToToday}
                       className="w-full mt-3 text-xs text-cyan-500 font-semibold py-1.5 rounded-lg hover:bg-cyan-50 transition-colors">
@@ -424,7 +413,6 @@ function DoctorDashboard() {
                   )}
                 </div>
 
-                {/* CTA */}
                 <div className="bg-gradient-to-br from-cyan-500 to-cyan-700 rounded-2xl p-5 text-white">
                   <p className="font-bold text-sm mb-1">Boost your visibility</p>
                   <p className="text-xs opacity-80 leading-snug mb-3">Keep your availability updated to get more bookings.</p>
