@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import TopBar from '../components/TopBar'
 import Sidebar from '../components/Sidebar'
 import { SidebarProvider } from '../components/SidebarContext'
 import { supabase } from '../lib/supabase'
+import { translateSpecialization } from '../utils/specializations'
 import {
   scheduleReminderNotifications,
   cancelReminderNotifications,
@@ -11,7 +13,16 @@ import {
   requestNotifPermission,
 } from '../hooks/useLocalNotifications'
 
+// Stored DB value -> i18next key under reminders.frequencies.*
+const FREQUENCY_KEY_BY_VALUE = {
+  'daily': 'daily',
+  'twice daily': 'twiceDaily',
+  'three times daily': 'threeTimesDaily',
+  'weekly': 'weekly',
+  'as needed': 'asNeeded',
+}
 const frequencyOptions = ['daily', 'twice daily', 'three times daily', 'weekly', 'as needed']
+
 const avatarColors = ['bg-cyan-500','bg-purple-500','bg-green-500','bg-orange-500','bg-pink-500','bg-blue-500']
 const getColor = (name) => avatarColors[(name?.charCodeAt(0)||0) % avatarColors.length]
 const getInitials = (name) => name?.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2)||'D'
@@ -27,10 +38,10 @@ function isActive(r) {
   return true
 }
 
-function StatusBadge({ active }) {
+function StatusBadge({ active, t }) {
   return (
     <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${active ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-400'}`}>
-      {active ? '● Active' : '● Expired'}
+      {active ? `● ${t('reminders.status.active')}` : `● ${t('reminders.status.expired')}`}
     </span>
   )
 }
@@ -44,6 +55,7 @@ function formatTime(t) {
 }
 
 function Reminders() {
+  const { t } = useTranslation()
   const user = JSON.parse(localStorage.getItem('user') || '{}')
   const [tab, setTab] = useState('medicine')
   const [reminders, setReminders] = useState([])
@@ -144,7 +156,7 @@ function Reminders() {
       setShowForm(false)
       fetchReminders()
     } catch(err) {
-      alert('Error: ' + JSON.stringify(err))
+      alert(t('reminders.errorPrefix') + ': ' + JSON.stringify(err))
     }
   }
 
@@ -188,15 +200,15 @@ function Reminders() {
 
             <div className="flex items-start justify-between mb-6">
               <div>
-                <h1 className="text-2xl font-black text-gray-900">Reminders</h1>
-                <p className="text-gray-400 text-sm mt-0.5">Stay on top of your medications & appointments</p>
+                <h1 className="text-2xl font-black text-gray-900">{t('reminders.title')}</h1>
+                <p className="text-gray-400 text-sm mt-0.5">{t('reminders.subtitle')}</p>
               </div>
               {tab === 'medicine' && (
                 <button
                   onClick={() => setShowForm(!showForm)}
                   className="bg-cyan-500 text-white px-4 py-2 rounded-xl hover:bg-cyan-600 font-semibold text-sm shrink-0"
                 >
-                  {showForm ? 'Cancel' : '+ Add'}
+                  {showForm ? t('common.cancel') : `+ ${t('reminders.add')}`}
                 </button>
               )}
             </div>
@@ -207,11 +219,11 @@ function Reminders() {
                 <div className="flex items-center gap-3">
                   <span className="text-2xl">🔔</span>
                   <div>
-                    <p className="text-sm font-bold text-amber-800">Allow notifications</p>
+                    <p className="text-sm font-bold text-amber-800">{t('reminders.notifBanner.title')}</p>
                     <p className="text-xs text-amber-600 mt-0.5">
                       {notifPermission === 'denied'
-                        ? 'Notifications blocked — enable in device Settings → Apps → MediInfo'
-                        : 'Get medicine reminders at exactly the right time'}
+                        ? t('reminders.notifBanner.blocked')
+                        : t('reminders.notifBanner.prompt')}
                     </p>
                   </div>
                 </div>
@@ -220,7 +232,7 @@ function Reminders() {
                     onClick={handleRequestPermission}
                     className="bg-amber-500 text-white text-xs font-bold px-4 py-2 rounded-xl hover:bg-amber-600 shrink-0"
                   >
-                    Allow
+                    {t('reminders.notifBanner.allow')}
                   </button>
                 )}
               </div>
@@ -229,95 +241,99 @@ function Reminders() {
             {notifPermission === 'granted' && (
               <div className="bg-green-50 border border-green-200 rounded-2xl px-4 py-3 mb-5 flex items-center gap-2 text-sm text-green-700">
                 <span>✅</span>
-                <span className="font-semibold">Notifications active</span>
-                <span className="text-green-500 text-xs">— reminders fire at exactly the scheduled time</span>
+                <span className="font-semibold">{t('reminders.notifBanner.activeTitle')}</span>
+                <span className="text-green-500 text-xs">— {t('reminders.notifBanner.activeSub')}</span>
               </div>
             )}
 
             <div className="grid grid-cols-3 gap-3 mb-6">
               <div className="bg-white rounded-2xl p-4 border border-gray-100 text-center">
                 <p className="text-2xl font-black text-cyan-500">{reminders.length}</p>
-                <p className="text-xs text-gray-400 mt-0.5">Total</p>
+                <p className="text-xs text-gray-400 mt-0.5">{t('reminders.stats.total')}</p>
               </div>
               <div className="bg-white rounded-2xl p-4 border border-gray-100 text-center">
                 <p className="text-2xl font-black text-green-500">{activeCount}</p>
-                <p className="text-xs text-gray-400 mt-0.5">Active</p>
+                <p className="text-xs text-gray-400 mt-0.5">{t('reminders.stats.active')}</p>
               </div>
               <div className="bg-white rounded-2xl p-4 border border-gray-100 text-center">
                 <p className="text-2xl font-black text-purple-500">{takenCount}</p>
-                <p className="text-xs text-gray-400 mt-0.5">Taken Today</p>
+                <p className="text-xs text-gray-400 mt-0.5">{t('reminders.stats.takenToday')}</p>
               </div>
             </div>
 
             <div className="flex gap-2 mb-6">
-              {['medicine', 'appointments'].map(t => (
+              {['medicine', 'appointments'].map(tabKey => (
                 <button
-                  key={t}
-                  onClick={() => setTab(t)}
+                  key={tabKey}
+                  onClick={() => setTab(tabKey)}
                   className={`px-5 py-2 rounded-xl text-sm font-semibold transition-all ${
-                    tab === t ? 'bg-cyan-500 text-white' : 'bg-white text-gray-500 border border-gray-200 hover:border-cyan-300'
+                    tab === tabKey ? 'bg-cyan-500 text-white' : 'bg-white text-gray-500 border border-gray-200 hover:border-cyan-300'
                   }`}
                 >
-                  {t === 'medicine' ? '💊 Medicine' : '📅 Appointments'}
+                  {tabKey === 'medicine' ? `💊 ${t('reminders.tabs.medicine')}` : `📅 ${t('reminders.tabs.appointments')}`}
                 </button>
               ))}
             </div>
 
             {tab === 'medicine' && showForm && (
               <div className="bg-white rounded-2xl shadow-sm p-6 mb-6 border border-gray-100">
-                <h2 className="text-base font-bold text-gray-800 mb-4">New Medicine Reminder</h2>
+                <h2 className="text-base font-bold text-gray-800 mb-4">{t('reminders.form.newTitle')}</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="sm:col-span-2">
-                    <label className="text-xs font-semibold text-gray-500 mb-1 block">Medicine Name *</label>
+                    <label className="text-xs font-semibold text-gray-500 mb-1 block">{t('reminders.form.medicineName')} *</label>
                     <input type="text" value={form.medicine_name}
                       onChange={e => setForm({...form, medicine_name: e.target.value})}
-                      placeholder="e.g. Paracetamol"
+                      placeholder={t('reminders.form.medicineNamePlaceholder')}
                       className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-sm" />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-gray-500 mb-1 block">Dosage</label>
+                    <label className="text-xs font-semibold text-gray-500 mb-1 block">{t('reminders.form.dosage')}</label>
                     <input type="text" value={form.dosage}
                       onChange={e => setForm({...form, dosage: e.target.value})}
-                      placeholder="e.g. 500mg"
+                      placeholder={t('reminders.form.dosagePlaceholder')}
                       className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-sm" />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-gray-500 mb-1 block">Reminder Time ⏰</label>
+                    <label className="text-xs font-semibold text-gray-500 mb-1 block">{t('reminders.form.reminderTime')} ⏰</label>
                     <input type="time" value={form.reminder_time}
                       onChange={e => setForm({...form, reminder_time: e.target.value})}
                       className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-sm" />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-gray-500 mb-1 block">Frequency</label>
+                    <label className="text-xs font-semibold text-gray-500 mb-1 block">{t('reminders.form.frequency')}</label>
                     <select value={form.frequency}
                       onChange={e => setForm({...form, frequency: e.target.value})}
                       className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-sm">
-                      {frequencyOptions.map(f => <option key={f} value={f}>{f}</option>)}
+                      {frequencyOptions.map(f => (
+                        <option key={f} value={f}>
+                          {t(`reminders.frequencies.${FREQUENCY_KEY_BY_VALUE[f]}`)}
+                        </option>
+                      ))}
                     </select>
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-gray-500 mb-1 block">Start Date *</label>
+                    <label className="text-xs font-semibold text-gray-500 mb-1 block">{t('reminders.form.startDate')} *</label>
                     <input type="date" value={form.start_date}
                       onChange={e => setForm({...form, start_date: e.target.value})}
                       className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-sm" />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-gray-500 mb-1 block">End Date</label>
+                    <label className="text-xs font-semibold text-gray-500 mb-1 block">{t('reminders.form.endDate')}</label>
                     <input type="date" value={form.end_date}
                       onChange={e => setForm({...form, end_date: e.target.value})}
                       className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-sm" />
                   </div>
                   <div className="sm:col-span-2">
-                    <label className="text-xs font-semibold text-gray-500 mb-1 block">Notes</label>
+                    <label className="text-xs font-semibold text-gray-500 mb-1 block">{t('reminders.form.notes')}</label>
                     <textarea value={form.notes}
                       onChange={e => setForm({...form, notes: e.target.value})}
-                      placeholder="e.g. Take after meals" rows={2}
+                      placeholder={t('reminders.form.notesPlaceholder')} rows={2}
                       className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-sm resize-none" />
                   </div>
                   <div className="sm:col-span-2">
                     <button onClick={handleSubmit}
                       className="w-full bg-cyan-500 text-white py-2.5 rounded-xl hover:bg-cyan-600 font-semibold text-sm">
-                      Save Reminder
+                      {t('reminders.form.save')}
                     </button>
                   </div>
                 </div>
@@ -327,12 +343,12 @@ function Reminders() {
             {tab === 'medicine' && (
               <>
                 {loading ? (
-                  <div className="text-center py-12 text-gray-400">Loading...</div>
+                  <div className="text-center py-12 text-gray-400">{t('common.loading')}</div>
                 ) : reminders.length === 0 ? (
                   <div className="text-center py-16 bg-white rounded-2xl border border-gray-100">
                     <p className="text-5xl mb-3">💊</p>
-                    <p className="text-gray-500 font-medium">No reminders yet</p>
-                    <p className="text-gray-400 text-sm mt-1">Click "+ Add" to get started</p>
+                    <p className="text-gray-500 font-medium">{t('reminders.empty.title')}</p>
+                    <p className="text-gray-400 text-sm mt-1">{t('reminders.empty.subtitle')}</p>
                   </div>
                 ) : (
                   <div className="flex flex-col gap-3">
@@ -349,11 +365,13 @@ function Reminders() {
                               <div className="flex-1 min-w-0">
                                 <div className="flex flex-wrap items-center gap-2 mb-1">
                                   <h3 className={`font-bold text-gray-900 ${taken ? 'line-through text-gray-400' : ''}`}>{r.medicine_name}</h3>
-                                  <StatusBadge active={active} />
+                                  <StatusBadge active={active} t={t} />
                                 </div>
                                 <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-500">
                                   {r.dosage && <span>💉 {r.dosage}</span>}
-                                  <span className="text-cyan-500 font-medium capitalize">🔁 {r.frequency}</span>
+                                  <span className="text-cyan-500 font-medium capitalize">
+                                    🔁 {FREQUENCY_KEY_BY_VALUE[r.frequency] ? t(`reminders.frequencies.${FREQUENCY_KEY_BY_VALUE[r.frequency]}`) : r.frequency}
+                                  </span>
                                   {r.reminder_time && <span>⏰ {formatTime(r.reminder_time)}</span>}
                                 </div>
                                 <p className="text-xs text-gray-400 mt-1">
@@ -366,11 +384,11 @@ function Reminders() {
                               {active && (
                                 <button onClick={() => toggleTaken(r.id)}
                                   className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-all ${taken ? 'bg-green-100 text-green-600 hover:bg-green-200' : 'bg-gray-100 text-gray-500 hover:bg-cyan-50 hover:text-cyan-600'}`}>
-                                  {taken ? 'Taken ✓' : 'Mark Taken'}
+                                  {taken ? `${t('reminders.taken')} ✓` : t('reminders.markTaken')}
                                 </button>
                               )}
                               <button onClick={() => handleDelete(r.id)} className="text-xs text-red-400 hover:text-red-600 font-medium">
-                                Delete
+                                {t('reminders.delete')}
                               </button>
                             </div>
                           </div>
@@ -387,15 +405,15 @@ function Reminders() {
                 {appointments.length === 0 ? (
                   <div className="text-center py-16 bg-white rounded-2xl border border-gray-100">
                     <p className="text-5xl mb-3">📅</p>
-                    <p className="text-gray-500 font-medium">No upcoming appointments</p>
-                    <p className="text-gray-400 text-sm mt-1">Book a doctor to see reminders here</p>
+                    <p className="text-gray-500 font-medium">{t('reminders.appointments.emptyTitle')}</p>
+                    <p className="text-gray-400 text-sm mt-1">{t('reminders.appointments.emptySubtitle')}</p>
                   </div>
                 ) : (
                   <div className="flex flex-col gap-3">
                     {appointments.map(a => {
                       const isToday = a.appointment_date === new Date().toISOString().split('T')[0]
                       const isTomorrow = a.appointment_date === new Date(Date.now()+86400000).toISOString().split('T')[0]
-                      const label = isToday ? '🔴 Today' : isTomorrow ? '🟡 Tomorrow' : '🟢 Upcoming'
+                      const label = isToday ? `🔴 ${t('common.today')}` : isTomorrow ? `🟡 ${t('common.tomorrow')}` : `🟢 ${t('reminders.appointments.upcoming')}`
                       return (
                         <div key={a.id} className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-5">
                           <div className="flex items-center gap-4">
@@ -407,14 +425,14 @@ function Reminders() {
                                 <p className="font-bold text-gray-900 text-sm">Dr. {a.doctor_name}</p>
                                 <span className="text-xs font-semibold">{label}</span>
                               </div>
-                              <p className="text-cyan-500 text-xs">{a.specialization || 'General Physician'}</p>
+                              <p className="text-cyan-500 text-xs">{translateSpecialization(t, a.specialization)}</p>
                               <div className="flex gap-3 text-xs text-gray-400 mt-1">
                                 <span>📅 {formatDate(a.appointment_date)}</span>
                                 {a.appointment_time && <span>⏰ {formatTime(a.appointment_time)}</span>}
                               </div>
                               {a.status === 'confirmed' && (
                                 <span className="inline-block mt-1 text-xs bg-green-100 text-green-600 font-semibold px-2 py-0.5 rounded-full">
-                                  ✓ Reminder set
+                                  ✓ {t('reminders.appointments.reminderSet')}
                                 </span>
                               )}
                               {a.issue && <p className="text-xs text-gray-400 italic mt-1">"{a.issue}"</p>}

@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useLocation } from '../hooks/useLocation'
 
 export default function LocationBar({ onLocationReady }) {
+  const { t } = useTranslation()
   const { location, locationName, status, error, detect, save } = useLocation()
   const [editing, setEditing] = useState(false)
   const [query, setQuery] = useState('')
@@ -29,7 +31,7 @@ export default function LocationBar({ onLocationReady }) {
       )
       const results = await res.json()
       if (!results || results.length === 0) {
-        setGeocodeError('Area not found. Try a different name.')
+        setGeocodeError(t('location.areaNotFound'))
         setGeocoding(false)
         return
       }
@@ -40,7 +42,7 @@ export default function LocationBar({ onLocationReady }) {
       setEditing(false)
       setQuery('')
     } catch {
-      setGeocodeError('Could not look up location. Check your connection.')
+      setGeocodeError(t('location.geocodeFailed'))
     }
     setGeocoding(false)
   }
@@ -51,10 +53,10 @@ export default function LocationBar({ onLocationReady }) {
   }
 
   const locationLabel = () => {
-    if (status === 'detecting') return <span className="text-cyan-600 font-medium">Detecting location…</span>
+    if (status === 'detecting') return <span className="text-cyan-600 font-medium">{t('location.detecting')}</span>
     if (status === 'auto' && location) return (
       <span className="text-cyan-600 font-medium">
-        📍 {locationName ? locationName : `${location.lat.toFixed(3)}, ${location.lng.toFixed(3)}`} — showing nearby doctors
+        📍 {locationName ? locationName : `${location.lat.toFixed(3)}, ${location.lng.toFixed(3)}`} — {t('location.showingNearby')}
       </span>
     )
     if (status === 'manual' && location) return (
@@ -63,7 +65,7 @@ export default function LocationBar({ onLocationReady }) {
       </span>
     )
     if (error) return <span className="text-red-500">{error}</span>
-    return <span className="text-gray-400">Location not set — enable to sort by distance</span>
+    return <span className="text-gray-400">{t('location.notSet')}</span>
   }
 
   return (
@@ -80,7 +82,7 @@ export default function LocationBar({ onLocationReady }) {
           <input
             ref={inputRef}
             type="text"
-            placeholder="Enter area, city (e.g. Andheri, Mumbai)"
+            placeholder={t('location.enterAreaPlaceholder')}
             value={query}
             onChange={e => { setQuery(e.target.value); setGeocodeError('') }}
             onKeyDown={handleKeyDown}
@@ -88,11 +90,11 @@ export default function LocationBar({ onLocationReady }) {
           />
           <button onClick={handleGeocode} disabled={geocoding || !query.trim()}
             className="px-3 py-1.5 bg-cyan-500 text-white rounded-lg font-medium hover:bg-cyan-600 disabled:opacity-50">
-            {geocoding ? 'Looking up…' : 'Set location'}
+            {geocoding ? t('location.lookingUp') : t('location.setLocation')}
           </button>
           <button onClick={() => { setEditing(false); setQuery(''); setGeocodeError('') }}
             className="px-3 py-1.5 border border-gray-200 text-gray-500 rounded-lg hover:bg-gray-50">
-            Cancel
+            {t('common.cancel')}
           </button>
           {geocodeError && <span className="w-full text-red-500 mt-0.5">{geocodeError}</span>}
         </div>
@@ -106,11 +108,11 @@ export default function LocationBar({ onLocationReady }) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                 d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
             </svg>
-            Auto-detect
+            {t('location.autoDetect')}
           </button>
           <button onClick={() => setEditing(true)}
             className="px-2.5 py-1 border border-gray-200 text-gray-500 rounded-lg hover:bg-gray-50">
-            Enter area
+            {t('location.enterArea')}
           </button>
         </div>
       )}

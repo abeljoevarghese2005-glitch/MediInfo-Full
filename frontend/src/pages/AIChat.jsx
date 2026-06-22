@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import TopBar from '../components/TopBar'
 import Sidebar from '../components/Sidebar'
 import { SidebarProvider } from '../components/SidebarContext'
@@ -7,10 +8,11 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 function AIChat() {
+  const { t } = useTranslation()
   const [messages, setMessages] = useState([
     {
       role: 'ai',
-      text: "Hello! I'm MediInfo AI 🤖 Ask me anything about medicines — side effects, dosage, interactions, pregnancy safety, and more!",
+      text: t('aiChat.greeting'),
     }
   ])
   const [input, setInput] = useState('')
@@ -65,7 +67,7 @@ function AIChat() {
       const aiMessage = { role: 'ai', text: data.answer }
       setMessages(prev => [...prev, aiMessage])
     } catch (err) {
-      const errorMsg = err.message || 'Something went wrong. Please try again.'
+      const errorMsg = err.message || t('aiChat.errorFallback')
       setMessages(prev => [...prev, { role: 'ai', text: `❌ ${errorMsg}` }])
     } finally {
       setLoading(false)
@@ -99,18 +101,18 @@ function AIChat() {
                 🤖
               </div>
               <div className="min-w-0">
-                <h1 className="font-bold text-gray-800 text-lg">MediInfo AI</h1>
-                <p className="text-gray-500 text-sm">Powered by Gemini · Ask about any medicine</p>
+                <h1 className="font-bold text-gray-800 text-lg">{t('aiChat.header.title')}</h1>
+                <p className="text-gray-500 text-sm">{t('aiChat.header.subtitle')}</p>
               </div>
             </div>
 
             <div className="bg-white rounded-xl shadow-sm p-3 flex items-center gap-2">
-              <span className="text-gray-500 text-sm whitespace-nowrap">💊 Medicine(s):</span>
+              <span className="text-gray-500 text-sm whitespace-nowrap">💊 {t('aiChat.medicineInput.label')}</span>
               <input
                 type="text"
                 value={medicineInput}
                 onChange={e => setMedicineInput(e.target.value)}
-                placeholder="e.g. Paracetamol, Ibuprofen (optional)"
+                placeholder={t('aiChat.medicineInput.placeholder')}
                 className="flex-1 text-sm outline-none text-gray-700 placeholder-gray-400 min-w-0"
               />
             </div>
@@ -156,7 +158,7 @@ function AIChat() {
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask about side effects, dosage, interactions..."
+                placeholder={t('aiChat.inputPlaceholder')}
                 rows={2}
                 className="flex-1 outline-none text-gray-700 placeholder-gray-400 resize-none text-sm pt-1 min-w-0"
               />
@@ -165,12 +167,12 @@ function AIChat() {
                 disabled={loading || !input.trim()}
                 className="bg-cyan-500 hover:bg-cyan-600 disabled:bg-gray-300 text-white px-4 py-2 rounded-xl font-medium text-sm transition-colors shrink-0"
               >
-                Send
+                {t('aiChat.send')}
               </button>
             </div>
 
             <p className="text-center text-xs text-gray-400">
-              ⚠️ MediInfo AI is for informational purposes only. Always consult a doctor.
+              ⚠️ {t('aiChat.disclaimer')}
             </p>
           </div>
         </div>

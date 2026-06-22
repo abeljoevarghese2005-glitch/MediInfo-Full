@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import DoctorTopBar from '../components/DoctorTopBar'
 import DoctorSidebar from '../components/DoctorSidebar'
 import { SidebarProvider } from '../components/SidebarContext'
@@ -13,6 +14,19 @@ const DEFAULT_AVAIL = Object.fromEntries(
     ranges: [{ start: '09:00', end: '17:00' }]
   }])
 )
+
+const LANGUAGES = [
+  { code: 'en', label: 'English' },
+  { code: 'hi', label: 'हिन्दी' },
+  { code: 'mr', label: 'मराठी' },
+  { code: 'ta', label: 'தமிழ்' },
+  { code: 'te', label: 'తెలుగు' },
+  { code: 'kn', label: 'ಕನ್ನಡ' },
+  { code: 'bn', label: 'বাংলা' },
+  { code: 'ml', label: 'മലയാളം' },
+  { code: 'gu', label: 'ગુજરાતી' },
+  { code: 'pa', label: 'ਪੰਜਾਬੀ' },
+]
 
 function normalizeAvail(raw) {
   if (!raw) return DEFAULT_AVAIL
@@ -62,10 +76,11 @@ function Field({ icon, label, value, editing, field, type = 'text', form, setFor
       </div>
       {editing ? (
         <div className="relative">
-          {prefix && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">{prefix}</span>}
+          {prefix && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 font-medium pointer-events-none">{prefix}</span>}
           <input type={type} value={form[field]}
             onChange={e => setForm(prev => ({ ...prev, [field]: type === 'number' ? Number(e.target.value) : e.target.value }))}
-            className={`w-full border border-gray-200 rounded-xl py-2.5 text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-cyan-300 ${prefix ? 'pl-7 pr-3' : 'px-3'}`} />
+            className={`w-full border border-gray-200 rounded-xl py-2.5 text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-cyan-300 ${prefix ? 'pr-3' : 'px-3'}`}
+            style={prefix ? { paddingLeft: `${prefix.length * 0.5 + 0.75}rem` } : undefined} />
         </div>
       ) : (
         <p className="text-sm text-gray-800 font-medium bg-gray-50 rounded-xl px-3 py-2.5 min-h-[38px]">
@@ -128,7 +143,9 @@ function DayRow({ day, d, editing, tpp, toggleDay, updateRange, addRange, remove
 
 function DoctorProfile() {
   const navigate = useNavigate()
+  const { t, i18n } = useTranslation()
   const user = JSON.parse(localStorage.getItem('user') || '{}')
+  const [activeTab, setActiveTab] = useState('info')
   const [profile, setProfile] = useState(null)
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState(EMPTY_FORM)
@@ -138,6 +155,7 @@ function DoctorProfile() {
   const [saved, setSaved] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [langSaved, setLangSaved] = useState(false)
 
   useEffect(() => {
     if (user.role !== 'doctor') { navigate('/home'); return }
@@ -160,7 +178,7 @@ function DoctorProfile() {
       setAvail(parsedAvail)
       setEditAvail(JSON.parse(JSON.stringify(parsedAvail)))
       setForm({
-        full_name: normalized.full_name || '',
+        full_name: (normalized.full_name || '').replace(/^Dr\.?\s+/i, ''),
         phone: normalized.phone || '',
         email: normalized.email || '',
         specialization: normalized.specialization || '',
@@ -232,6 +250,13 @@ function DoctorProfile() {
   const addRange = (day) => setEditAvail(prev => ({ ...prev, [day]: { ...prev[day], ranges: [...prev[day].ranges, { start: '09:00', end: '17:00' }] } }))
   const removeRange = (day, idx) => setEditAvail(prev => ({ ...prev, [day]: { ...prev[day], ranges: prev[day].ranges.filter((_, i) => i !== idx) } }))
 
+  const handleLanguageChange = (code) => {
+    i18n.changeLanguage(code)
+    localStorage.setItem('mediinfo_lang', code)
+    setLangSaved(true)
+    setTimeout(() => setLangSaved(false), 2000)
+  }
+
   const currentAvail = editing ? editAvail : avail
   const currentTpp = editing ? form.time_per_patient : (profile?.time_per_patient || 15)
   const displayName = profile?.full_name || user.full_name || 'Doctor'
@@ -278,57 +303,109 @@ function DoctorProfile() {
                   <p className="text-sm text-cyan-600 font-semibold">{profile?.specialization || 'General Physician'} · {profile?.experience_years || 0} yrs</p>
                   {profile?.clinic_name && <p className="text-sm text-gray-500 mt-0.5">{profile.clinic_name}</p>}
                 </div>
-                {!editing ? (
-                  <button onClick={startEdit} className="shrink-0 bg-cyan-500 hover:bg-cyan-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-sm transition-colors">Edit profile</button>
-                ) : (
-                  <div className="flex gap-2 shrink-0">
-                    <button onClick={cancelEdit} className="border border-gray-200 bg-white text-gray-600 px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-gray-50">Cancel</button>
-                    <button onClick={handleSave} disabled={saving} className="bg-cyan-500 hover:bg-cyan-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-sm disabled:opacity-60">
-                      {saving ? 'Saving…' : 'Save changes'}
-                    </button>
-                  </div>
+                {activeTab === 'info' && (
+                  !editing ? (
+                    <button onClick={startEdit} className="shrink-0 bg-cyan-500 hover:bg-cyan-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-sm transition-colors">Edit profile</button>
+                  ) : (
+                    <div className="flex gap-2 shrink-0">
+                      <button onClick={cancelEdit} className="border border-gray-200 bg-white text-gray-600 px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-gray-50">Cancel</button>
+                      <button onClick={handleSave} disabled={saving} className="bg-cyan-500 hover:bg-cyan-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-sm disabled:opacity-60">
+                        {saving ? 'Saving…' : 'Save changes'}
+                      </button>
+                    </div>
+                  )
                 )}
               </div>
             </div>
 
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 items-start">
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                <h2 className="text-base font-black text-gray-800 mb-5">Basic information</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Field icon="👤" label="Full name" field="full_name" value={profile?.full_name} editing={editing} form={form} setForm={setForm} />
-                  <Field icon="📞" label="Phone" field="phone" type="tel" value={profile?.phone} editing={editing} form={form} setForm={setForm} />
-                  <Field icon="✉️" label="Email" field="email" type="email" value={profile?.email} editing={editing} form={form} setForm={setForm} />
-                  <Field icon="🩺" label="Specialization" field="specialization" value={profile?.specialization} editing={editing} form={form} setForm={setForm} />
-                  <Field icon="📅" label="Experience (years)" field="experience_years" type="number" value={profile?.experience_years} editing={editing} form={form} setForm={setForm} />
-                  <Field icon="🏥" label="Clinic / Hospital" field="clinic_name" value={profile?.clinic_name} editing={editing} form={form} setForm={setForm} />
-                  <Field icon="💰" label="Consultation Fee (₹)" field="consultation_fee" type="number" value={profile?.consultation_fee} prefix="₹" editing={editing} form={form} setForm={setForm} />
-                  <Field icon="🔒" label="License number" field="license_number" value={profile?.license_number} editing={editing} form={form} setForm={setForm} />
+            {/* Tabs */}
+            <div className="flex gap-2 mb-6">
+              {['info', 'language'].map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                    activeTab === tab
+                      ? 'bg-cyan-500 text-white'
+                      : 'bg-white text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  {tab === 'language' ? t('profile.languageTab') : t('doctorProfile.tabs.info')}
+                </button>
+              ))}
+            </div>
+
+            {activeTab === 'info' && (
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 items-start">
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                  <h2 className="text-base font-black text-gray-800 mb-5">Basic information</h2>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <Field icon="👤" label="Full name" field="full_name" value={profile?.full_name} editing={editing} form={form} setForm={setForm} prefix="Dr. " />
+                    <Field icon="📞" label="Phone" field="phone" type="tel" value={profile?.phone} editing={editing} form={form} setForm={setForm} />
+                    <Field icon="✉️" label="Email" field="email" type="email" value={profile?.email} editing={editing} form={form} setForm={setForm} />
+                    <Field icon="🩺" label="Specialization" field="specialization" value={profile?.specialization} editing={editing} form={form} setForm={setForm} />
+                    <Field icon="📅" label="Experience (years)" field="experience_years" type="number" value={profile?.experience_years} editing={editing} form={form} setForm={setForm} />
+                    <Field icon="🏥" label="Clinic / Hospital" field="clinic_name" value={profile?.clinic_name} editing={editing} form={form} setForm={setForm} />
+                    <Field icon="💰" label="Consultation Fee (₹)" field="consultation_fee" type="number" value={profile?.consultation_fee} prefix="₹" editing={editing} form={form} setForm={setForm} />
+                    <Field icon="🔒" label="License number" field="license_number" value={profile?.license_number} editing={editing} form={form} setForm={setForm} />
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                  <h2 className="text-base font-black text-gray-800 mb-1">Weekly availability & slots</h2>
+                  <p className="text-xs text-gray-400 mb-4">Add multiple time blocks per day.</p>
+                  <div className="flex items-center justify-between bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 mb-4">
+                    <span className="text-sm font-semibold text-gray-600">⏱ Time per patient</span>
+                    {editing ? (
+                      <select value={form.time_per_patient} onChange={e => setForm(prev => ({ ...prev, time_per_patient: Number(e.target.value) }))}
+                        className="text-sm bg-white border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-cyan-300 text-gray-700">
+                        {[5, 10, 15, 20, 30, 45, 60].map(m => <option key={m} value={m}>{m} min</option>)}
+                      </select>
+                    ) : (
+                      <span className="text-sm font-bold text-gray-700">{currentTpp} minutes per patient</span>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    {DAYS.map(day => (
+                      <DayRow key={day} day={day} d={currentAvail[day] || { enabled: false, ranges: [] }}
+                        editing={editing} tpp={currentTpp} toggleDay={toggleDay}
+                        updateRange={updateRange} addRange={addRange} removeRange={removeRange} />
+                    ))}
+                  </div>
                 </div>
               </div>
+            )}
 
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                <h2 className="text-base font-black text-gray-800 mb-1">Weekly availability & slots</h2>
-                <p className="text-xs text-gray-400 mb-4">Add multiple time blocks per day.</p>
-                <div className="flex items-center justify-between bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 mb-4">
-                  <span className="text-sm font-semibold text-gray-600">⏱ Time per patient</span>
-                  {editing ? (
-                    <select value={form.time_per_patient} onChange={e => setForm(prev => ({ ...prev, time_per_patient: Number(e.target.value) }))}
-                      className="text-sm bg-white border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-cyan-300 text-gray-700">
-                      {[5, 10, 15, 20, 30, 45, 60].map(m => <option key={m} value={m}>{m} min</option>)}
-                    </select>
-                  ) : (
-                    <span className="text-sm font-bold text-gray-700">{currentTpp} minutes per patient</span>
-                  )}
+            {activeTab === 'language' && (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 max-w-2xl space-y-5">
+                <div>
+                  <h2 className="font-semibold text-gray-700 text-lg">{t('profile.languageTitle')}</h2>
+                  <p className="text-sm text-gray-500 mt-1">{t('profile.languageSubtitle')}</p>
                 </div>
-                <div className="space-y-2">
-                  {DAYS.map(day => (
-                    <DayRow key={day} day={day} d={currentAvail[day] || { enabled: false, ranges: [] }}
-                      editing={editing} tpp={currentTpp} toggleDay={toggleDay}
-                      updateRange={updateRange} addRange={addRange} removeRange={removeRange} />
+
+                {langSaved && (
+                  <div className="bg-green-50 text-green-600 px-4 py-3 rounded-lg text-sm">
+                    ✅ {t('profile.languageSaved')}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-3">
+                  {LANGUAGES.map(({ code, label }) => (
+                    <button
+                      key={code}
+                      onClick={() => handleLanguageChange(code)}
+                      className={`px-4 py-3 rounded-xl text-sm font-medium border transition-colors ${
+                        i18n.language === code
+                          ? 'bg-cyan-500 text-white border-cyan-500'
+                          : 'bg-gray-50 text-gray-700 border-gray-200 hover:border-cyan-300'
+                      }`}
+                    >
+                      {label}
+                    </button>
                   ))}
                 </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

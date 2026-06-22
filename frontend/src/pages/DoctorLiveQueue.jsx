@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import DoctorTopBar from '../components/DoctorTopBar'
 import DoctorSidebar from '../components/DoctorSidebar'
 import { SidebarProvider } from '../components/SidebarContext'
@@ -11,6 +12,7 @@ const getColor = (name) => avatarColors[(name?.charCodeAt(0) || 0) % avatarColor
 const getInitials = (name) => name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '??'
 
 function DoctorLiveQueue() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const user = JSON.parse(localStorage.getItem('user') || '{}')
   const [queue, setQueue] = useState([])
@@ -120,10 +122,10 @@ function DoctorLiveQueue() {
           <div className="flex-1 px-4 sm:px-6 lg:px-8 py-6 space-y-5">
             <div className="flex items-center justify-between flex-wrap gap-3">
               <div>
-                <h1 className="text-xl font-black text-gray-900">Live Queue</h1>
-                <p className="text-sm text-gray-400">Today's confirmed patients · {now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</p>
+                <h1 className="text-xl font-black text-gray-900">{t('doctorLiveQueue.header.title')}</h1>
+                <p className="text-sm text-gray-400">{t('doctorLiveQueue.header.subtitle')} · {now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</p>
               </div>
-              <button onClick={fetchQueue} className="text-sm border border-gray-200 bg-white text-gray-500 px-4 py-2 rounded-xl hover:bg-gray-50 transition-colors">Refresh</button>
+              <button onClick={fetchQueue} className="text-sm border border-gray-200 bg-white text-gray-500 px-4 py-2 rounded-xl hover:bg-gray-50 transition-colors">{t('doctorLiveQueue.header.refresh')}</button>
             </div>
 
             {loading ? (
@@ -132,12 +134,12 @@ function DoctorLiveQueue() {
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                 </svg>
-                Loading queue…
+                {t('doctorLiveQueue.loading')}
               </div>
             ) : queue.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-24 text-gray-300">
-                <p className="text-sm font-medium">No patients in queue today</p>
-                <p className="text-xs mt-1">Confirmed appointments will appear here.</p>
+                <p className="text-sm font-medium">{t('doctorLiveQueue.empty.title')}</p>
+                <p className="text-xs mt-1">{t('doctorLiveQueue.empty.subtitle')}</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
@@ -145,21 +147,21 @@ function DoctorLiveQueue() {
 
                   <div className="bg-white rounded-2xl shadow-sm p-5">
                     <div className="flex items-center justify-between mb-3">
-                      <p className="text-sm font-bold text-gray-700">Queue Progress</p>
-                      <p className="text-xs text-gray-400">{done.length} done · {remaining.length} remaining</p>
+                      <p className="text-sm font-bold text-gray-700">{t('doctorLiveQueue.progress.title')}</p>
+                      <p className="text-xs text-gray-400">{t('doctorLiveQueue.progress.status', { done: done.length, remaining: remaining.length })}</p>
                     </div>
                     <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
                       <div className="h-full bg-gradient-to-r from-cyan-400 to-cyan-600 rounded-full transition-all duration-700"
                         style={{ width: `${queue.length ? (done.length / queue.length) * 100 : 0}%` }} />
                     </div>
-                    <p className="text-xs text-gray-400 mt-2">{queue.length} total patients today</p>
+                    <p className="text-xs text-gray-400 mt-2">{t('doctorLiveQueue.progress.totalToday', { count: queue.length })}</p>
                   </div>
 
                   {current ? (
                     <div className="bg-gradient-to-br from-cyan-500 to-cyan-700 rounded-2xl shadow-md p-6 text-white">
                       <div className="flex items-center gap-2 mb-4">
                         <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                        <p className="text-xs font-bold uppercase tracking-widest opacity-80">Now Consulting</p>
+                        <p className="text-xs font-bold uppercase tracking-widest opacity-80">{t('doctorLiveQueue.current.nowConsulting')}</p>
                       </div>
                       <div className="flex items-center gap-4">
                         <div className={`w-14 h-14 rounded-2xl ${getColor(current.patient_name)} bg-opacity-30 flex items-center justify-center text-white font-black text-xl border-2 border-white/30`}>
@@ -167,13 +169,11 @@ function DoctorLiveQueue() {
                         </div>
                         <div>
                           <p className="text-xl font-black">{current.patient_name}</p>
-                          <p className="text-sm opacity-75">{current.issue || 'General consultation'}</p>
+                          <p className="text-sm opacity-75">{current.issue || t('doctorLiveQueue.issueFallback')}</p>
                           <p className="text-xs opacity-60 mt-0.5">{formatTime(current.appointment_time)}</p>
                         </div>
                       </div>
-
-                      {/* ✅ NEW: Prescribe button, only for the current patient whose turn it is */}
-                      <div className="flex gap-2 mt-5">
+                        <div className="flex gap-2 mt-5">
                         <button
                           onClick={() => setPrescribeTarget(current)}
                           className="flex-1 bg-white/15 border border-white/30 text-white font-bold text-sm py-2.5 rounded-xl hover:bg-white/25 transition-colors">
@@ -189,10 +189,10 @@ function DoctorLiveQueue() {
                                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                               </svg>
-                              Marking done…
+                              {t('doctorLiveQueue.current.markingDone')}
                             </>
                           ) : (
-                            <>✓ Done — Next Patient</>
+                            <>✓ {t('doctorLiveQueue.current.doneNextPatient')}</>
                           )}
                         </button>
                       </div>
@@ -200,15 +200,15 @@ function DoctorLiveQueue() {
                   ) : (
                     <div className="bg-white rounded-2xl shadow-sm p-8 text-center text-gray-400">
                       <p className="text-2xl mb-2">🎉</p>
-                      <p className="text-sm font-semibold text-gray-600">All patients seen!</p>
-                      <p className="text-xs mt-1">Queue complete for today.</p>
+                      <p className="text-sm font-semibold text-gray-600">{t('doctorLiveQueue.allSeen.title')}</p>
+                      <p className="text-xs mt-1">{t('doctorLiveQueue.allSeen.subtitle')}</p>
                     </div>
                   )}
 
                   {waiting.length > 0 && (
                     <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
                       <div className="px-5 py-4 border-b border-gray-100">
-                        <h2 className="text-sm font-bold text-gray-800">Waiting ({waiting.length})</h2>
+                        <h2 className="text-sm font-bold text-gray-800">{t('doctorLiveQueue.waiting.title', { count: waiting.length })}</h2>
                       </div>
                       <div className="divide-y divide-gray-50">
                         {waiting.map((p, i) => (
@@ -217,7 +217,7 @@ function DoctorLiveQueue() {
                             <div className={`w-9 h-9 rounded-full ${getColor(p.patient_name)} flex items-center justify-center text-white font-bold text-sm shrink-0`}>{getInitials(p.patient_name)}</div>
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-semibold text-gray-800 truncate">{p.patient_name}</p>
-                              <p className="text-xs text-gray-400 truncate">{p.issue || 'General consultation'}</p>
+                              <p className="text-xs text-gray-400 truncate">{p.issue || t('doctorLiveQueue.issueFallback')}</p>
                             </div>
                             <p className="text-xs text-gray-400 shrink-0">{formatTime(p.appointment_time)}</p>
                           </div>
@@ -229,12 +229,12 @@ function DoctorLiveQueue() {
 
                 <div className="space-y-4">
                   <div className="bg-white rounded-2xl shadow-sm p-5 space-y-4">
-                    <h3 className="text-sm font-bold text-gray-800">Today's Summary</h3>
+                    <h3 className="text-sm font-bold text-gray-800">{t('doctorLiveQueue.summary.title')}</h3>
                     {[
-                      { label: 'Total scheduled', value: queue.length, color: 'text-gray-800' },
-                      { label: 'Completed', value: done.length, color: 'text-green-500' },
-                      { label: 'In progress', value: current ? 1 : 0, color: 'text-cyan-500' },
-                      { label: 'Waiting', value: waiting.length, color: 'text-amber-500' },
+                      { label: t('doctorLiveQueue.summary.totalScheduled'), value: queue.length, color: 'text-gray-800' },
+                      { label: t('doctorLiveQueue.summary.completed'), value: done.length, color: 'text-green-500' },
+                      { label: t('doctorLiveQueue.summary.inProgress'), value: current ? 1 : 0, color: 'text-cyan-500' },
+                      { label: t('doctorLiveQueue.summary.waiting'), value: waiting.length, color: 'text-amber-500' },
                     ].map(s => (
                       <div key={s.label} className="flex items-center justify-between">
                         <p className="text-sm text-gray-500">{s.label}</p>
@@ -246,7 +246,7 @@ function DoctorLiveQueue() {
                   {done.length > 0 && (
                     <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
                       <div className="px-5 py-4 border-b border-gray-100">
-                        <h3 className="text-sm font-bold text-gray-800">Completed ({done.length})</h3>
+                        <h3 className="text-sm font-bold text-gray-800">{t('doctorLiveQueue.completedSection.title', { count: done.length })}</h3>
                       </div>
                       <div className="divide-y divide-gray-50">
                         {done.map(p => (
