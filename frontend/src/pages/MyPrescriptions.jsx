@@ -32,26 +32,51 @@ function MyPrescriptions() {
     return () => supabase.removeChannel(channel)
   }, [])
 
-  const fetchPrescriptions = async () => {
-    setLoading(true)
-    const { data, error } = await supabase
-      .from('prescriptions')
-      .select('*, appointments(appointment_date, appointment_time, doctor_id, users!appointments_doctor_id_fkey(full_name, specialization))')
-      .eq('patient_id', user.id)
-      .order('created_at', { ascending: false })
+ const fetchPrescriptions = async () => {
+  setLoading(true)
+  
+  // Step 1: Get all prescriptions for this patient
+  const { data: prescriptionData, error: prescError } = await supabase
+    .from('prescriptions')
+    .select('*')
+    .eq('patient_id', user.id)
+    .order('created_at', { ascending: false })
 
-    if (!error && data) {
-      const normalized = data.map(p => ({
-        ...p,
-        doctor_name: p.appointments?.users?.full_name,
-        specialization: p.appointments?.users?.specialization,
-        appointment_date: p.appointments?.appointment_date,
-        appointment_time: p.appointments?.appointment_time,
-      }))
-      setPrescriptions(normalized)
-    }
+  if (prescError || !prescriptionData) {
     setLoading(false)
+    return
   }
+
+  // Step 2: Get the related appointment details for each prescription
+  const appointmentIds = [...new Set(prescriptionData.map(p => p.appointment_id).filter(Boolean))]
+  
+  let appointmentsMap = {}
+  if (appointmentIds.length > 0) {
+    const { data: appts } = await supabase
+      .from('appointments')
+      .select('id, appointment_date, appointment_time, doctor_id, users!appointments_doctor_id_fkey(full_name, specialization)')
+      .in('id', appointmentIds)
+    
+    if (appts) {
+      appts.forEach(a => { appointmentsMap[a.id] = a })
+    }
+  }
+
+  // Step 3: Merge prescription + appointment data
+  const normalized = prescriptionData.map(p => {
+    const appt = appointmentsMap[p.appointment_id]
+    return {
+      ...p,
+      doctor_name: appt?.users?.full_name,
+      specialization: appt?.users?.specialization,
+      appointment_date: appt?.appointment_date,
+      appointment_time: appt?.appointment_time,
+    }
+  })
+
+  setPrescriptions(normalized)
+  setLoading(false)
+}
 
   const filtered = prescriptions.filter(p =>
     !search ||

@@ -204,11 +204,11 @@ function DoctorDashboard() {
   const confirmedCount = appointments.filter(a => a.status === 'confirmed').length
 
   const filterTabs = [
-    { key: 'pending', label: `Pending (${pendingCount})` },
-    { key: 'confirmed', label: `Accepted (${confirmedCount})` },
-    { key: 'cancelled', label: `Rejected (${appointments.filter(a => a.status === 'cancelled').length})` },
-    { key: 'all', label: `All (${appointments.length})` },
-  ]
+  { key: 'all', label: `All (${appointments.length})` },
+  { key: 'pending', label: `Pending (${pendingCount})` },
+  { key: 'confirmed', label: `Accepted (${confirmedCount})` },
+  { key: 'cancelled', label: `Rejected (${appointments.filter(a => a.status === 'cancelled').length})` },
+]
 
   const displayed = appointments.filter(a => {
     const matchDate = a.appointment_date === selectedDateStr
