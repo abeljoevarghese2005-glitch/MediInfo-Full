@@ -1,14 +1,28 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import TopBar from '../components/TopBar'
 import Sidebar from '../components/Sidebar'
 import { SidebarProvider } from '../components/SidebarContext'
 import LocationBar from '../components/LocationBar'
 import { supabase } from '../lib/supabase'
+import { translateSpecialization } from '../utils/specializations'
 
+// Used for the filter chips, which need the "All" option in addition to
+// the real specializations. The translation lookup itself now comes from
+// the shared src/utils/specializations.js helper (single source of truth),
+// so this array is only used here for rendering the chips and as the
+// filter state values — not for translating doctor.specialization.
 const SPECIALIZATIONS = [
-  'All', 'General Physician', 'Cardiologist', 'Dermatologist',
-  'Neurologist', 'Orthopedic', 'Pediatrician', 'Psychiatrist', 'ENT'
+  { value: 'All', key: 'all' },
+  { value: 'General Physician', key: 'generalPhysician' },
+  { value: 'Cardiologist', key: 'cardiologist' },
+  { value: 'Dermatologist', key: 'dermatologist' },
+  { value: 'Neurologist', key: 'neurologist' },
+  { value: 'Orthopedic', key: 'orthopedic' },
+  { value: 'Pediatrician', key: 'pediatrician' },
+  { value: 'Psychiatrist', key: 'psychiatrist' },
+  { value: 'ENT', key: 'ent' },
 ]
 
 const avatarColors = ['bg-cyan-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-500', 'bg-pink-500', 'bg-blue-500']
@@ -46,6 +60,7 @@ function getDistanceKm(lat1, lng1, lat2, lng2) {
 
 function Doctors() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const user = JSON.parse(localStorage.getItem('user') || '{}')
 
   const [doctors, setDoctors] = useState([])
@@ -245,8 +260,8 @@ function Doctors() {
   }, [])
 
   const handleBook = async () => {
-    if (!selectedDate || !selectedTime) { setError('Please select date and time'); return }
-    if (bookedSlots.includes(selectedTime)) { setError('This slot is already booked'); return }
+    if (!selectedDate || !selectedTime) { setError(t('doctors.selectDateTimeError')); return }
+    if (bookedSlots.includes(selectedTime)) { setError(t('doctors.slotBookedError')); return }
     setPaying(true)
     setError('')
     try {
@@ -260,7 +275,7 @@ function Doctors() {
         .in('status', ['pending', 'confirmed', 'accepted'])
 
       if (existing && existing.length > 0) {
-        setError('You already have an appointment at this time')
+        setError(t('doctors.duplicateApptError'))
         setPaying(false)
         return
       }
@@ -274,14 +289,14 @@ function Doctors() {
         status: 'pending',
       })
       if (bookError) throw bookError
-      setSuccess(`Appointment request sent to Dr. ${selectedDoctor.full_name}! Awaiting clinic approval.`)
+      setSuccess(t('doctors.requestSent', { name: selectedDoctor.full_name }))
       setSelectedDoctor(null)
       setSelectedDate('')
       setSelectedTime('')
       setIssue('')
       setTimeout(() => setSuccess(''), 6000)
     } catch (err) {
-      setError(err.message || 'Failed to book appointment. Please try again.')
+      setError(err.message || t('doctors.bookFailError'))
     }
     setPaying(false)
   }
@@ -300,8 +315,8 @@ function Doctors() {
           <div className="px-4 sm:px-8 py-8">
 
             <div className="mb-4">
-              <h1 className="text-2xl font-black text-gray-900">Find a Doctor</h1>
-              <p className="text-gray-400 text-sm mt-1">Browse and book appointments</p>
+              <h1 className="text-2xl font-black text-gray-900">{t('doctors.title')}</h1>
+              <p className="text-gray-400 text-sm mt-1">{t('doctors.subtitle')}</p>
             </div>
 
             <LocationBar onLocationReady={handleLocationReady} />
@@ -310,34 +325,34 @@ function Doctors() {
               <div className="bg-amber-50 border border-amber-200 text-amber-700 px-4 py-3 rounded-xl mb-4 text-sm flex items-center gap-2">
                 ⏳ {success}
                 <button onClick={() => navigate('/my-appointments')} className="ml-auto text-amber-600 underline font-medium">
-                  View Appointments
+                  {t('doctors.viewAppointments')}
                 </button>
               </div>
             )}
 
             <div className="flex gap-2 overflow-x-auto pb-2 mb-6 scrollbar-hide">
-              {SPECIALIZATIONS.map(spec => (
-                <button key={spec} onClick={() => setFilter(spec)}
+              {SPECIALIZATIONS.map(({ value, key }) => (
+                <button key={value} onClick={() => setFilter(value)}
                   className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
-                    filter === spec ? 'bg-cyan-500 text-white shadow-sm' : 'bg-white text-gray-600 border border-gray-200 hover:border-cyan-300'
+                    filter === value ? 'bg-cyan-500 text-white shadow-sm' : 'bg-white text-gray-600 border border-gray-200 hover:border-cyan-300'
                   }`}>
-                  {spec}
+                  {t(`doctors.specializations.${key}`)}
                 </button>
               ))}
             </div>
 
             {loading ? (
-              <div className="text-center py-16 text-gray-400">Loading doctors…</div>
+              <div className="text-center py-16 text-gray-400">{t('doctors.loadingDoctors')}</div>
             ) : doctors.length === 0 ? (
               <div className="text-center py-16">
                 <p className="text-4xl mb-3">🩺</p>
-                <p className="text-gray-500">No doctors found</p>
-                <p className="text-gray-400 text-sm mt-1">Try a different specialization or expand your search area</p>
+                <p className="text-gray-500">{t('doctors.noDoctors')}</p>
+                <p className="text-gray-400 text-sm mt-1">{t('doctors.noDoctorsSub')}</p>
               </div>
             ) : (
               <div className="space-y-4 max-w-2xl">
                 {userLocation && (
-                  <p className="text-xs text-gray-400 mb-1">Sorted by distance from your location</p>
+                  <p className="text-xs text-gray-400 mb-1">{t('doctors.sortedByDistance')}</p>
                 )}
                 {doctors.map(doctor => (
                   <div key={doctor.id} className="bg-white rounded-2xl shadow-sm p-5">
@@ -347,11 +362,11 @@ function Doctors() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold text-gray-800">Dr. {doctor.full_name}</h3>
-                        <p className="text-cyan-600 text-sm">{doctor.specialization || 'General Physician'}</p>
+                        <p className="text-cyan-600 text-sm">{translateSpecialization(t, doctor.specialization)}</p>
                         <p className="text-gray-400 text-xs mt-0.5">📞 {doctor.phone}</p>
                         {doctor.distance_km != null && (
                           <p className="text-cyan-500 text-xs font-semibold mt-0.5">
-                            📍 {Number(doctor.distance_km).toFixed(1)} km away
+                            📍 {t('doctors.distanceAway', { distance: Number(doctor.distance_km).toFixed(1) })}
                           </p>
                         )}
                       </div>
@@ -366,7 +381,7 @@ function Doctors() {
                             setIssue('')
                           }}
                           className="mt-1 bg-cyan-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-cyan-600">
-                          Book
+                          {t('doctors.book')}
                         </button>
                       </div>
                     </div>
@@ -379,7 +394,7 @@ function Doctors() {
               <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 px-4 pb-6 sm:pb-0">
                 <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto">
                   <div className="flex items-center justify-between mb-4">
-                    <h2 className="font-bold text-gray-800 text-lg">Book Appointment</h2>
+                    <h2 className="font-bold text-gray-800 text-lg">{t('doctors.bookAppointment')}</h2>
                     <button onClick={() => setSelectedDoctor(null)} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
                   </div>
 
@@ -389,29 +404,29 @@ function Doctors() {
                     </div>
                     <div className="flex-1">
                       <p className="font-semibold text-gray-800">Dr. {selectedDoctor.full_name}</p>
-                      <p className="text-cyan-600 text-sm">{selectedDoctor.specialization || 'General Physician'}</p>
+                      <p className="text-cyan-600 text-sm">{translateSpecialization(t, selectedDoctor.specialization)}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-xs text-gray-400">Fee</p>
+                      <p className="text-xs text-gray-400">{t('doctors.fee')}</p>
                       <p className="font-black text-cyan-600">₹{selectedDoctor.consultation_fee || 500}</p>
                     </div>
                   </div>
 
                   <div className="mb-4">
-                    <label className="text-xs font-semibold text-gray-500 mb-1 block">Select Date</label>
+                    <label className="text-xs font-semibold text-gray-500 mb-1 block">{t('doctors.selectDate')}</label>
                     <input type="date" min={today} value={selectedDate}
                       onChange={e => setSelectedDate(e.target.value)}
                       className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-gray-800 text-sm" />
                   </div>
 
                   <div className="mb-4">
-                    <label className="text-xs font-semibold text-gray-500 mb-2 block">Select Time Slot</label>
+                    <label className="text-xs font-semibold text-gray-500 mb-2 block">{t('doctors.selectTimeSlot')}</label>
                     {!selectedDate ? (
-                      <p className="text-gray-400 text-xs">Please select a date first</p>
+                      <p className="text-gray-400 text-xs">{t('doctors.selectDateFirst')}</p>
                     ) : slotsLoading ? (
-                      <p className="text-gray-400 text-xs">Loading available slots...</p>
+                      <p className="text-gray-400 text-xs">{t('doctors.loadingSlots')}</p>
                     ) : availableSlots.length === 0 ? (
-                      <p className="text-red-400 text-xs">No availability on this day</p>
+                      <p className="text-red-400 text-xs">{t('doctors.noAvailability')}</p>
                     ) : (
                       <>
                         <div
@@ -442,16 +457,16 @@ function Doctors() {
                           </div>
                         </div>
                         {availableSlots.length > 16 && (
-                          <p className="text-xs text-gray-400 mt-1 text-center">Scroll to see more slots</p>
+                          <p className="text-xs text-gray-400 mt-1 text-center">{t('doctors.scrollMore')}</p>
                         )}
                       </>
                     )}
                   </div>
 
                   <div className="mb-4">
-                    <label className="text-xs font-semibold text-gray-500 mb-1 block">Describe your issue (optional)</label>
+                    <label className="text-xs font-semibold text-gray-500 mb-1 block">{t('doctors.describeIssue')}</label>
                     <textarea value={issue} onChange={e => setIssue(e.target.value)}
-                      placeholder="e.g. Fever and headache for 2 days…" rows={2}
+                      placeholder={t('doctors.issuePlaceholder')} rows={2}
                       className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 resize-none" />
                   </div>
 
@@ -459,7 +474,7 @@ function Doctors() {
 
                   <button onClick={handleBook} disabled={paying || !selectedTime}
                     className="w-full bg-cyan-500 text-white py-3 rounded-xl font-bold hover:bg-cyan-600 disabled:opacity-60 flex items-center justify-center gap-2">
-                    {paying ? 'Booking…' : `📅 Request Appointment — ₹${selectedDoctor.consultation_fee ?? 500}`}
+                    {paying ? t('doctors.booking') : t('doctors.requestAppointment', { fee: selectedDoctor.consultation_fee ?? 500 })}
                   </button>
                 </div>
               </div>

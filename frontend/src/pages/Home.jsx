@@ -2,9 +2,11 @@ import Sidebar from '../components/Sidebar'
 import { SidebarProvider } from '../components/SidebarContext'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import TopBar from '../components/TopBar'
 import LocationBar from '../components/LocationBar'
 import { supabase } from '../lib/supabase'
+import { translateSpecialization } from '../utils/specializations'
 
 const TIME_SLOTS = ['10:30', '13:00', '16:00', '09:00', '11:00', '14:00']
 
@@ -22,15 +24,27 @@ const formatSlot = (t) => {
   return `${hour}:${m.toString().padStart(2, '0')} ${suffix}`
 }
 
-const mockSlot = (idx) => {
-  const slots = ['Today, 10:00 AM', 'Today, 1:00 PM', 'Today, 11:30 AM', 'Today, 4:30 PM', 'Today, 9:30 AM', 'Tomorrow, 10:00 AM']
-  return slots[idx % slots.length]
+// idx-based mock slot data, translated via common.today/common.tomorrow + formatSlot
+const MOCK_SLOT_DATA = [
+  { day: 'today', time: '10:00' },
+  { day: 'today', time: '13:00' },
+  { day: 'today', time: '11:30' },
+  { day: 'today', time: '16:30' },
+  { day: 'today', time: '09:30' },
+  { day: 'tomorrow', time: '10:00' },
+]
+
+const mockSlot = (t, idx) => {
+  const { day, time } = MOCK_SLOT_DATA[idx % MOCK_SLOT_DATA.length]
+  const dayLabel = day === 'today' ? t('common.today') : t('common.tomorrow')
+  return `${dayLabel}, ${formatSlot(time)}`
 }
 
 const mockFee = (idx) => [800, 700, 550, 900, 600, 750][idx % 6]
 const mockRating = (idx) => [4.9, 4.8, 4.6, 4.9, 4.7, 4.5][idx % 6]
 
 function BookingModal({ doctor, idx, onClose, onBooked }) {
+  const { t } = useTranslation()
   const user = JSON.parse(localStorage.getItem('user') || '{}')
   const today = new Date().toLocaleDateString('en-CA')
   const [date, setDate] = useState(today)
@@ -42,7 +56,7 @@ function BookingModal({ doctor, idx, onClose, onBooked }) {
   const fee = doctor.consultation_fee || mockFee(idx)
 
   const handleBook = async () => {
-    if (!date || !slot) { setError('Please select date and time'); return }
+    if (!date || !slot) { setError(t('doctors.selectDateTimeError')); return }
     setLoading(true)
     setError('')
     try {
@@ -55,10 +69,10 @@ function BookingModal({ doctor, idx, onClose, onBooked }) {
         status: 'pending',
       })
       if (bookError) throw bookError
-      onBooked(`Appointment request sent to Dr. ${doctor.full_name}! Awaiting clinic approval.`)
+      onBooked(t('doctors.requestSent', { name: doctor.full_name }))
       onClose()
     } catch (err) {
-      setError(err.message || 'Failed to book appointment. Please try again.')
+      setError(err.message || t('doctors.bookFailError'))
       setLoading(false)
     }
   }
@@ -73,25 +87,25 @@ function BookingModal({ doctor, idx, onClose, onBooked }) {
             </div>
             <div>
               <h3 className="font-bold text-gray-900">Dr. {doctor.full_name}</h3>
-              <p className="text-cyan-500 text-sm">{doctor.specialization || 'General Physician'}</p>
+              <p className="text-cyan-500 text-sm">{translateSpecialization(t, doctor.specialization)}</p>
             </div>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg">✕</button>
         </div>
 
         <div className="bg-cyan-50 rounded-xl px-4 py-3 mb-4 flex items-center justify-between">
-          <span className="text-sm text-gray-600">Consultation Fee</span>
+          <span className="text-sm text-gray-600">{t('home.consultationFee')}</span>
           <span className="text-xl font-black text-cyan-600">₹{fee}</span>
         </div>
 
         <div className="mb-4">
-          <label className="text-xs font-semibold text-gray-500 mb-1 block">Date</label>
+          <label className="text-xs font-semibold text-gray-500 mb-1 block">{t('doctors.selectDate')}</label>
           <input type="date" min={today} value={date} onChange={e => setDate(e.target.value)}
             className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400" />
         </div>
 
         <div className="mb-4">
-          <label className="text-xs font-semibold text-gray-500 mb-2 block">Select Time Slot</label>
+          <label className="text-xs font-semibold text-gray-500 mb-2 block">{t('doctors.selectTimeSlot')}</label>
           <div className="flex flex-wrap gap-2">
             {TIME_SLOTS.map(s => (
               <button key={s} onClick={() => setSlot(s)}
@@ -105,9 +119,9 @@ function BookingModal({ doctor, idx, onClose, onBooked }) {
         </div>
 
         <div className="mb-5">
-          <label className="text-xs font-semibold text-gray-500 mb-1 block">Describe your issue</label>
+          <label className="text-xs font-semibold text-gray-500 mb-1 block">{t('doctors.describeIssue')}</label>
           <textarea value={issue} onChange={e => setIssue(e.target.value)}
-            placeholder="e.g. Persistent cough for 5 days..." rows={2}
+            placeholder={t('home.issuePlaceholder')} rows={2}
             className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 resize-none" />
         </div>
 
@@ -115,11 +129,11 @@ function BookingModal({ doctor, idx, onClose, onBooked }) {
 
         <div className="grid grid-cols-2 gap-3">
           <button onClick={onClose} className="py-3 rounded-xl border border-gray-200 text-gray-600 text-sm font-semibold hover:bg-gray-50">
-            Cancel
+            {t('common.cancel')}
           </button>
           <button onClick={handleBook} disabled={loading}
             className="py-3 rounded-xl bg-cyan-500 text-white text-sm font-semibold hover:bg-cyan-600 disabled:opacity-60 flex items-center justify-center gap-2">
-            {loading ? 'Booking...' : `📅 Book — ₹${fee}`}
+            {loading ? t('doctors.booking') : t('home.bookFee', { fee })}
           </button>
         </div>
       </div>
@@ -128,6 +142,7 @@ function BookingModal({ doctor, idx, onClose, onBooked }) {
 }
 
 function DoctorCard({ doctor, idx, onBook, distanceMap }) {
+  const { t } = useTranslation()
   return (
     <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between mb-3">
@@ -137,7 +152,7 @@ function DoctorCard({ doctor, idx, onBook, distanceMap }) {
           </div>
           <div>
             <h3 className="font-bold text-gray-900 text-sm">Dr. {doctor.full_name}</h3>
-            <p className="text-cyan-500 text-xs font-medium">{doctor.specialization || 'General Physician'}</p>
+            <p className="text-cyan-500 text-xs font-medium">{translateSpecialization(t, doctor.specialization)}</p>
           </div>
         </div>
         <div className="flex items-center gap-1 text-green-500 text-xs font-bold">
@@ -146,7 +161,7 @@ function DoctorCard({ doctor, idx, onBook, distanceMap }) {
       </div>
 
       <div className="flex items-center gap-3 text-xs text-gray-500 mb-3">
-        <span>{doctor.years_of_experience ? `${doctor.years_of_experience} yrs` : '5 yrs'}</span>
+        <span>{doctor.years_of_experience ? t('home.yrsExp', { years: doctor.years_of_experience }) : t('home.yrsExp', { years: 5 })}</span>
         <span>
           {distanceMap[doctor.id] != null
             ? <span className="text-cyan-600 font-semibold">{Number(distanceMap[doctor.id]).toFixed(1)} km</span>
@@ -156,10 +171,10 @@ function DoctorCard({ doctor, idx, onBook, distanceMap }) {
       </div>
 
       <div className="flex items-center justify-between">
-        <span className="text-xs text-gray-500">{mockSlot(idx)}</span>
+        <span className="text-xs text-gray-500">{mockSlot(t, idx)}</span>
         <button onClick={() => onBook(doctor, idx)}
           className="bg-cyan-500 text-white text-xs font-bold px-4 py-2 rounded-xl hover:bg-cyan-600 transition-colors">
-          Book Now
+          {t('home.bookNow')}
         </button>
       </div>
     </div>
@@ -168,6 +183,7 @@ function DoctorCard({ doctor, idx, onBook, distanceMap }) {
 
 function Home() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const user = JSON.parse(localStorage.getItem('user') || '{}')
   const [doctors, setDoctors] = useState([])
   const [loadingDoctors, setLoadingDoctors] = useState(true)
@@ -268,9 +284,9 @@ function Home() {
 
   const getGreeting = () => {
     const h = new Date().getHours()
-    if (h < 12) return 'Good morning,'
-    if (h < 17) return 'Good afternoon,'
-    return 'Good evening,'
+    if (h < 12) return t('home.goodMorning')
+    if (h < 17) return t('home.goodAfternoon')
+    return t('home.goodEvening')
   }
 
   return (
@@ -283,7 +299,7 @@ function Home() {
 
             <p className="text-gray-400 text-sm font-medium mb-1">{getGreeting()}</p>
             <h1 className="text-3xl font-black text-gray-900 mb-4">
-              Hi {user.full_name?.split(' ')[0]}, how can we help today?
+              {t('home.greeting', { name: user.full_name?.split(' ')[0] })}
             </h1>
 
             <LocationBar onLocationReady={handleLocationReady} />
@@ -294,7 +310,7 @@ function Home() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0118 0z" />
                 </svg>
                 <input type="text" value={query} onChange={e => setQuery(e.target.value)}
-                  placeholder="Search medicines or conditions"
+                  placeholder={t('home.searchPlaceholder')}
                   className="flex-1 text-sm text-gray-700 focus:outline-none bg-transparent" />
               </div>
             </form>
@@ -303,7 +319,7 @@ function Home() {
               <div className="bg-amber-50 border border-amber-200 text-amber-700 px-4 py-3 rounded-xl mb-6 text-sm flex items-center gap-2 max-w-2xl">
                 ⏳ {success}
                 <button onClick={() => navigate('/my-appointments')} className="ml-auto text-amber-600 underline font-medium">
-                  View Appointments →
+                  {t('home.viewAppointments')}
                 </button>
               </div>
             )}
@@ -312,14 +328,14 @@ function Home() {
               <div className="flex items-center justify-between mb-3">
                 <div>
                   <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
-                    📍 Nearby Doctors
-                    {nearbyLoading && <span className="text-xs font-normal text-cyan-400 animate-pulse ml-1">Sorting by distance…</span>}
+                    📍 {t('home.nearbyDoctors')}
+                    {nearbyLoading && <span className="text-xs font-normal text-cyan-400 animate-pulse ml-1">{t('home.sortingByDistance')}</span>}
                   </h2>
                   <p className="text-xs text-gray-400 mt-0.5">
-                    {Object.keys(distanceMap).length > 0 ? 'Sorted by distance from your location' : 'Enable location for distance sorting'}
+                    {Object.keys(distanceMap).length > 0 ? t('home.sortedByDistance') : t('home.enableLocation')}
                   </p>
                 </div>
-                <button onClick={() => navigate('/doctors')} className="text-cyan-500 text-sm font-semibold hover:underline">See all →</button>
+                <button onClick={() => navigate('/doctors')} className="text-cyan-500 text-sm font-semibold hover:underline">{t('home.seeAll')}</button>
               </div>
 
               {loadingDoctors ? (
@@ -327,7 +343,7 @@ function Home() {
                   {[1,2,3,4].map(i => <div key={i} className="bg-white rounded-2xl border border-gray-100 p-4 h-32 animate-pulse" />)}
                 </div>
               ) : doctors.length === 0 ? (
-                <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center text-gray-400 text-sm">No doctors found</div>
+                <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center text-gray-400 text-sm">{t('home.noDoctorsFound')}</div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {doctors.map((doc, idx) => (
@@ -341,12 +357,12 @@ function Home() {
 
             <div>
               <div className="mb-3">
-                <h2 className="text-base font-bold text-gray-900">🔄 Previously Visited</h2>
-                <p className="text-xs text-gray-400 mt-0.5">Quick rebook in one tap</p>
+                <h2 className="text-base font-bold text-gray-900">🔄 {t('home.previouslyVisited')}</h2>
+                <p className="text-xs text-gray-400 mt-0.5">{t('home.quickRebook')}</p>
               </div>
               {previousDoctors.length === 0 ? (
                 <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center">
-                  <p className="text-gray-400 text-sm">Doctors you visit will show up here for quick rebooking.</p>
+                  <p className="text-gray-400 text-sm">{t('home.noPreviousDoctors')}</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -358,12 +374,12 @@ function Home() {
                         </div>
                         <div>
                           <p className="font-bold text-sm text-gray-900">Dr. {appt.doctor_name}</p>
-                          <p className="text-cyan-500 text-xs">{appt.specialization}</p>
+                          <p className="text-cyan-500 text-xs">{translateSpecialization(t, appt.specialization)}</p>
                         </div>
                       </div>
                       <button onClick={() => navigate('/doctors')}
                         className="text-cyan-500 text-xs font-bold bg-cyan-50 px-3 py-1.5 rounded-lg hover:bg-cyan-100">
-                        Rebook
+                        {t('home.rebook')}
                       </button>
                     </div>
                   ))}

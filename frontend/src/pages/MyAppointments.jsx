@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import TopBar from '../components/TopBar'
 import Sidebar from '../components/Sidebar'
 import { SidebarProvider } from '../components/SidebarContext'
@@ -47,6 +48,7 @@ function Toast({ toasts, onDismiss }) {
 }
 
 function RescheduleModal({ appointment, onClose, onSuccess, addToast }) {
+const { t } = useTranslation()
   const today = new Date().toLocaleDateString('en-CA')
   const [newDate, setNewDate] = useState('')
   const [availableSlots, setAvailableSlots] = useState([])
@@ -124,11 +126,11 @@ function RescheduleModal({ appointment, onClose, onSuccess, addToast }) {
         .eq('id', appointment.id)
 
       if (error) throw error
-      addToast(`Appointment rescheduled to ${formatDate(newDate)} at ${newTime}. A rescheduling fee may apply.`, 'info')
+      addToast(t('myAppointments.toast.rescheduled', { date: formatDate(newDate), time: newTime }), 'info')
       onSuccess()
       onClose()
     } catch (err) {
-      addToast('Failed to reschedule. Please try again.', 'cancelled')
+      addToast(t('myAppointments.toast.rescheduleFailed'), 'cancelled')
     }
     setSaving(false)
   }
@@ -137,12 +139,12 @@ function RescheduleModal({ appointment, onClose, onSuccess, addToast }) {
     <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 px-4 pb-6 sm:pb-0">
       <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="font-bold text-gray-800 text-lg">Reschedule Appointment</h2>
+          <h2 className="font-bold text-gray-800 text-lg">{t('myAppointments.modal.title')}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
         </div>
 
         <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4 text-sm text-amber-700">
-          ⚠️ Rescheduling resets your appointment to pending. A rescheduling fee may be deducted by the clinic.
+          ⚠️ {t('myAppointments.modal.warningText')}
         </div>
 
         <div className="flex items-center gap-3 bg-cyan-50 rounded-xl p-3 mb-4">
@@ -151,26 +153,26 @@ function RescheduleModal({ appointment, onClose, onSuccess, addToast }) {
           </div>
           <div>
             <p className="font-semibold text-gray-800 text-sm">{appointment.doctor_name}</p>
-            <p className="text-cyan-600 text-xs">{appointment.specialization || 'General Physician'}</p>
-            <p className="text-gray-400 text-xs">Currently: {formatDate(appointment.appointment_date)} at {appointment.appointment_time}</p>
+            <p className="text-cyan-600 text-xs">{appointment.specialization || t('doctors.specializations.generalPhysician')}</p>
+            <p className="text-gray-400 text-xs">{t('myAppointments.modal.currentlyLabel')} {formatDate(appointment.appointment_date)} {t('liveQueue.at')} {appointment.appointment_time}</p>
           </div>
         </div>
 
         <div className="mb-4">
-          <label className="text-xs font-semibold text-gray-500 mb-1 block">New Date</label>
+          <label className="text-xs font-semibold text-gray-500 mb-1 block">{t('myAppointments.modal.newDateLabel')}</label>
           <input type="date" min={today} value={newDate}
             onChange={e => setNewDate(e.target.value)}
             className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-gray-800 text-sm" />
         </div>
 
         <div className="mb-5">
-          <label className="text-xs font-semibold text-gray-500 mb-2 block">New Time Slot</label>
+          <label className="text-xs font-semibold text-gray-500 mb-2 block">{t('myAppointments.modal.newTimeLabel')}</label>
           {!newDate ? (
-            <p className="text-gray-400 text-xs">Select a date first</p>
+            <p className="text-gray-400 text-xs">{t('doctors.selectDateFirst')}</p>
           ) : slotsLoading ? (
-            <p className="text-gray-400 text-xs">Loading slots...</p>
+            <p className="text-gray-400 text-xs">{t('doctors.loadingSlots')}</p>
           ) : availableSlots.length === 0 ? (
-            <p className="text-red-400 text-xs">No availability on this day</p>
+            <p className="text-red-400 text-xs">{t('doctors.noAvailability')}</p>
           ) : (
             <div className="grid grid-cols-4 gap-2">
               {availableSlots.map(({ time, past }) => {
@@ -195,7 +197,7 @@ function RescheduleModal({ appointment, onClose, onSuccess, addToast }) {
 
         <button onClick={handleReschedule} disabled={saving || !newDate || !newTime}
           className="w-full bg-cyan-500 text-white py-3 rounded-xl font-bold hover:bg-cyan-600 disabled:opacity-60">
-          {saving ? 'Rescheduling...' : '📅 Confirm Reschedule'}
+          {saving ? t('myAppointments.modal.rescheduling') : t('myAppointments.modal.confirmReschedule')}
         </button>
       </div>
     </div>
@@ -203,6 +205,7 @@ function RescheduleModal({ appointment, onClose, onSuccess, addToast }) {
 }
 
 function MyAppointments() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const user = JSON.parse(localStorage.getItem('user') || '{}')
   const [appointments, setAppointments] = useState([])
@@ -243,11 +246,11 @@ function MyAppointments() {
       normalized.forEach(newAppt => {
         const old = prevAppointments.current.find(a => a.id === newAppt.id)
         if (!old || old.status === newAppt.status) return
-        const doc = newAppt.doctor_name || 'your doctor'
+        const doc = newAppt.doctor_name || t('myAppointments.toast.defaultDoctor')
         if (newAppt.status === 'confirmed')
-          addToast(`Your appointment with ${doc} has been confirmed! 🎉`, 'confirmed')
+          addToast(t('myAppointments.toast.confirmed', { doctor: doc }), 'confirmed')
         else if (newAppt.status === 'cancelled')
-          addToast(`Your appointment with ${doc} was cancelled by the clinic.`, 'cancelled')
+          addToast(t('myAppointments.toast.cancelledByClinic', { doctor: doc }), 'cancelled')
       })
     }
 
@@ -315,8 +318,8 @@ function MyAppointments() {
   }
 
   const getStatusLabel = (status) => {
-    if (status === 'accepted') return 'confirmed'
-    return status
+    const key = status === 'accepted' ? 'confirmed' : status
+    return t(`myAppointments.status.${key}`, key)
   }
 
   return (
@@ -337,13 +340,13 @@ function MyAppointments() {
           <div className="flex-1 px-4 sm:px-8 py-8">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h1 className="text-2xl font-black text-gray-900">My Appointments</h1>
-                <p className="text-gray-400 text-sm mt-0.5">Manage all your bookings</p>
+                <h1 className="text-2xl font-black text-gray-900">{t('myAppointments.title')}</h1>
+                <p className="text-gray-400 text-sm mt-0.5">{t('myAppointments.subtitle')}</p>
               </div>
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-1.5 text-xs text-gray-400">
                   <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                  Live
+                  {t('myAppointments.live')}
                   {lastUpdated && (
                     <span className="hidden sm:inline">
                       · {lastUpdated.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
@@ -352,13 +355,13 @@ function MyAppointments() {
                 </div>
                 <button onClick={() => navigate('/doctors')}
                   className="bg-cyan-500 text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-cyan-600">
-                  + Book New
+                  {t('myAppointments.bookNew')}
                 </button>
               </div>
             </div>
 
             {loading ? (
-              <div className="text-gray-400 text-sm">Loading...</div>
+              <div className="text-gray-400 text-sm">{t('common.loading')}</div>
             ) : appointments.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16">
                 <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mb-4">
@@ -366,18 +369,18 @@ function MyAppointments() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
                 </div>
-                <p className="text-gray-700 font-bold mb-1">No appointments yet</p>
-                <p className="text-gray-400 text-sm mb-5">Book your first appointment with a doctor</p>
+                <p className="text-gray-700 font-bold mb-1">{t('myAppointments.emptyTitle')}</p>
+                <p className="text-gray-400 text-sm mb-5">{t('myAppointments.emptySubtitle')}</p>
                 <button onClick={() => navigate('/doctors')}
                   className="bg-cyan-500 text-white px-6 py-2.5 rounded-xl text-sm font-semibold hover:bg-cyan-600">
-                  Find a Doctor
+                  {t('myAppointments.findDoctor')}
                 </button>
               </div>
             ) : (
               <div className="space-y-6 max-w-2xl">
                 {upcoming.length > 0 && (
                   <div>
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Upcoming</p>
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">{t('myAppointments.upcoming')}</p>
                     <div className="space-y-3">
                       {upcoming.map(appt => (
                         <div key={appt.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
@@ -388,7 +391,7 @@ function MyAppointments() {
                               </div>
                               <div className="min-w-0">
                                 <p className="font-bold text-gray-900 text-sm truncate">{appt.doctor_name}</p>
-                                <p className="text-cyan-500 text-xs">{appt.specialization || 'General Physician'}</p>
+                                <p className="text-cyan-500 text-xs">{appt.specialization || t('doctors.specializations.generalPhysician')}</p>
                                 <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-gray-400">
                                   <span>📅 {formatDate(appt.appointment_date)}</span>
                                   <span>🕐 {appt.appointment_time}</span>
@@ -404,29 +407,29 @@ function MyAppointments() {
                               <button onClick={() => navigate('/live-queue', { state: { appointment: appt } })}
                                 className="flex-1 min-w-[120px] bg-cyan-500 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-cyan-600 flex items-center justify-center gap-2">
                                 <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                                Join Live Queue
+                                {t('myAppointments.joinLiveQueue')}
                               </button>
                               <button onClick={() => setRescheduling(appt)}
                                 className="px-4 py-2.5 rounded-xl border border-cyan-200 text-cyan-600 text-sm font-semibold hover:bg-cyan-50">
-                                Reschedule
+                                {t('myAppointments.reschedule')}
                               </button>
                               <button onClick={() => handleCancel(appt.id)} disabled={cancelling === appt.id}
                                 className="px-4 py-2.5 rounded-xl border border-red-200 text-red-500 text-sm font-semibold hover:bg-red-50 disabled:opacity-50">
-                                {cancelling === appt.id ? '...' : 'Cancel'}
+                                {cancelling === appt.id ? '...' : t('common.cancel')}
                               </button>
                             </div>
                           ) : (
                             <div className="flex flex-wrap gap-2 items-center">
                               <div className="flex-1 min-w-[120px] flex items-center gap-2 bg-amber-50 border border-amber-100 text-amber-600 py-2.5 px-4 rounded-xl text-sm font-medium">
-                                ⏳ Awaiting approval
+                                ⏳ {t('myAppointments.awaitingApproval')}
                               </div>
                               <button onClick={() => setRescheduling(appt)}
                                 className="px-4 py-2.5 rounded-xl border border-cyan-200 text-cyan-600 text-sm font-semibold hover:bg-cyan-50">
-                                Reschedule
+                                {t('myAppointments.reschedule')}
                               </button>
                               <button onClick={() => handleCancel(appt.id)} disabled={cancelling === appt.id}
                                 className="px-4 py-2.5 rounded-xl border border-red-200 text-red-500 text-sm font-semibold hover:bg-red-50 disabled:opacity-50">
-                                {cancelling === appt.id ? '...' : 'Cancel'}
+                                {cancelling === appt.id ? '...' : t('common.cancel')}
                               </button>
                             </div>
                           )}
@@ -437,7 +440,7 @@ function MyAppointments() {
                 )}
                 {past.length > 0 && (
                   <div>
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Past & Cancelled</p>
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">{t('myAppointments.pastAndCancelled')}</p>
                     <div className="space-y-3">
                       {past.map(appt => (
                         <div key={appt.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 opacity-60">
@@ -448,7 +451,7 @@ function MyAppointments() {
                               </div>
                               <div className="min-w-0">
                                 <p className="font-bold text-gray-900 text-sm truncate">{appt.doctor_name}</p>
-                                <p className="text-cyan-500 text-xs">{appt.specialization || 'General Physician'}</p>
+                                <p className="text-cyan-500 text-xs">{appt.specialization || t('doctors.specializations.generalPhysician')}</p>
                                 <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-gray-400">
                                   <span>📅 {formatDate(appt.appointment_date)}</span>
                                   <span>🕐 {appt.appointment_time}</span>
