@@ -89,7 +89,7 @@ function AIChat() {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen bg-gray-50 flex overflow-x-hidden">
+      <div className="min-h-screen bg-green-50 flex overflow-x-hidden">
         <Sidebar />
         <div className="lg:ml-56 flex-1 flex flex-col min-w-0">
           <TopBar />
@@ -101,7 +101,7 @@ function AIChat() {
                 🤖
               </div>
               <div className="min-w-0">
-                <h1 className="font-black text-white text-2xl">{t('aiChat.header.title')}</h1>
+                <h1 className="font-semibold tracking-tight text-white text-2xl">{t('aiChat.header.title')}</h1>
                 <p className="text-cyan-100 text-sm">{t('aiChat.header.subtitle')}</p>
               </div>
             </div>
@@ -110,8 +110,8 @@ function AIChat() {
           <div className="flex-1 flex flex-col px-4 sm:px-8 pb-4 gap-4 max-w-3xl w-full mx-auto">
 
             {/* ── Medicine input ── */}
-            <div className="bg-white rounded-xl shadow-sm p-3 flex items-center gap-2">
-              <span className="text-gray-500 text-sm whitespace-nowrap">💊 {t('aiChat.medicineInput.label')}</span>
+            <div className="bg-white rounded-xl shadow-sm p-3 flex items-center gap-2 transition-colors hover:shadow-md">
+              <span className="text-gray-500 text-sm whitespace-nowrap font-medium">💊 {t('aiChat.medicineInput.label')}</span>
               <input
                 type="text"
                 value={medicineInput}
@@ -126,14 +126,14 @@ function AIChat() {
               {messages.map((msg, i) => (
                 <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                   {msg.role === 'ai' && (
-                    <div className="w-8 h-8 bg-cyan-500 rounded-full flex items-center justify-center text-white text-sm mr-2 mt-1 flex-shrink-0">
+                    <div className="w-8 h-8 bg-emerald-600 rounded-full flex items-center justify-center text-white text-sm mr-2 mt-1 flex-shrink-0">
                       🤖
                     </div>
                   )}
                   <div
                     className={`max-w-[75vw] sm:max-w-[80%] px-4 py-3 rounded-2xl text-sm leading-relaxed break-words overflow-hidden ${
                       msg.role === 'user'
-                        ? 'bg-cyan-500 text-white rounded-tr-none'
+                        ? 'bg-emerald-700 text-white rounded-tr-none'
                         : 'bg-gray-100 text-gray-800 rounded-tl-none'
                     }`}
                     dangerouslySetInnerHTML={{ __html: formatText(msg.text) }}
@@ -143,14 +143,14 @@ function AIChat() {
 
               {loading && (
                 <div className="flex justify-start">
-                  <div className="w-8 h-8 bg-cyan-500 rounded-full flex items-center justify-center text-white text-sm mr-2 flex-shrink-0">
+                  <div className="w-8 h-8 bg-emerald-600 rounded-full flex items-center justify-center text-white text-sm mr-2 flex-shrink-0">
                     🤖
                   </div>
                   <div className="bg-gray-100 px-4 py-3 rounded-2xl rounded-tl-none">
                     <div className="flex gap-1 items-center h-5">
-                      <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                      <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                      <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                      <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                     </div>
                   </div>
                 </div>
@@ -159,7 +159,7 @@ function AIChat() {
             </div>
 
             {/* ── Input bar ── */}
-            <div className="bg-white rounded-2xl shadow-sm p-3 flex items-end gap-3">
+            <div className="bg-white rounded-2xl shadow-sm p-3 flex items-end gap-3 transition-colors hover:shadow-md">
               <textarea
                 value={input}
                 onChange={e => setInput(e.target.value)}
@@ -171,7 +171,7 @@ function AIChat() {
               <button
                 onClick={handleSend}
                 disabled={loading || !input.trim()}
-                className="bg-cyan-500 hover:bg-cyan-600 disabled:bg-gray-300 text-white px-4 py-2 rounded-xl font-medium text-sm transition-colors shrink-0"
+                className="bg-emerald-700 hover:bg-emerald-500 disabled:bg-gray-300 text-white px-4 py-2 rounded-xl font-bold tracking-tight text-sm transition-colors shrink-0"
               >
                 {t('aiChat.send')}
               </button>

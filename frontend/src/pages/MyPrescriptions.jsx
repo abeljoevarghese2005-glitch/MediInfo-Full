@@ -84,7 +84,7 @@ function MyPrescriptions() {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen bg-gray-50 flex">
+      <div className="min-h-screen bg-green-50 flex">
         <Sidebar />
         <div className="lg:ml-56 flex-1 flex flex-col min-w-0">
           <TopBar />
@@ -93,12 +93,12 @@ function MyPrescriptions() {
           <div className="bg-gradient-to-br from-teal-500 via-cyan-500 to-emerald-400 px-4 sm:px-8 pt-8 pb-10 rounded-b-3xl mb-6">
             <div className="flex items-start justify-between">
               <div>
-                <h1 className="text-2xl font-black text-white">My Prescriptions</h1>
-                <p className="text-cyan-100 text-sm mt-1">Medicines prescribed by your doctors</p>
+                <h1 className="text-2xl font-semibold tracking-tight text-white">My Prescriptions</h1>
+                <p className="text-cyan-100 text-sm mt-1 font-normal">Medicines prescribed by your doctors</p>
               </div>
               <div className="bg-white/20 backdrop-blur-sm rounded-2xl px-5 py-3 text-center">
-                <p className="text-2xl font-black text-white">{prescriptions.length}</p>
-                <p className="text-xs text-cyan-100">Total</p>
+                <p className="text-2xl font-bold tracking-tight text-white">{prescriptions.length}</p>
+                <p className="text-xs text-cyan-100 font-normal">Total</p>
               </div>
             </div>
 
@@ -113,7 +113,7 @@ function MyPrescriptions() {
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                   placeholder="Search by doctor or medicine…"
-                  className="w-full max-w-sm pl-10 pr-4 py-2.5 text-sm bg-white/20 backdrop-blur-sm rounded-xl border border-white/30 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/50"
+                  className="w-full max-w-sm pl-10 pr-4 py-2.5 text-sm bg-white/20 backdrop-blur-sm rounded-xl border border-white/30 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/50 hover:bg-white/30 transition-colors"
                 />
               </div>
             )}
@@ -123,40 +123,40 @@ function MyPrescriptions() {
           <div className="flex-1 px-4 sm:px-8 pb-8 max-w-2xl w-full">
 
             {loading ? (
-              <div className="text-gray-400 text-sm">Loading...</div>
+              <div className="text-gray-400 text-sm font-normal">Loading...</div>
             ) : prescriptions.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16">
                 <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center mb-4">
-                  <svg className="w-8 h-8 text-cyan-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-8 h-8 text-emerald-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                 </div>
-                <p className="text-gray-700 font-bold mb-1">No prescriptions yet</p>
-                <p className="text-gray-400 text-sm mb-5">Prescriptions from your doctors will appear here</p>
+                <p className="text-gray-700 font-semibold tracking-tight mb-1">No prescriptions yet</p>
+                <p className="text-gray-400 text-sm font-normal mb-5">Prescriptions from your doctors will appear here</p>
                 <button
                   onClick={() => navigate('/doctors')}
-                  className="bg-cyan-500 text-white px-6 py-2.5 rounded-xl text-sm font-semibold hover:bg-cyan-600"
+                  className="bg-emerald-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold tracking-tight hover:bg-emerald-500 transition-colors"
                 >
                   Find a Doctor
                 </button>
               </div>
             ) : filtered.length === 0 ? (
-              <div className="text-gray-400 text-sm py-8 text-center">No prescriptions match your search</div>
+              <div className="text-gray-400 text-sm font-normal py-8 text-center">No prescriptions match your search</div>
             ) : (
               <div className="space-y-3">
                 {filtered.map(p => (
                   <div key={p.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                     <div
-                      className="flex items-center gap-4 p-5 cursor-pointer hover:bg-gray-50 transition-colors"
+                      className="flex items-center gap-4 p-5 cursor-pointer hover:bg-green-50 transition-colors"
                       onClick={() => setExpanded(expanded === p.id ? null : p.id)}
                     >
                       <div className={`w-11 h-11 ${getColor(p.doctor_name)} rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0`}>
                         {getInitials(p.doctor_name)}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-bold text-gray-900 text-sm truncate">Dr. {p.doctor_name || 'Unknown'}</p>
-                        <p className="text-cyan-500 text-xs">{p.specialization || 'General Physician'}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">
+                        <p className="font-semibold tracking-tight text-gray-900 text-sm truncate">Dr. {p.doctor_name || 'Unknown'}</p>
+                        <p className="text-emerald-600 text-xs font-medium">{p.specialization || 'General Physician'}</p>
+                        <p className="text-xs text-gray-400 font-normal mt-0.5">
                           {fmt(p.appointment_date)} · {p.medicines?.length} medicine{p.medicines?.length !== 1 ? 's' : ''}
                         </p>
                       </div>
@@ -164,28 +164,28 @@ function MyPrescriptions() {
                     </div>
 
                     {expanded === p.id && (
-                      <div className="px-5 pb-5 space-y-3 border-t border-gray-50 pt-4">
+                      <div className="px-5 pb-5 space-y-3 border-t border-gray-100 pt-4">
                         <div className="space-y-2">
                           {p.medicines?.map((med, idx) => (
-                            <div key={idx} className="bg-gray-50 rounded-xl px-4 py-3">
-                              <p className="text-sm font-bold text-gray-800">{med.name}</p>
+                            <div key={idx} className="bg-green-50 rounded-xl px-4 py-3 hover:bg-green-100 transition-colors">
+                              <p className="text-sm font-semibold tracking-tight text-gray-800">{med.name}</p>
                               <div className="flex flex-wrap gap-3 mt-1">
-                                {med.dosage && <span className="text-xs text-gray-500">💊 {med.dosage}</span>}
-                                {med.frequency && <span className="text-xs text-gray-500">🔁 {med.frequency}</span>}
-                                {med.duration && <span className="text-xs text-gray-500">📅 {med.duration}</span>}
+                                {med.dosage && <span className="text-xs text-gray-500 font-normal">💊 {med.dosage}</span>}
+                                {med.frequency && <span className="text-xs text-gray-500 font-normal">🔁 {med.frequency}</span>}
+                                {med.duration && <span className="text-xs text-gray-500 font-normal">📅 {med.duration}</span>}
                               </div>
                             </div>
                           ))}
                         </div>
 
                         {p.notes && (
-                          <div className="bg-cyan-50 rounded-xl px-4 py-2.5">
-                            <p className="text-xs font-semibold text-cyan-700 mb-0.5">Doctor's Notes</p>
-                            <p className="text-xs text-gray-600">{p.notes}</p>
+                          <div className="bg-emerald-50 rounded-xl px-4 py-2.5">
+                            <p className="text-xs font-semibold text-emerald-700 mb-0.5">Doctor's Notes</p>
+                            <p className="text-xs text-gray-600 font-normal">{p.notes}</p>
                           </div>
                         )}
 
-                        <p className="text-[10px] text-gray-300">
+                        <p className="text-[10px] text-gray-300 font-normal">
                           Prescribed on {new Date(p.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </p>
                       </div>

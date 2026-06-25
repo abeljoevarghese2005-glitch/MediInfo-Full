@@ -308,14 +308,14 @@ function Doctors() {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen bg-gray-50 flex">
+      <div className="min-h-screen bg-green-50 flex">
         <Sidebar />
         <div className="lg:ml-56 flex-1 flex flex-col min-w-0">
           <TopBar />
 
           {/* ── Gradient Hero Banner ── */}
           <div className="bg-gradient-to-br from-teal-500 via-cyan-500 to-emerald-400 px-4 sm:px-8 pt-8 pb-10 rounded-b-3xl mb-6">
-            <h1 className="text-2xl font-black text-white">{t('doctors.title')}</h1>
+            <h1 className="text-2xl font-semibold tracking-tight text-white">{t('doctors.title')}</h1>
             <p className="text-cyan-100 text-sm mt-1">{t('doctors.subtitle')}</p>
           </div>
 
@@ -338,8 +338,8 @@ function Doctors() {
                 <button key={value} onClick={() => setFilter(value)}
                   className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
                     filter === value
-                      ? 'bg-cyan-500 text-white shadow-sm'
-                      : 'bg-white text-gray-600 border border-gray-200 hover:border-cyan-300'
+                      ? 'bg-emerald-600 text-white shadow-sm hover:bg-emerald-500'
+                      : 'bg-white text-gray-600 border border-gray-200 hover:border-emerald-400 hover:text-emerald-600 hover:bg-emerald-50'
                   }`}>
                   {t(`doctors.specializations.${key}`)}
                 </button>
@@ -363,21 +363,21 @@ function Doctors() {
                 {doctors.map(doctor => (
                   <div key={doctor.id} className="bg-white rounded-2xl shadow-sm p-5">
                     <div className="flex items-center gap-4">
-                      <div className={`w-14 h-14 ${getColor(doctor.full_name)} rounded-full flex items-center justify-center text-white text-xl font-bold shrink-0`}>
+                      <div className={`w-14 h-14 ${getColor(doctor.full_name)} rounded-full flex items-center justify-center text-white text-xl font-semibold shrink-0`}>
                         {getInitials(doctor.full_name)}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-gray-800">Dr. {doctor.full_name}</h3>
-                        <p className="text-cyan-600 text-sm">{translateSpecialization(t, doctor.specialization)}</p>
+                        <h3 className="font-semibold text-gray-800 tracking-tight">Dr. {doctor.full_name}</h3>
+                        <p className="text-emerald-600 text-sm font-medium">{translateSpecialization(t, doctor.specialization)}</p>
                         <p className="text-gray-400 text-xs mt-0.5">📞 {doctor.phone}</p>
                         {doctor.distance_km != null && (
-                          <p className="text-cyan-500 text-xs font-semibold mt-0.5">
+                          <p className="text-emerald-600 text-xs font-medium mt-0.5">
                             📍 {t('doctors.distanceAway', { distance: Number(doctor.distance_km).toFixed(1) })}
                           </p>
                         )}
                       </div>
                       <div className="text-right shrink-0">
-                        <p className="text-cyan-600 font-bold text-sm">₹{doctor.consultation_fee || 500}</p>
+                        <p className="text-emerald-700 font-bold text-sm tracking-tight">₹{doctor.consultation_fee || 500}</p>
                         <button
                           onClick={() => {
                             setSelectedDoctor(doctor)
@@ -386,7 +386,7 @@ function Doctors() {
                             setSelectedTime('')
                             setIssue('')
                           }}
-                          className="mt-1 bg-cyan-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-cyan-600">
+                          className="mt-1 bg-emerald-700 text-white px-4 py-2 rounded-xl text-sm font-bold tracking-tight transition-colors hover:bg-emerald-500">
                           {t('doctors.book')}
                         </button>
                       </div>
@@ -405,33 +405,33 @@ function Doctors() {
         <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 px-4 pb-6 sm:pb-0">
           <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-bold text-gray-800 text-lg">{t('doctors.bookAppointment')}</h2>
+              <h2 className="font-semibold tracking-tight text-gray-800 text-lg">{t('doctors.bookAppointment')}</h2>
               <button onClick={() => setSelectedDoctor(null)} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
             </div>
 
-            <div className="flex items-center gap-3 bg-cyan-50 rounded-xl p-3 mb-4">
-              <div className={`w-10 h-10 ${getColor(selectedDoctor.full_name)} rounded-full flex items-center justify-center text-white font-bold shrink-0`}>
+            <div className="flex items-center gap-3 bg-green-50 rounded-xl p-3 mb-4">
+              <div className={`w-10 h-10 ${getColor(selectedDoctor.full_name)} rounded-full flex items-center justify-center text-white font-semibold shrink-0`}>
                 {getInitials(selectedDoctor.full_name)}
               </div>
               <div className="flex-1">
-                <p className="font-semibold text-gray-800">Dr. {selectedDoctor.full_name}</p>
-                <p className="text-cyan-600 text-sm">{translateSpecialization(t, selectedDoctor.specialization)}</p>
+                <p className="font-semibold text-gray-800 tracking-tight">Dr. {selectedDoctor.full_name}</p>
+                <p className="text-emerald-600 text-sm font-medium">{translateSpecialization(t, selectedDoctor.specialization)}</p>
               </div>
               <div className="text-right">
                 <p className="text-xs text-gray-400">{t('doctors.fee')}</p>
-                <p className="font-black text-cyan-600">₹{selectedDoctor.consultation_fee || 500}</p>
+                <p className="font-bold text-emerald-700 tracking-tight">₹{selectedDoctor.consultation_fee || 500}</p>
               </div>
             </div>
 
             <div className="mb-4">
-              <label className="text-xs font-semibold text-gray-500 mb-1 block">{t('doctors.selectDate')}</label>
+              <label className="text-xs font-medium text-gray-500 mb-1 block">{t('doctors.selectDate')}</label>
               <input type="date" min={today} value={selectedDate}
                 onChange={e => setSelectedDate(e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-gray-800 text-sm" />
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-gray-800 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-400 hover:border-emerald-300 hover:bg-emerald-50/40" />
             </div>
 
             <div className="mb-4">
-              <label className="text-xs font-semibold text-gray-500 mb-2 block">{t('doctors.selectTimeSlot')}</label>
+              <label className="text-xs font-medium text-gray-500 mb-2 block">{t('doctors.selectTimeSlot')}</label>
               {!selectedDate ? (
                 <p className="text-gray-400 text-xs">{t('doctors.selectDateFirst')}</p>
               ) : slotsLoading ? (
@@ -458,8 +458,8 @@ function Doctors() {
                               isDisabled
                                 ? 'bg-gray-100 text-gray-300 cursor-not-allowed line-through'
                                 : isSelected
-                                ? 'bg-cyan-500 text-white'
-                                : 'bg-gray-50 text-gray-700 hover:bg-cyan-50'
+                                ? 'bg-emerald-600 text-white hover:bg-emerald-500'
+                                : 'bg-gray-50 text-gray-700 hover:bg-emerald-50 hover:text-emerald-700'
                             }`}>
                             {time}
                           </button>
@@ -475,16 +475,16 @@ function Doctors() {
             </div>
 
             <div className="mb-4">
-              <label className="text-xs font-semibold text-gray-500 mb-1 block">{t('doctors.describeIssue')}</label>
+              <label className="text-xs font-medium text-gray-500 mb-1 block">{t('doctors.describeIssue')}</label>
               <textarea value={issue} onChange={e => setIssue(e.target.value)}
                 placeholder={t('doctors.issuePlaceholder')} rows={2}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 resize-none" />
+                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm resize-none transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-400 hover:border-emerald-300 hover:bg-emerald-50/40" />
             </div>
 
             {error && <div className="bg-red-50 text-red-600 px-3 py-2 rounded-lg text-sm mb-4">❌ {error}</div>}
 
             <button onClick={handleBook} disabled={paying || !selectedTime}
-              className="w-full bg-cyan-500 text-white py-3 rounded-xl font-bold hover:bg-cyan-600 disabled:opacity-60 flex items-center justify-center gap-2">
+              className="w-full bg-emerald-700 text-white py-3 rounded-xl font-bold tracking-tight transition-colors hover:bg-emerald-500 disabled:opacity-60 flex items-center justify-center gap-2">
               {paying ? t('doctors.booking') : t('doctors.requestAppointment', { fee: selectedDoctor.consultation_fee ?? 500 })}
             </button>
           </div>

@@ -85,31 +85,31 @@ function BookingModal({ doctor, idx, onClose, onBooked }) {
               {getInitials(doctor.full_name)}
             </div>
             <div>
-              <h3 className="font-bold text-gray-900">Dr. {doctor.full_name}</h3>
-              <p className="text-cyan-500 text-sm">{translateSpecialization(t, doctor.specialization)}</p>
+              <h3 className="font-semibold text-gray-900 tracking-tight">Dr. {doctor.full_name}</h3>
+              <p className="text-emerald-600 text-sm font-medium">{translateSpecialization(t, doctor.specialization)}</p>
             </div>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg">✕</button>
         </div>
 
-        <div className="bg-cyan-50 rounded-xl px-4 py-3 mb-4 flex items-center justify-between">
-          <span className="text-sm text-gray-600">{t('home.consultationFee')}</span>
-          <span className="text-xl font-black text-cyan-600">₹{fee}</span>
+        <div className="bg-green-50 rounded-xl px-4 py-3 mb-4 flex items-center justify-between">
+          <span className="text-sm text-gray-600 font-medium">{t('home.consultationFee')}</span>
+          <span className="text-xl font-bold text-emerald-700 tracking-tight">₹{fee}</span>
         </div>
 
         <div className="mb-4">
-          <label className="text-xs font-semibold text-gray-500 mb-1 block">{t('doctors.selectDate')}</label>
+          <label className="text-xs font-medium text-gray-500 mb-1 block">{t('doctors.selectDate')}</label>
           <input type="date" min={today} value={date} onChange={e => setDate(e.target.value)}
-            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400" />
+            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-400 hover:border-emerald-300 hover:bg-emerald-50/40" />
         </div>
 
         <div className="mb-4">
-          <label className="text-xs font-semibold text-gray-500 mb-2 block">{t('doctors.selectTimeSlot')}</label>
+          <label className="text-xs font-medium text-gray-500 mb-2 block">{t('doctors.selectTimeSlot')}</label>
           <div className="flex flex-wrap gap-2">
             {TIME_SLOTS.map(s => (
               <button key={s} onClick={() => setSlot(s)}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                  slot === s ? 'bg-cyan-500 text-white' : 'border border-gray-200 text-gray-600 hover:border-cyan-300'
+                  slot === s ? 'bg-emerald-600 text-white hover:bg-emerald-500' : 'border border-gray-200 text-gray-600 hover:border-emerald-400 hover:text-emerald-600 hover:bg-emerald-50'
                 }`}>
                 {formatSlot(s)}
               </button>
@@ -118,20 +118,20 @@ function BookingModal({ doctor, idx, onClose, onBooked }) {
         </div>
 
         <div className="mb-5">
-          <label className="text-xs font-semibold text-gray-500 mb-1 block">{t('doctors.describeIssue')}</label>
+          <label className="text-xs font-medium text-gray-500 mb-1 block">{t('doctors.describeIssue')}</label>
           <textarea value={issue} onChange={e => setIssue(e.target.value)}
             placeholder={t('home.issuePlaceholder')} rows={2}
-            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 resize-none" />
+            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm resize-none transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-400 hover:border-emerald-300 hover:bg-emerald-50/40" />
         </div>
 
         {error && <div className="bg-red-50 text-red-600 px-3 py-2 rounded-lg text-sm mb-3">{error}</div>}
 
         <div className="grid grid-cols-2 gap-3">
-          <button onClick={onClose} className="py-3 rounded-xl border border-gray-200 text-gray-600 text-sm font-semibold hover:bg-gray-50">
+          <button onClick={onClose} className="py-3 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50">
             {t('common.cancel')}
           </button>
           <button onClick={handleBook} disabled={loading}
-            className="py-3 rounded-xl bg-cyan-500 text-white text-sm font-semibold hover:bg-cyan-600 disabled:opacity-60 flex items-center justify-center gap-2">
+            className="py-3 rounded-xl bg-emerald-700 text-white text-sm font-bold tracking-tight transition-colors hover:bg-emerald-500 disabled:opacity-60 flex items-center justify-center gap-2">
             {loading ? t('doctors.booking') : t('home.bookFee', { fee })}
           </button>
         </div>
@@ -150,11 +150,11 @@ function DoctorCard({ doctor, idx, onBook, distanceMap }) {
             {getInitials(doctor.full_name)}
           </div>
           <div>
-            <h3 className="font-bold text-gray-900 text-sm">Dr. {doctor.full_name}</h3>
-            <p className="text-cyan-500 text-xs font-medium">{translateSpecialization(t, doctor.specialization)}</p>
+            <h3 className="font-semibold text-gray-900 text-sm tracking-tight">Dr. {doctor.full_name}</h3>
+            <p className="text-emerald-600 text-xs font-medium">{translateSpecialization(t, doctor.specialization)}</p>
           </div>
         </div>
-        <div className="flex items-center gap-1 text-green-500 text-xs font-bold">
+        <div className="flex items-center gap-1 text-green-600 text-xs font-medium">
           ★ {mockRating(idx)}
         </div>
       </div>
@@ -163,16 +163,16 @@ function DoctorCard({ doctor, idx, onBook, distanceMap }) {
         <span>{doctor.years_of_experience ? t('home.yrsExp', { years: doctor.years_of_experience }) : t('home.yrsExp', { years: 5 })}</span>
         <span>
           {distanceMap[doctor.id] != null
-            ? <span className="text-cyan-600 font-semibold">{Number(distanceMap[doctor.id]).toFixed(1)} km</span>
+            ? <span className="text-emerald-700 font-medium">{Number(distanceMap[doctor.id]).toFixed(1)} km</span>
             : <span className="text-gray-300">— km</span>}
         </span>
-        <span>₹{doctor.consultation_fee ?? mockFee(idx)}</span>
+        <span className="font-semibold text-gray-700">₹{doctor.consultation_fee ?? mockFee(idx)}</span>
       </div>
 
       <div className="flex items-center justify-between">
         <span className="text-xs text-gray-500">{mockSlot(t, idx)}</span>
         <button onClick={() => onBook(doctor, idx)}
-          className="bg-cyan-500 text-white text-xs font-bold px-4 py-2 rounded-xl hover:bg-cyan-600 transition-colors">
+          className="bg-emerald-700 text-white text-xs font-bold tracking-tight px-4 py-2 rounded-xl transition-colors hover:bg-emerald-500">
           {t('home.bookNow')}
         </button>
       </div>
@@ -289,7 +289,7 @@ function Home() {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen bg-gray-50 flex">
+      <div className="min-h-screen bg-green-50 flex">
         <Sidebar />
         <div className="lg:ml-56 flex-1 flex flex-col min-w-0">
           <TopBar />
@@ -297,7 +297,7 @@ function Home() {
           {/* ── Gradient Hero Banner ── */}
           <div className="bg-gradient-to-br from-teal-500 via-cyan-500 to-emerald-400 px-4 sm:px-8 pt-8 pb-10 rounded-b-3xl mb-6">
             <p className="text-cyan-100 text-sm font-medium mb-1">{getGreeting()}</p>
-            <h1 className="text-3xl font-black text-white mb-5">
+            <h1 className="text-3xl font-semibold tracking-tight text-white mb-5">
               {t('home.greeting', { name: user.full_name?.split(' ')[0] })}
             </h1>
 
@@ -305,7 +305,7 @@ function Home() {
 
             {/* Search bar */}
             <form onSubmit={handleSearch} className="mt-4">
-              <div className="flex items-center bg-white/20 backdrop-blur-sm border border-white/30 rounded-2xl px-4 py-3 gap-3 max-w-2xl">
+              <div className="flex items-center bg-white/20 backdrop-blur-sm border border-white/30 rounded-2xl px-4 py-3 gap-3 max-w-2xl transition-colors hover:bg-white/30">
                 <svg className="w-5 h-5 text-white/70 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0118 0z" />
                 </svg>
@@ -336,10 +336,10 @@ function Home() {
             <div className="mb-8">
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                  <h2 className="text-base font-semibold tracking-tight text-gray-900 flex items-center gap-2">
                     📍 {t('home.nearbyDoctors')}
                     {nearbyLoading && (
-                      <span className="text-xs font-normal text-cyan-400 animate-pulse ml-1">
+                      <span className="text-xs font-normal text-emerald-500 animate-pulse ml-1">
                         {t('home.sortingByDistance')}
                       </span>
                     )}
@@ -348,7 +348,7 @@ function Home() {
                     {Object.keys(distanceMap).length > 0 ? t('home.sortedByDistance') : t('home.enableLocation')}
                   </p>
                 </div>
-                <button onClick={() => navigate('/doctors')} className="text-cyan-500 text-sm font-semibold hover:underline">
+                <button onClick={() => navigate('/doctors')} className="text-emerald-600 text-sm font-medium hover:underline hover:text-emerald-500">
                   {t('home.seeAll')}
                 </button>
               </div>
@@ -377,7 +377,7 @@ function Home() {
             {/* Previously Visited */}
             <div>
               <div className="mb-3">
-                <h2 className="text-base font-bold text-gray-900">🔄 {t('home.previouslyVisited')}</h2>
+                <h2 className="text-base font-semibold tracking-tight text-gray-900">🔄 {t('home.previouslyVisited')}</h2>
                 <p className="text-xs text-gray-400 mt-0.5">{t('home.quickRebook')}</p>
               </div>
               {previousDoctors.length === 0 ? (
@@ -393,12 +393,12 @@ function Home() {
                           {getInitials(appt.doctor_name)}
                         </div>
                         <div>
-                          <p className="font-bold text-sm text-gray-900">Dr. {appt.doctor_name}</p>
-                          <p className="text-cyan-500 text-xs">{translateSpecialization(t, appt.specialization)}</p>
+                          <p className="font-semibold text-sm text-gray-900 tracking-tight">Dr. {appt.doctor_name}</p>
+                          <p className="text-emerald-600 text-xs font-medium">{translateSpecialization(t, appt.specialization)}</p>
                         </div>
                       </div>
                       <button onClick={() => navigate('/doctors')}
-                        className="text-cyan-500 text-xs font-bold bg-cyan-50 px-3 py-1.5 rounded-lg hover:bg-cyan-100">
+                        className="text-emerald-700 text-xs font-bold tracking-tight bg-green-50 px-3 py-1.5 rounded-lg transition-colors hover:bg-green-100 hover:text-emerald-600">
                         {t('home.rebook')}
                       </button>
                     </div>

@@ -9,7 +9,7 @@ const navItems = [
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
       </svg>
     ),
-    labelKey: 'nav.home', path: '/home'
+    labelKey: 'nav.home', label: 'Home', path: '/home'
   },
   {
     icon: (
@@ -74,13 +74,13 @@ function SidebarContent({ onClose }) {
         onClick={onClose}
         className="flex items-center gap-2 mb-8 px-3"
       >
-        <div className="w-9 h-9 bg-cyan-500 rounded-xl flex items-center justify-center shadow-sm">
-          <span className="text-white font-black text-base">M</span>
+        <div className="w-9 h-9 bg-emerald-600 rounded-xl flex items-center justify-center shadow-sm">
+          <span className="text-white font-semibold text-base">M</span>
         </div>
-        <span className="text-xl font-black text-gray-900 tracking-tight">MediInfo</span>
+        <span className="text-xl font-semibold text-gray-900 tracking-tight">MediInfo</span>
       </Link>
 
-      <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 px-3">{t('nav.menu')}</p>
+      <p className="text-xs font-medium text-gray-400 uppercase tracking-widest mb-2 px-3">{t('nav.menu')}</p>
 
       <nav className="flex flex-col gap-0.5 flex-1">
         {navItems.map(item => {
@@ -92,12 +92,12 @@ function SidebarContent({ onClose }) {
               onClick={onClose}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
                 active
-                  ? 'bg-cyan-50 text-cyan-600 border-l-4 border-cyan-500'
+                  ? 'bg-green-50 text-emerald-700 border-l-4 border-emerald-600'
                   : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
               }`}
             >
-              <span className={active ? 'text-cyan-500' : 'text-gray-400'}>{item.icon}</span>
-              {t(item.labelKey)}
+              <span className={active ? 'text-emerald-600' : 'text-gray-400'}>{item.icon}</span>
+              {item.label ?? t(item.labelKey)}
             </Link>
           )
         })}
@@ -108,11 +108,11 @@ function SidebarContent({ onClose }) {
             onClick={onClose}
             className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
               location.pathname === '/doctor-dashboard'
-                ? 'bg-cyan-50 text-cyan-600 border-l-4 border-cyan-500'
+                ? 'bg-green-50 text-emerald-700 border-l-4 border-emerald-600'
                 : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
             }`}
           >
-            <span className={location.pathname === '/doctor-dashboard' ? 'text-cyan-500' : 'text-gray-400'}>
+            <span className={location.pathname === '/doctor-dashboard' ? 'text-emerald-600' : 'text-gray-400'}>
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>

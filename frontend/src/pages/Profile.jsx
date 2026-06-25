@@ -81,7 +81,7 @@ function Profile() {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen bg-gray-50 flex">
+      <div className="min-h-screen bg-green-50 flex">
         <Sidebar />
         <div className="lg:ml-56 flex-1 flex flex-col min-w-0">
           <TopBar />
@@ -89,13 +89,13 @@ function Profile() {
           {/* ── Gradient Hero Banner (with user identity) ── */}
           <div className="bg-gradient-to-br from-teal-500 via-cyan-500 to-emerald-400 px-4 sm:px-8 pt-8 pb-10 rounded-b-3xl mb-6">
             <div className="flex items-center gap-5">
-              <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center text-white text-3xl font-bold shrink-0">
+              <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center text-white text-3xl font-semibold shrink-0">
                 {user.full_name?.charAt(0).toUpperCase() || 'U'}
               </div>
               <div>
-                <h1 className="text-2xl font-black text-white">{user.full_name}</h1>
+                <h1 className="text-2xl font-semibold tracking-tight text-white">{user.full_name}</h1>
                 <p className="text-cyan-100 text-sm mt-0.5">{user.phone}</p>
-                <span className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-semibold capitalize bg-white/20 text-white`}>
+                <span className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-medium capitalize bg-white/20 text-white`}>
                   {t(`profile.roles.${user.role}`, user.role)}
                 </span>
               </div>
@@ -110,9 +110,9 @@ function Profile() {
                 <button
                   key={tab}
                   onClick={() => { setActiveTab(tab); setEditing(false); setError(''); setSuccess('') }}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium capitalize ${
+                  className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-colors ${
                     activeTab === tab
-                      ? 'bg-cyan-500 text-white'
+                      ? 'bg-emerald-600 text-white hover:bg-emerald-500'
                       : 'bg-white text-gray-600 hover:bg-gray-100'
                   }`}
                 >
@@ -127,11 +127,11 @@ function Profile() {
               {activeTab === 'profile' && (
                 <div className="space-y-5">
                   <div className="flex items-center justify-between">
-                    <h2 className="font-semibold text-gray-700 text-lg">{t('profile.title')}</h2>
+                    <h2 className="font-semibold tracking-tight text-gray-700 text-lg">{t('profile.title')}</h2>
                     {!editing ? (
                       <button
                         onClick={() => setEditing(true)}
-                        className="text-cyan-500 hover:text-cyan-600 text-sm font-medium border border-cyan-300 px-3 py-1 rounded-lg"
+                        className="text-emerald-600 hover:text-emerald-500 text-sm font-medium border border-emerald-300 px-3 py-1 rounded-lg transition-colors hover:bg-emerald-50"
                       >
                         ✏️ {t('common.edit')}
                       </button>
@@ -164,7 +164,7 @@ function Profile() {
                         type="text"
                         value={form.full_name}
                         onChange={e => setForm({ ...form, full_name: e.target.value })}
-                        className="w-full bg-white px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-gray-800"
+                        className="w-full bg-white px-3 py-2 rounded-lg border border-gray-200 text-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-400 hover:border-emerald-300"
                       />
                     ) : (
                       <p className="font-medium text-gray-800">{user.full_name}</p>
@@ -178,7 +178,7 @@ function Profile() {
                         type="text"
                         value={form.phone}
                         onChange={e => setForm({ ...form, phone: e.target.value })}
-                        className="w-full bg-white px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-gray-800"
+                        className="w-full bg-white px-3 py-2 rounded-lg border border-gray-200 text-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-400 hover:border-emerald-300"
                       />
                     ) : (
                       <p className="font-medium text-gray-800">{user.phone}</p>
@@ -199,7 +199,7 @@ function Profile() {
                     <button
                       onClick={handleSave}
                       disabled={saving}
-                      className="w-full bg-cyan-500 text-white py-3 rounded-xl hover:bg-cyan-600 font-medium"
+                      className="w-full bg-emerald-700 text-white py-3 rounded-xl font-bold tracking-tight transition-colors hover:bg-emerald-500"
                     >
                       {saving ? t('common.saving') : t('common.save')}
                     </button>
@@ -209,13 +209,13 @@ function Profile() {
                     <div className="pt-2 flex gap-3">
                       <button
                         onClick={() => navigate('/reminders')}
-                        className="flex-1 bg-cyan-50 text-cyan-600 py-2 rounded-xl hover:bg-cyan-100 font-medium text-sm"
+                        className="flex-1 bg-green-50 text-emerald-700 py-2 rounded-xl font-medium text-sm transition-colors hover:bg-green-100 hover:text-emerald-600"
                       >
                         ⏰ {t('profile.myReminders')}
                       </button>
                       <button
                         onClick={() => navigate('/ai-chat')}
-                        className="flex-1 bg-cyan-50 text-cyan-600 py-2 rounded-xl hover:bg-cyan-100 font-medium text-sm"
+                        className="flex-1 bg-green-50 text-emerald-700 py-2 rounded-xl font-medium text-sm transition-colors hover:bg-green-100 hover:text-emerald-600"
                       >
                         🤖 {t('profile.aiChat')}
                       </button>
@@ -226,7 +226,7 @@ function Profile() {
 
               {activeTab === 'security' && (
                 <div className="space-y-5">
-                  <h2 className="font-semibold text-gray-700 text-lg">{t('profile.security')}</h2>
+                  <h2 className="font-semibold tracking-tight text-gray-700 text-lg">{t('profile.security')}</h2>
 
                   <div className="bg-gray-50 rounded-xl p-4 flex items-center justify-between">
                     <div>
@@ -262,7 +262,7 @@ function Profile() {
               {activeTab === 'language' && (
                 <div className="space-y-5">
                   <div>
-                    <h2 className="font-semibold text-gray-700 text-lg">{t('profile.languageTitle')}</h2>
+                    <h2 className="font-semibold tracking-tight text-gray-700 text-lg">{t('profile.languageTitle')}</h2>
                     <p className="text-sm text-gray-500 mt-1">{t('profile.languageSubtitle')}</p>
                   </div>
 
@@ -279,8 +279,8 @@ function Profile() {
                         onClick={() => handleLanguageChange(code)}
                         className={`px-4 py-3 rounded-xl text-sm font-medium border transition-colors ${
                           i18n.language === code
-                            ? 'bg-cyan-500 text-white border-cyan-500'
-                            : 'bg-gray-50 text-gray-700 border-gray-200 hover:border-cyan-300'
+                            ? 'bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-500'
+                            : 'bg-gray-50 text-gray-700 border-gray-200 hover:border-emerald-400 hover:text-emerald-600'
                         }`}
                       >
                         {label}
@@ -294,19 +294,19 @@ function Profile() {
             {/* ── Quick Stats ── */}
             <div className="grid grid-cols-3 gap-4 mt-6 max-w-2xl">
               <div className="bg-white rounded-2xl shadow-sm p-4 text-center">
-                <p className="text-2xl font-bold text-cyan-500">💊</p>
+                <p className="text-2xl font-semibold text-emerald-600">💊</p>
                 <p className="text-xs text-gray-500 mt-1">{t('profile.medicines')}</p>
-                <p className="font-bold text-gray-800">100+</p>
+                <p className="font-semibold tracking-tight text-gray-800">100+</p>
               </div>
               <div className="bg-white rounded-2xl shadow-sm p-4 text-center">
-                <p className="text-2xl font-bold text-cyan-500">🤖</p>
+                <p className="text-2xl font-semibold text-emerald-600">🤖</p>
                 <p className="text-xs text-gray-500 mt-1">{t('profile.aiPowered')}</p>
-                <p className="font-bold text-gray-800">Gemini</p>
+                <p className="font-semibold tracking-tight text-gray-800">Gemini</p>
               </div>
               <div className="bg-white rounded-2xl shadow-sm p-4 text-center">
-                <p className="text-2xl font-bold text-cyan-500">🇮🇳</p>
+                <p className="text-2xl font-semibold text-emerald-600">🇮🇳</p>
                 <p className="text-xs text-gray-500 mt-1">{t('profile.madeFor')}</p>
-                <p className="font-bold text-gray-800">{t('profile.india')}</p>
+                <p className="font-semibold tracking-tight text-gray-800">{t('profile.india')}</p>
               </div>
             </div>
 
