@@ -192,19 +192,99 @@ function WalkInModal({ doctorId, onClose, onSuccess }) {
   )
 }
 
+function DetailModal({ appointment, onClose }) {
+  if (!appointment) return null
+  const statusStyles = {
+    confirmed: 'bg-green-100 text-green-700',
+    cancelled: 'bg-red-100 text-red-600',
+    pending: 'bg-amber-100 text-amber-700',
+    completed: 'bg-gray-100 text-gray-500',
+  }
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-black text-gray-900">Appointment Details</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg leading-none">✕</button>
+        </div>
+        <div className="space-y-3">
+          <div className="flex items-center gap-3 bg-cyan-50 rounded-xl p-4">
+            <div className="w-12 h-12 rounded-full bg-cyan-200 text-cyan-700 font-black text-lg flex items-center justify-center shrink-0">
+              {appointment.patient_name?.charAt(0).toUpperCase() || '?'}
+            </div>
+            <div>
+              <p className="font-bold text-gray-900">{appointment.patient_name || 'Walk-in Patient'}</p>
+              {appointment.source === 'walkin' && (
+                <span className="text-[10px] font-bold bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full">Walk-in</span>
+              )}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-gray-50 rounded-xl p-3">
+              <p className="text-xs text-gray-400 mb-1">Date</p>
+              <p className="text-sm font-semibold text-gray-800">
+                {new Date(appointment.appointment_date).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+              </p>
+            </div>
+            <div className="bg-gray-50 rounded-xl p-3">
+              <p className="text-xs text-gray-400 mb-1">Time</p>
+              <p className="text-sm font-semibold text-gray-800">{appointment.appointment_time}</p>
+            </div>
+            <div className="bg-gray-50 rounded-xl p-3">
+              <p className="text-xs text-gray-400 mb-1">Type</p>
+              <p className="text-sm font-semibold text-gray-800 capitalize">{appointment.source === 'walkin' ? 'Walk-in' : 'Booked'}</p>
+            </div>
+            <div className="bg-gray-50 rounded-xl p-3">
+              <p className="text-xs text-gray-400 mb-1">Status</p>
+              <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold capitalize ${statusStyles[appointment.status] || 'bg-gray-100 text-gray-500'}`}>
+                {appointment.status === 'confirmed' ? 'Accepted' : appointment.status}
+              </span>
+            </div>
+          </div>
+          {appointment.issue && (
+            <div className="bg-gray-50 rounded-xl p-3">
+              <p className="text-xs text-gray-400 mb-1">Issue / Notes</p>
+              <p className="text-sm text-gray-700">{appointment.issue}</p>
+            </div>
+          )}
+          {appointment.source === 'walkin' && (
+            <div className="bg-orange-50 rounded-xl p-3 space-y-1">
+              <p className="text-xs text-gray-400 mb-1">Walk-in Info</p>
+              <p className="text-sm text-gray-700">Age: {appointment.walkin_age}</p>
+              <p className="text-sm text-gray-700">Phone: {appointment.walkin_phone}</p>
+            </div>
+          )}
+          {appointment.status === 'cancelled' && appointment.cancellation_reason && (
+            <div className="bg-red-50 rounded-xl p-3">
+              <p className="text-xs text-gray-400 mb-1">Cancellation Reason</p>
+              <p className="text-sm text-red-600">{appointment.cancellation_reason}</p>
+            </div>
+          )}
+        </div>
+        <button onClick={onClose}
+          className="w-full py-2.5 border border-gray-200 text-gray-500 text-sm font-semibold rounded-xl hover:bg-gray-50">
+          Close
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function DoctorAppointments() {
   const navigate = useNavigate()
   const user = JSON.parse(localStorage.getItem('user') || '{}')
   const [appointments, setAppointments] = useState([])
   const [loading, setLoading] = useState(true)
   const [acting, setActing] = useState(null)
-  const [filter, setFilter] = useState('pending')
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [dateFilter, setDateFilter] = useState('all')
   const [search, setSearch] = useState('')
   const [toasts, setToasts] = useState([])
   const [lastUpdated, setLastUpdated] = useState(null)
   const [cancelTarget, setCancelTarget] = useState(null)
   const [showWalkIn, setShowWalkIn] = useState(false)
   const [prescribeTarget, setPrescribeTarget] = useState(null)
+  const [detailTarget, setDetailTarget] = useState(null)
   const prevAppointments = useRef([])
   const toastCounter = useRef(0)
 
@@ -303,7 +383,7 @@ function DoctorAppointments() {
           }),
         })
       }
-      addToast(`Appointment cancelled. Patient notified.`)
+      addToast('Appointment cancelled. Patient notified.')
       setCancelTarget(null)
     } catch (err) {
       console.error('Cancel error:', err)
@@ -319,21 +399,32 @@ function DoctorAppointments() {
     completed: 'bg-gray-100 text-gray-500',
   }
 
-  const pendingCount = appointments.filter(a => a.status === 'pending').length
-  const confirmedCount = appointments.filter(a => a.status === 'confirmed').length
-
-  const displayed = appointments.filter(a => {
-    const matchFilter = filter === 'all' || a.status === filter
-    const matchSearch = !search ||
-      a.patient_name?.toLowerCase().includes(search.toLowerCase()) ||
-      (a.issue || '').toLowerCase().includes(search.toLowerCase())
-    return matchFilter && matchSearch
-  })
-
   const todayStr = new Date().toLocaleDateString('en-CA')
   const tomorrowDate = new Date()
   tomorrowDate.setDate(tomorrowDate.getDate() + 1)
   const tomorrowStr = tomorrowDate.toLocaleDateString('en-CA')
+  const weekEndDate = new Date()
+  weekEndDate.setDate(weekEndDate.getDate() + 7)
+  const weekEndStr = weekEndDate.toLocaleDateString('en-CA')
+
+  const pendingCount = appointments.filter(a => a.status === 'pending').length
+  const confirmedCount = appointments.filter(a => a.status === 'confirmed').length
+  const cancelledCount = appointments.filter(a => a.status === 'cancelled').length
+  const completedCount = appointments.filter(a => a.status === 'completed').length
+
+  const displayed = appointments.filter(a => {
+    if (dateFilter === 'today' && a.appointment_date !== todayStr) return false
+    if (dateFilter === 'tomorrow' && a.appointment_date !== tomorrowStr) return false
+    if (dateFilter === 'week' && (a.appointment_date < todayStr || a.appointment_date > weekEndStr)) return false
+    if (statusFilter !== 'all' && a.status !== statusFilter) return false
+    if (search) {
+      const q = search.toLowerCase()
+      const matchName = a.patient_name?.toLowerCase().includes(q)
+      const matchIssue = (a.issue || '').toLowerCase().includes(q)
+      if (!matchName && !matchIssue) return false
+    }
+    return true
+  })
 
   const dayLabel = (dateStr) => {
     if (dateStr === todayStr) return 'Today'
@@ -349,6 +440,21 @@ function DoctorAppointments() {
   }, {})
   const sortedDates = Object.keys(groups).sort()
 
+  const dateFilterTabs = [
+    { key: 'all', label: 'All Dates' },
+    { key: 'today', label: 'Today' },
+    { key: 'tomorrow', label: 'Tomorrow' },
+    { key: 'week', label: 'This Week' },
+  ]
+
+  const statusFilterTabs = [
+    { key: 'all', label: `All (${appointments.length})` },
+    { key: 'pending', label: `Pending (${pendingCount})` },
+    { key: 'confirmed', label: `Accepted (${confirmedCount})` },
+    { key: 'completed', label: `Completed (${completedCount})` },
+    { key: 'cancelled', label: `Cancelled (${cancelledCount})` },
+  ]
+
   return (
     <SidebarProvider>
       <div className="min-h-screen bg-[#f0f4f8] flex">
@@ -358,12 +464,10 @@ function DoctorAppointments() {
         {cancelTarget && (
           <CancelModal appointment={cancelTarget} onConfirm={handleCancelConfirmed} onClose={() => setCancelTarget(null)} />
         )}
-
         {showWalkIn && (
           <WalkInModal doctorId={user.id} onClose={() => setShowWalkIn(false)}
             onSuccess={(msg) => { addToast(msg); fetchAppointments() }} />
         )}
-
         {prescribeTarget && (
           <PrescriptionModal
             appointment={prescribeTarget}
@@ -371,11 +475,15 @@ function DoctorAppointments() {
             onSaved={(msg) => { addToast(msg) }}
           />
         )}
+        {detailTarget && (
+          <DetailModal appointment={detailTarget} onClose={() => setDetailTarget(null)} />
+        )}
 
         <div className="lg:ml-56 flex-1 flex flex-col">
           <DoctorTopBar />
           <div className="flex-1 px-4 sm:px-6 lg:px-8 py-6 space-y-5">
 
+            {/* Header */}
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-xl font-black text-gray-900">Appointments</h1>
@@ -402,11 +510,13 @@ function DoctorAppointments() {
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4 max-w-sm">
+            {/* Stat Cards */}
+            <div className="grid grid-cols-4 gap-4 max-w-lg">
               {[
                 { label: 'Total', value: appointments.length, color: 'text-gray-800' },
                 { label: 'Accepted', value: confirmedCount, color: 'text-green-500' },
                 { label: 'Pending', value: pendingCount, color: 'text-amber-500' },
+                { label: 'Completed', value: completedCount, color: 'text-cyan-500' },
               ].map(s => (
                 <div key={s.label} className="bg-white rounded-2xl shadow-sm p-4 text-center">
                   <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
@@ -415,124 +525,186 @@ function DoctorAppointments() {
               ))}
             </div>
 
+            {/* Main Panel */}
             <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+
+              {/* Search */}
               <div className="px-5 py-4 border-b border-gray-100">
                 <div className="relative max-w-sm">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-sm">🔍</span>
                   <input type="text" value={search} onChange={e => setSearch(e.target.value)}
                     placeholder="Search patient or issue..."
                     className="w-full pl-9 pr-4 py-2 text-sm bg-gray-50 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-cyan-300" />
                 </div>
               </div>
 
-              <div className="flex gap-1 px-5 py-3 border-b border-gray-100 overflow-x-auto">
-                {[
-                  { key: 'all', label: `All (${appointments.length})` },
-                  { key: 'pending', label: `Pending (${pendingCount})` },
-                  { key: 'confirmed', label: `Accepted (${confirmedCount})` },
-                  { key: 'cancelled', label: `Rejected (${appointments.filter(a => a.status === 'cancelled').length})` },
-                ].map(tab => (
-                  <button key={tab.key} onClick={() => setFilter(tab.key)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
-                      filter === tab.key ? 'bg-cyan-500 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                    }`}>
-                    {tab.label}
-                  </button>
-                ))}
+              {/* Date filters */}
+              <div className="px-5 py-3 border-b border-gray-100 bg-gray-50/50">
+                <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-2">Filter by Date</p>
+                <div className="flex gap-1.5 overflow-x-auto">
+                  {dateFilterTabs.map(tab => (
+                    <button key={tab.key} onClick={() => setDateFilter(tab.key)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
+                        dateFilter === tab.key
+                          ? 'bg-gray-800 text-white'
+                          : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'
+                      }`}>
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
+              {/* Status filters */}
+              <div className="px-5 py-3 border-b border-gray-100">
+                <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-2">Filter by Status</p>
+                <div className="flex gap-1.5 overflow-x-auto">
+                  {statusFilterTabs.map(tab => (
+                    <button key={tab.key} onClick={() => setStatusFilter(tab.key)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
+                        statusFilter === tab.key
+                          ? 'bg-cyan-500 text-white'
+                          : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                      }`}>
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Table header — desktop only */}
+              <div className="hidden md:grid grid-cols-[2fr_1fr_1fr_1fr_1fr_2fr] gap-4 px-5 py-2.5 bg-gray-50 border-b border-gray-100">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Patient</span>
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Date</span>
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Time</span>
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Type</span>
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Status</span>
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Actions</span>
+              </div>
+
+              {/* Rows */}
               {loading ? (
                 <div className="flex items-center justify-center py-20 text-gray-300">Loading…</div>
               ) : displayed.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 text-gray-300">
                   <p className="text-sm">No appointments found</p>
+                  {(statusFilter !== 'all' || dateFilter !== 'all' || search) && (
+                    <button onClick={() => { setStatusFilter('all'); setDateFilter('all'); setSearch('') }}
+                      className="mt-3 text-xs text-cyan-500 font-semibold hover:underline">
+                      Clear filters
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div>
                   {sortedDates.map(dateKey => (
                     <div key={dateKey}>
+                      {/* Date group header */}
                       <div className="flex items-center gap-3 px-5 py-2.5 bg-gray-50 border-y border-gray-100">
                         <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">{dayLabel(dateKey)}</span>
-                        <span className="text-xs text-gray-400">— {new Date(dateKey).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                        <span className="text-xs text-gray-400">
+                          — {new Date(dateKey).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
+                        </span>
                         <span className="ml-auto text-[11px] bg-gray-200 text-gray-500 font-semibold px-2 py-0.5 rounded-full">
                           {groups[dateKey].length} appt{groups[dateKey].length > 1 ? 's' : ''}
                         </span>
                       </div>
+
                       <div className="divide-y divide-gray-50">
                         {groups[dateKey]
                           .sort((a, b) => a.appointment_time.localeCompare(b.appointment_time))
                           .map(appt => (
-                            <div key={appt.id} className="flex items-center gap-4 py-3.5 px-5 hover:bg-gray-50 transition-colors">
-                              <div className="w-9 h-9 rounded-full bg-cyan-100 text-cyan-600 font-bold text-sm flex items-center justify-center shrink-0">
-                                {appt.patient_name?.charAt(0).toUpperCase()}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <p className="text-sm font-semibold text-gray-800 truncate">{appt.patient_name}</p>
-                                  {appt.source === 'walkin' && (
-                                    <span className="text-[10px] font-bold bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full shrink-0">
-                                      Walk-in
-                                    </span>
-                                  )}
+                            <div key={appt.id}
+                              className="flex flex-col md:grid md:grid-cols-[2fr_1fr_1fr_1fr_1fr_2fr] md:items-center gap-3 md:gap-4 py-3.5 px-5 hover:bg-gray-50 transition-colors">
+
+                              {/* Patient */}
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div className="w-9 h-9 rounded-full bg-cyan-100 text-cyan-600 font-bold text-sm flex items-center justify-center shrink-0">
+                                  {appt.patient_name?.charAt(0).toUpperCase() || '?'}
                                 </div>
-                                <p className="text-xs text-gray-400 truncate">
-                                  {appt.source === 'walkin'
-                                    ? `Age ${appt.walkin_age} · ${appt.walkin_phone}`
-                                    : appt.issue || 'General consultation'}
-                                </p>
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <p className="text-sm font-semibold text-gray-800 truncate">{appt.patient_name || 'Walk-in'}</p>
+                                    {appt.source === 'walkin' && (
+                                      <span className="text-[10px] font-bold bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full shrink-0">Walk-in</span>
+                                    )}
+                                  </div>
+                                  <p className="text-xs text-gray-400 truncate">
+                                    {appt.source === 'walkin'
+                                      ? `Age ${appt.walkin_age} · ${appt.walkin_phone}`
+                                      : appt.issue || 'General consultation'}
+                                  </p>
+                                </div>
+                              </div>
+
+                              {/* Date */}
+                              <p className="text-xs font-medium text-gray-700">
+                                {new Date(appt.appointment_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                              </p>
+
+                              {/* Time */}
+                              <p className="text-sm font-bold text-gray-700">{appt.appointment_time}</p>
+
+                              {/* Type */}
+                              <span className={`text-[11px] font-semibold px-2 py-1 rounded-lg w-fit ${appt.source === 'walkin' ? 'bg-orange-50 text-orange-600' : 'bg-blue-50 text-blue-600'}`}>
+                                {appt.source === 'walkin' ? 'Walk-in' : 'Booked'}
+                              </span>
+
+                              {/* Status */}
+                              <div>
+                                <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold capitalize ${statusStyles[appt.status] || 'bg-gray-100 text-gray-500'}`}>
+                                  {appt.status === 'confirmed' ? 'Accepted' : appt.status}
+                                </span>
                                 {appt.status === 'cancelled' && appt.cancellation_reason && (
-                                  <p className="text-xs text-red-400 truncate mt-0.5">Reason: {appt.cancellation_reason}</p>
+                                  <p className="text-[10px] text-red-400 mt-0.5 truncate max-w-[100px]">{appt.cancellation_reason}</p>
                                 )}
                               </div>
-                              <div className="text-right shrink-0">
-                                <p className="text-sm font-bold text-gray-700">{appt.appointment_time}</p>
+
+                              {/* Actions */}
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <button onClick={() => setDetailTarget(appt)}
+                                  className="px-2.5 py-1.5 border border-gray-200 text-gray-500 text-xs font-semibold rounded-lg hover:bg-gray-50 transition-colors">
+                                  Details
+                                </button>
+
+                                {appt.status === 'pending' && (
+                                  <>
+                                    <button onClick={() => handleConfirm(appt.id)} disabled={acting === appt.id}
+                                      className="px-2.5 py-1.5 bg-green-500 text-white text-xs font-semibold rounded-lg hover:bg-green-600 disabled:opacity-50 transition-colors">
+                                      {acting === appt.id ? '…' : 'Accept'}
+                                    </button>
+                                    <button onClick={() => handleReject(appt.id)} disabled={acting === appt.id}
+                                      className="px-2.5 py-1.5 border border-red-200 text-red-500 text-xs font-semibold rounded-lg hover:bg-red-50 disabled:opacity-50 transition-colors">
+                                      {acting === appt.id ? '…' : 'Reject'}
+                                    </button>
+                                  </>
+                                )}
+
+                                {appt.status === 'confirmed' && (
+                                  <>
+                                    <button onClick={() => setPrescribeTarget(appt)}
+                                      className="px-2.5 py-1.5 border border-cyan-200 text-cyan-600 text-xs font-semibold rounded-lg hover:bg-cyan-50 transition-colors">
+                                      Prescribe
+                                    </button>
+                                    <button onClick={() => navigate('/doctor-live-queue')}
+                                      className="px-2.5 py-1.5 bg-cyan-500 text-white text-xs font-semibold rounded-lg hover:bg-cyan-600 transition-colors">
+                                      Start
+                                    </button>
+                                    <button onClick={() => setCancelTarget(appt)} disabled={acting === appt.id}
+                                      className="px-2.5 py-1.5 border border-red-200 text-red-500 text-xs font-semibold rounded-lg hover:bg-red-50 disabled:opacity-50 transition-colors">
+                                      Cancel
+                                    </button>
+                                  </>
+                                )}
+
+                                {appt.status === 'completed' && (
+                                  <button onClick={() => setPrescribeTarget(appt)}
+                                    className="px-2.5 py-1.5 border border-cyan-200 text-cyan-600 text-xs font-semibold rounded-lg hover:bg-cyan-50 transition-colors">
+                                    Prescribe
+                                  </button>
+                                )}
                               </div>
 
-                              {appt.status === 'pending' && (
-                                <div className="flex gap-2 shrink-0">
-                                  <button onClick={() => handleConfirm(appt.id)} disabled={acting === appt.id}
-                                    className="px-3 py-1.5 bg-green-500 text-white text-xs font-semibold rounded-lg hover:bg-green-600 disabled:opacity-50">
-                                    {acting === appt.id ? '…' : 'Accept'}
-                                  </button>
-                                  <button onClick={() => handleReject(appt.id)} disabled={acting === appt.id}
-                                    className="px-3 py-1.5 border border-red-200 text-red-500 text-xs font-semibold rounded-lg hover:bg-red-50 disabled:opacity-50">
-                                    {acting === appt.id ? '…' : 'Reject'}
-                                  </button>
-                                </div>
-                              )}
-
-                              {appt.status === 'confirmed' && (
-                                <div className="flex items-center gap-2 shrink-0">
-                                  <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold capitalize ${statusStyles.confirmed}`}>
-                                    Accepted
-                                  </span>
-                                  <button onClick={() => setPrescribeTarget(appt)}
-                                    className="px-3 py-1.5 border border-cyan-200 text-cyan-600 text-xs font-semibold rounded-lg hover:bg-cyan-50 transition-colors">
-                                    Prescribe
-                                  </button>
-                                  <button onClick={() => setCancelTarget(appt)} disabled={acting === appt.id}
-                                    className="px-3 py-1.5 border border-red-200 text-red-500 text-xs font-semibold rounded-lg hover:bg-red-50 disabled:opacity-50 transition-colors">
-                                    Cancel
-                                  </button>
-                                </div>
-                              )}
-
-                              {appt.status === 'completed' && (
-                                <div className="flex items-center gap-2 shrink-0">
-                                  <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold capitalize ${statusStyles.completed}`}>
-                                    completed
-                                  </span>
-                                  <button onClick={() => setPrescribeTarget(appt)}
-                                    className="px-3 py-1.5 border border-cyan-200 text-cyan-600 text-xs font-semibold rounded-lg hover:bg-cyan-50 transition-colors">
-                                    Prescribe
-                                  </button>
-                                </div>
-                              )}
-
-                              {appt.status === 'cancelled' && (
-                                <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold capitalize shrink-0 ${statusStyles.cancelled}`}>
-                                  cancelled
-                                </span>
-                              )}
                             </div>
                           ))}
                       </div>

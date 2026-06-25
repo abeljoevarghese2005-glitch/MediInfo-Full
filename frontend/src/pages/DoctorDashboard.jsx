@@ -13,14 +13,13 @@ const greeting = () => {
   return 'Good evening,'
 }
 
-// Returns 7 days starting from the given Monday-anchored weekStart date
 const getWeekDays = (weekStart) => {
   const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
-  const todayStr = new Date().toLocaleDateString('en-CA') // ✅ FIX: IST-safe
+  const todayStr = new Date().toLocaleDateString('en-CA')
   return Array.from({ length: 7 }, (_, i) => {
     const d = new Date(weekStart)
     d.setDate(weekStart.getDate() + i)
-    const dateStr = d.toLocaleDateString('en-CA') // ✅ FIX: IST-safe
+    const dateStr = d.toLocaleDateString('en-CA')
     return {
       label: days[d.getDay()],
       date: d.getDate(),
@@ -31,7 +30,6 @@ const getWeekDays = (weekStart) => {
   })
 }
 
-// Get the Monday of the week containing a given date
 const getWeekStart = (date) => {
   const d = new Date(date)
   const day = d.getDay()
@@ -56,58 +54,13 @@ function StatCard({ icon, value, label, sub, subColor = 'text-cyan-500' }) {
   )
 }
 
-function AppointmentRow({ appt, onConfirm, onReject, acting }) {
-  const statusStyles = {
-    confirmed: 'bg-green-100 text-green-700',
-    cancelled: 'bg-red-100 text-red-600',
-    pending: 'bg-amber-100 text-amber-700',
-  }
-  const fmt = (d) => new Date(d).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })
-
-  return (
-    <div className="flex items-center gap-4 py-3.5 px-4 rounded-xl hover:bg-gray-50 transition-colors">
-      <div className="w-9 h-9 rounded-full bg-cyan-100 text-cyan-600 font-bold text-sm flex items-center justify-center shrink-0">
-        {appt.patient_name?.charAt(0).toUpperCase()}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-gray-800 truncate">{appt.patient_name}</p>
-        <p className="text-xs text-gray-400 truncate">{appt.issue || 'General consultation'}</p>
-      </div>
-      <div className="hidden sm:block text-right shrink-0">
-        <p className="text-xs font-medium text-gray-600">{fmt(appt.appointment_date)}</p>
-        <p className="text-xs text-gray-400">{appt.appointment_time}</p>
-      </div>
-      {appt.status === 'pending' ? (
-        <div className="flex gap-2 shrink-0">
-          <button onClick={() => onConfirm(appt.id)} disabled={acting === appt.id}
-            className="px-3 py-1.5 bg-green-500 text-white text-xs font-semibold rounded-lg hover:bg-green-600 disabled:opacity-50 transition-colors">
-            {acting === appt.id ? '…' : 'Accept'}
-          </button>
-          <button onClick={() => onReject(appt.id)} disabled={acting === appt.id}
-            className="px-3 py-1.5 border border-red-200 text-red-500 text-xs font-semibold rounded-lg hover:bg-red-50 disabled:opacity-50 transition-colors">
-            {acting === appt.id ? '…' : 'Reject'}
-          </button>
-        </div>
-      ) : (
-        <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold capitalize shrink-0 ${statusStyles[appt.status] || 'bg-gray-100 text-gray-500'}`}>
-          {appt.status}
-        </span>
-      )}
-    </div>
-  )
-}
-
 function DoctorDashboard() {
   const navigate = useNavigate()
   const user = JSON.parse(localStorage.getItem('user') || '{}')
   const [appointments, setAppointments] = useState([])
   const [loading, setLoading] = useState(true)
-  const [acting, setActing] = useState(null)
-  const [filter, setFilter] = useState('pending')
-  const [search, setSearch] = useState('')
   const [nearbyPatients, setNearbyPatients] = useState([])
 
-  // ✅ FIX: IST-safe today
   const todayStr = new Date().toLocaleDateString('en-CA')
   const [weekStart, setWeekStart] = useState(() => getWeekStart(new Date()))
   const [selectedDateStr, setSelectedDateStr] = useState(todayStr)
@@ -120,26 +73,9 @@ function DoctorDashboard() {
     return `${weekStart.toLocaleDateString('en-IN', opts)} – ${end.toLocaleDateString('en-IN', opts)}`
   })()
 
-  const goToPrevWeek = () => {
-    setWeekStart(prev => {
-      const d = new Date(prev)
-      d.setDate(d.getDate() - 7)
-      return d
-    })
-  }
-
-  const goToNextWeek = () => {
-    setWeekStart(prev => {
-      const d = new Date(prev)
-      d.setDate(d.getDate() + 7)
-      return d
-    })
-  }
-
-  const goToToday = () => {
-    setWeekStart(getWeekStart(new Date()))
-    setSelectedDateStr(todayStr)
-  }
+  const goToPrevWeek = () => setWeekStart(prev => { const d = new Date(prev); d.setDate(d.getDate() - 7); return d })
+  const goToNextWeek = () => setWeekStart(prev => { const d = new Date(prev); d.setDate(d.getDate() + 7); return d })
+  const goToToday = () => { setWeekStart(getWeekStart(new Date())); setSelectedDateStr(todayStr) }
 
   useEffect(() => {
     if (user.role !== 'doctor') { navigate('/home'); return }
@@ -184,48 +120,53 @@ function DoctorDashboard() {
     setLoading(false)
   }
 
-  const handleConfirm = async (id) => {
-    setActing(id)
-    const { error } = await supabase.from('appointments').update({ status: 'confirmed' }).eq('id', id)
-    if (!error) setAppointments(prev => prev.map(a => a.id === id ? { ...a, status: 'confirmed' } : a))
-    setActing(null)
-  }
-
-  const handleReject = async (id) => {
-    setActing(id)
-    const { error } = await supabase.from('appointments').update({ status: 'cancelled' }).eq('id', id)
-    if (!error) setAppointments(prev => prev.map(a => a.id === id ? { ...a, status: 'cancelled' } : a))
-    setActing(null)
-  }
-
-  const today = new Date().toLocaleDateString('en-CA') // ✅ FIX: IST-safe
+  const today = new Date().toLocaleDateString('en-CA')
   const todayCount = appointments.filter(a => a.appointment_date === today).length
   const pendingCount = appointments.filter(a => a.status === 'pending').length
   const confirmedCount = appointments.filter(a => a.status === 'confirmed').length
 
-  const filterTabs = [
-  { key: 'all', label: `All (${appointments.length})` },
-  { key: 'pending', label: `Pending (${pendingCount})` },
-  { key: 'confirmed', label: `Accepted (${confirmedCount})` },
-  { key: 'cancelled', label: `Rejected (${appointments.filter(a => a.status === 'cancelled').length})` },
-]
+  // Weekly stats
+  const weekStartStr = weekStart.toLocaleDateString('en-CA')
+  const weekEndDate = new Date(weekStart)
+  weekEndDate.setDate(weekStart.getDate() + 6)
+  const weekEndStr = weekEndDate.toLocaleDateString('en-CA')
+  const weekAppts = appointments.filter(a => a.appointment_date >= weekStartStr && a.appointment_date <= weekEndStr)
+  const weekCompleted = weekAppts.filter(a => a.status === 'completed' || a.status === 'confirmed').length
+  const weekTotal = weekAppts.length
+  const completionRate = weekTotal > 0 ? Math.round((weekCompleted / weekTotal) * 100) : 0
 
-  const displayed = appointments.filter(a => {
-    const matchDate = a.appointment_date === selectedDateStr
-    const matchFilter = filter === 'all' || a.status === filter
-    const matchSearch = !search ||
-      a.patient_name?.toLowerCase().includes(search.toLowerCase()) ||
-      (a.issue || '').toLowerCase().includes(search.toLowerCase())
-    return matchDate && matchFilter && matchSearch
-  })
+  // Upcoming: next 5 from today onward
+  const upcoming5 = appointments
+    .filter(a => a.appointment_date >= today && a.status !== 'cancelled')
+    .slice(0, 5)
+
+  // Recent activity: last 5 non-pending
+  const recentActivity = [...appointments]
+    .filter(a => a.status !== 'pending')
+    .sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at))
+    .slice(0, 5)
 
   const countForDate = (dateStr) => appointments.filter(a => a.appointment_date === dateStr).length
 
-  const selectedDayLabel = (() => {
-    if (selectedDateStr === todayStr) return 'Today'
-    const d = new Date(selectedDateStr)
-    return d.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short' })
-  })()
+  const fmtDate = (d) => {
+    if (d === today) return 'Today'
+    const dt = new Date(d)
+    return dt.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })
+  }
+
+  const activityMeta = (status) => {
+    if (status === 'confirmed') return { icon: '✅', color: 'text-green-500', bg: 'bg-green-50', label: 'Accepted' }
+    if (status === 'cancelled') return { icon: '❌', color: 'text-red-500', bg: 'bg-red-50', label: 'Cancelled' }
+    if (status === 'completed') return { icon: '🏁', color: 'text-gray-500', bg: 'bg-gray-50', label: 'Completed' }
+    return { icon: '⏳', color: 'text-amber-500', bg: 'bg-amber-50', label: 'Pending' }
+  }
+
+  const statusStyles = {
+    confirmed: 'bg-green-100 text-green-700',
+    cancelled: 'bg-red-100 text-red-600',
+    pending: 'bg-amber-100 text-amber-700',
+    completed: 'bg-gray-100 text-gray-500',
+  }
 
   return (
     <SidebarProvider>
@@ -235,6 +176,7 @@ function DoctorDashboard() {
           <DoctorTopBar />
           <div className="flex-1 px-4 sm:px-6 lg:px-8 py-6 space-y-6">
 
+            {/* Header */}
             <div className="flex items-start justify-between flex-wrap gap-4">
               <div className="flex items-center gap-4">
                 <div className="w-14 h-14 bg-gradient-to-br from-cyan-400 to-cyan-600 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-sm shrink-0">
@@ -250,6 +192,7 @@ function DoctorDashboard() {
 
             <LocationBar onLocationReady={handleLocationReady} />
 
+            {/* Nearby patients */}
             {nearbyPatients.length > 0 && (
               <div className="bg-white rounded-2xl shadow-sm p-5">
                 <h2 className="text-sm font-bold text-gray-800 mb-1">📍 Nearby patients who've booked you</h2>
@@ -275,6 +218,7 @@ function DoctorDashboard() {
               </div>
             )}
 
+            {/* Stat Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <StatCard icon="📅" value={todayCount} label="Today's patients" sub="+12%" subColor="text-green-500" />
               <StatCard icon="⚡" value={pendingCount} label="Pending requests"
@@ -284,53 +228,147 @@ function DoctorDashboard() {
               <StatCard icon="⭐" value={user.rating || 4.9} label="Rating" sub="232 reviews" subColor="text-gray-400" />
             </div>
 
+            {/* Quick Actions */}
+            <div className="bg-white rounded-2xl shadow-sm p-5">
+              <h2 className="text-sm font-bold text-gray-800 mb-4">Quick Actions</h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <button
+                  onClick={() => navigate('/doctor-appointments')}
+                  className="flex items-center gap-3 px-4 py-3.5 bg-cyan-50 hover:bg-cyan-100 rounded-xl transition-colors">
+                  <span className="text-xl">🚶</span>
+                  <div className="text-left">
+                    <p className="text-sm font-bold text-gray-800">Walk-in</p>
+                    <p className="text-xs text-gray-400">Add patient now</p>
+                  </div>
+                </button>
+                <button
+                  onClick={() => navigate('/doctor-prescriptions')}
+                  className="flex items-center gap-3 px-4 py-3.5 bg-purple-50 hover:bg-purple-100 rounded-xl transition-colors">
+                  <span className="text-xl">💊</span>
+                  <div className="text-left">
+                    <p className="text-sm font-bold text-gray-800">Add Prescription</p>
+                    <p className="text-xs text-gray-400">Write & send</p>
+                  </div>
+                </button>
+                <button
+                  onClick={() => navigate('/doctor-profile')}
+                  className="flex items-center gap-3 px-4 py-3.5 bg-green-50 hover:bg-green-100 rounded-xl transition-colors">
+                  <span className="text-xl">📅</span>
+                  <div className="text-left">
+                    <p className="text-sm font-bold text-gray-800">Update Availability</p>
+                    <p className="text-xs text-gray-400">Manage schedule</p>
+                  </div>
+                </button>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
 
-              <div className="xl:col-span-2 bg-white rounded-2xl shadow-sm overflow-hidden">
-                <div className="p-5 border-b border-gray-100 flex items-center justify-between">
-                  <div>
-                    <h2 className="text-base font-bold text-gray-800">Appointments — {selectedDayLabel}</h2>
-                    <p className="text-xs text-gray-400">Real-time updates via Supabase</p>
-                  </div>
-                  <button onClick={fetchAppointments} className="text-xs text-gray-500 border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-gray-50">
-                    Refresh
-                  </button>
-                </div>
+              {/* Left column */}
+              <div className="xl:col-span-2 space-y-6">
 
-                <div className="px-5 py-3 border-b border-gray-100">
-                  <div className="relative">
-                    <input type="text" value={search} onChange={e => setSearch(e.target.value)}
-                      placeholder="Search patient or issue..."
-                      className="w-full pl-9 pr-4 py-2 text-sm bg-gray-50 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-cyan-300" />
-                  </div>
-                </div>
-
-                <div className="flex gap-1 px-5 py-3 border-b border-gray-100 overflow-x-auto">
-                  {filterTabs.map(tab => (
-                    <button key={tab.key} onClick={() => setFilter(tab.key)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
-                        filter === tab.key ? 'bg-cyan-500 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                      }`}>
-                      {tab.label}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="divide-y divide-gray-50 min-h-[200px]">
-                  {loading ? (
-                    <div className="flex items-center justify-center py-16 text-gray-300">Loading…</div>
-                  ) : displayed.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-16 text-gray-300">
-                      <p className="text-sm">No {filter === 'all' ? '' : filter} appointments on {selectedDayLabel}</p>
+                {/* Upcoming Appointments Widget */}
+                <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                  <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+                    <div>
+                      <h2 className="text-base font-bold text-gray-800">Upcoming Appointments</h2>
+                      <p className="text-xs text-gray-400">Next 5 scheduled</p>
                     </div>
-                  ) : (
-                    displayed.map(appt => (
-                      <AppointmentRow key={appt.id} appt={appt} onConfirm={handleConfirm} onReject={handleReject} acting={acting} />
-                    ))
+                    <button
+                      onClick={() => navigate('/doctor-appointments')}
+                      className="text-xs font-semibold text-cyan-600 border border-cyan-200 px-3 py-1.5 rounded-lg hover:bg-cyan-50 transition-colors">
+                      View All →
+                    </button>
+                  </div>
+                  <div className="divide-y divide-gray-50 min-h-[120px]">
+                    {loading ? (
+                      <div className="flex items-center justify-center py-10 text-gray-300 text-sm">Loading…</div>
+                    ) : upcoming5.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-10 text-gray-300">
+                        <p className="text-sm">No upcoming appointments</p>
+                      </div>
+                    ) : (
+                      upcoming5.map(appt => (
+                        <div key={appt.id} className="flex items-center gap-4 py-3.5 px-5 hover:bg-gray-50 transition-colors">
+                          <div className="w-9 h-9 rounded-full bg-cyan-100 text-cyan-600 font-bold text-sm flex items-center justify-center shrink-0">
+                            {appt.patient_name?.charAt(0).toUpperCase() || '?'}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-gray-800 truncate">{appt.patient_name || 'Walk-in Patient'}</p>
+                            <p className="text-xs text-gray-400 truncate">{appt.issue || 'General consultation'}</p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <p className="text-xs font-semibold text-gray-700">{fmtDate(appt.appointment_date)}</p>
+                            <p className="text-xs text-gray-400">{appt.appointment_time}</p>
+                          </div>
+                          <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold capitalize shrink-0 ${statusStyles[appt.status] || 'bg-gray-100 text-gray-500'}`}>
+                            {appt.status === 'confirmed' ? 'Accepted' : appt.status}
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  {upcoming5.length > 0 && (
+                    <div className="px-5 py-3 border-t border-gray-100">
+                      <button
+                        onClick={() => navigate('/doctor-appointments')}
+                        className="w-full text-xs text-cyan-500 font-semibold py-1.5 rounded-lg hover:bg-cyan-50 transition-colors">
+                        View all appointments →
+                      </button>
+                    </div>
                   )}
                 </div>
+
+                {/* Weekly Performance */}
+                <div className="bg-white rounded-2xl shadow-sm p-5">
+                  <h2 className="text-sm font-bold text-gray-800 mb-4">Weekly Performance</h2>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="text-center bg-cyan-50 rounded-xl py-4">
+                      <p className="text-2xl font-black text-cyan-600">{weekTotal}</p>
+                      <p className="text-xs text-gray-400 mt-1">This week</p>
+                    </div>
+                    <div className="text-center bg-green-50 rounded-xl py-4">
+                      <p className="text-2xl font-black text-green-600">{completionRate}%</p>
+                      <p className="text-xs text-gray-400 mt-1">Completion rate</p>
+                    </div>
+                    <div className="text-center bg-amber-50 rounded-xl py-4">
+                      <p className="text-2xl font-black text-amber-500">{user.rating || '4.9'} ⭐</p>
+                      <p className="text-xs text-gray-400 mt-1">Avg rating</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Recent Activity */}
+                <div className="bg-white rounded-2xl shadow-sm p-5">
+                  <h2 className="text-sm font-bold text-gray-800 mb-4">Recent Activity</h2>
+                  {loading ? (
+                    <div className="text-sm text-gray-300 text-center py-4">Loading…</div>
+                  ) : recentActivity.length === 0 ? (
+                    <div className="text-sm text-gray-300 text-center py-4">No recent activity</div>
+                  ) : (
+                    <div className="space-y-2">
+                      {recentActivity.map(appt => {
+                        const { icon, color, bg, label } = activityMeta(appt.status)
+                        return (
+                          <div key={appt.id} className={`flex items-center gap-3 px-3 py-2.5 ${bg} rounded-xl`}>
+                            <span className="text-base shrink-0">{icon}</span>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-gray-800 truncate">
+                                {appt.patient_name || 'Walk-in Patient'}
+                              </p>
+                              <p className="text-xs text-gray-400">{fmtDate(appt.appointment_date)} · {appt.appointment_time}</p>
+                            </div>
+                            <span className={`text-xs font-bold shrink-0 ${color}`}>{label}</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+
               </div>
 
+              {/* Right column: Profile + Calendar + Boost */}
               <div className="space-y-4">
 
                 <div className="bg-white rounded-2xl shadow-sm p-5">
@@ -363,15 +401,14 @@ function DoctorDashboard() {
                   </div>
                 </div>
 
+                {/* Calendar */}
                 <div className="bg-white rounded-2xl shadow-sm p-5">
                   <div className="flex items-center justify-between mb-3">
                     <button onClick={goToPrevWeek}
                       className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors text-sm">
                       ‹
                     </button>
-                    <div className="text-center">
-                      <h3 className="text-xs font-bold text-gray-800">{weekLabel}</h3>
-                    </div>
+                    <h3 className="text-xs font-bold text-gray-800">{weekLabel}</h3>
                     <button onClick={goToNextWeek}
                       className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors text-sm">
                       ›
@@ -383,9 +420,7 @@ function DoctorDashboard() {
                       const isSelected = d.dateStr === selectedDateStr
                       const count = countForDate(d.dateStr)
                       return (
-                        <button
-                          key={i}
-                          onClick={() => setSelectedDateStr(d.dateStr)}
+                        <button key={i} onClick={() => setSelectedDateStr(d.dateStr)}
                           className={`flex flex-col items-center py-2 rounded-xl text-xs transition-colors relative ${
                             isSelected
                               ? 'bg-cyan-500 text-white shadow-sm'
@@ -421,6 +456,7 @@ function DoctorDashboard() {
                     Update availability
                   </button>
                 </div>
+
               </div>
             </div>
           </div>
