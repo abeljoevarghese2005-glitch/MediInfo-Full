@@ -300,7 +300,9 @@ function DoctorAppointments() {
     limit.setDate(limit.getDate() + 30)
     const limitIST = limit.toLocaleDateString('en-CA')
 
-    const { data, error } = await supabase
+    // Window query: confirmed/completed/cancelled appointments within the
+    // upcoming 30-day range (this is the normal "schedule" view).
+    const windowQuery = supabase
       .from('appointments')
       .select('*, users!appointments_patient_id_fkey(full_name, fcm_token)')
       .eq('doctor_id', user.id)
@@ -308,9 +310,32 @@ function DoctorAppointments() {
       .lte('appointment_date', limitIST)
       .order('appointment_date', { ascending: true })
 
+    // Pending query: ALL pending requests, regardless of date.
+    // Pending requests must never be hidden by the date window — a patient
+    // can request a date outside the 30-day range, or a date/timezone
+    // rounding difference can push a "today" request just outside the
+    // window, silently dropping it from this page while it still shows on
+    // the dashboard (which has no date filter at all).
+    const pendingQuery = supabase
+      .from('appointments')
+      .select('*, users!appointments_patient_id_fkey(full_name, fcm_token)')
+      .eq('doctor_id', user.id)
+      .eq('status', 'pending')
+      .order('appointment_date', { ascending: true })
+
+    const [{ data, error }, { data: pendingData, error: pendingError }] = await Promise.all([windowQuery, pendingQuery])
+
     if (error || !data) { setLoading(false); return }
 
-    const normalized = data.map(a => ({
+    // Merge the two result sets, de-duping by id (a pending appointment that
+    // already falls inside the 30-day window would otherwise be counted twice)
+    const combined = [...data]
+    if (!pendingError && pendingData) {
+      const existingIds = new Set(data.map(a => a.id))
+      pendingData.forEach(p => { if (!existingIds.has(p.id)) combined.push(p) })
+    }
+
+    const normalized = combined.map(a => ({
       ...a,
       patient_name: a.source === 'walkin' ? a.walkin_name : a.users?.full_name,
       patient_fcm_token: a.users?.fcm_token,
@@ -429,11 +454,12 @@ function DoctorAppointments() {
   const dayLabel = (dateStr) => {
     if (dateStr === todayStr) return 'Today'
     if (dateStr === tomorrowStr) return 'Tomorrow'
+    if (!dateStr) return 'No date set'
     return new Date(dateStr).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short' })
   }
 
   const groups = displayed.reduce((acc, appt) => {
-    const key = appt.appointment_date
+    const key = appt.appointment_date || 'no-date'
     if (!acc[key]) acc[key] = []
     acc[key].push(appt)
     return acc
@@ -602,9 +628,11 @@ function DoctorAppointments() {
                       {/* Date group header */}
                       <div className="flex items-center gap-3 px-5 py-2.5 bg-gray-50 border-y border-gray-100">
                         <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">{dayLabel(dateKey)}</span>
-                        <span className="text-xs text-gray-400">
-                          — {new Date(dateKey).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
-                        </span>
+                        {dateKey !== 'no-date' && (
+                          <span className="text-xs text-gray-400">
+                            — {new Date(dateKey).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
+                          </span>
+                        )}
                         <span className="ml-auto text-[11px] bg-gray-200 text-gray-500 font-semibold px-2 py-0.5 rounded-full">
                           {groups[dateKey].length} appt{groups[dateKey].length > 1 ? 's' : ''}
                         </span>
@@ -612,7 +640,7 @@ function DoctorAppointments() {
 
                       <div className="divide-y divide-gray-50">
                         {groups[dateKey]
-                          .sort((a, b) => a.appointment_time.localeCompare(b.appointment_time))
+                          .sort((a, b) => (a.appointment_time || '').localeCompare(b.appointment_time || ''))
                           .map(appt => (
                             <div key={appt.id}
                               className="flex flex-col md:grid md:grid-cols-[2fr_1fr_1fr_1fr_1fr_2fr] md:items-center gap-3 md:gap-4 py-3.5 px-5 hover:bg-gray-50 transition-colors">
@@ -639,11 +667,14 @@ function DoctorAppointments() {
 
                               {/* Date */}
                               <p className="text-xs font-medium text-gray-700">
-                                {new Date(appt.appointment_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                                {appt.appointment_date
+                                  ? new Date(appt.appointment_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+                                  : '—'}
                               </p>
 
                               {/* Time */}
-                              <p className="text-sm font-bold text-gray-700">{appt.appointment_time}</p>
+                              <p className="text-sm font-bold text-gray-700">{appt.appointment_time || '—'}</p>
+
 
                               {/* Type */}
                               <span className={`text-[11px] font-semibold px-2 py-1 rounded-lg w-fit ${appt.source === 'walkin' ? 'bg-orange-50 text-orange-600' : 'bg-blue-50 text-blue-600'}`}>
