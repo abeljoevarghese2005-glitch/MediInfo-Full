@@ -337,15 +337,17 @@ function MyAppointments() {
         )}
         <div className="lg:ml-56 flex-1 flex flex-col min-w-0">
           <TopBar />
-          <div className="flex-1 px-4 sm:px-8 py-8">
-            <div className="flex items-center justify-between mb-6">
+
+          {/* ── Gradient Hero Banner ── */}
+          <div className="bg-gradient-to-br from-teal-500 via-cyan-500 to-emerald-400 px-4 sm:px-8 pt-8 pb-10 rounded-b-3xl mb-6">
+            <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-black text-gray-900">{t('myAppointments.title')}</h1>
-                <p className="text-gray-400 text-sm mt-0.5">{t('myAppointments.subtitle')}</p>
+                <h1 className="text-2xl font-black text-white">{t('myAppointments.title')}</h1>
+                <p className="text-cyan-100 text-sm mt-1">{t('myAppointments.subtitle')}</p>
               </div>
               <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1.5 text-xs text-gray-400">
-                  <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                <div className="flex items-center gap-1.5 text-xs text-cyan-100">
+                  <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
                   {t('myAppointments.live')}
                   {lastUpdated && (
                     <span className="hidden sm:inline">
@@ -354,11 +356,14 @@ function MyAppointments() {
                   )}
                 </div>
                 <button onClick={() => navigate('/doctors')}
-                  className="bg-cyan-500 text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-cyan-600">
+                  className="bg-white text-teal-600 px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-cyan-50">
                   {t('myAppointments.bookNew')}
                 </button>
               </div>
             </div>
+          </div>
+
+          <div className="flex-1 px-4 sm:px-8 py-6 max-w-5xl w-full">
 
             {loading ? (
               <div className="text-gray-400 text-sm">{t('common.loading')}</div>
@@ -469,6 +474,7 @@ function MyAppointments() {
                 )}
               </div>
             )}
+
           </div>
         </div>
       </div>

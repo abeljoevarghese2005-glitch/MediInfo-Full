@@ -94,18 +94,22 @@ function AIChat() {
         <div className="lg:ml-56 flex-1 flex flex-col min-w-0">
           <TopBar />
 
-          <div className="flex-1 flex flex-col p-4 sm:p-8 gap-4 max-w-3xl w-full mx-auto">
-
-            <div className="bg-white rounded-2xl shadow-sm p-4 flex items-center gap-3">
-              <div className="w-10 h-10 bg-cyan-500 rounded-full flex items-center justify-center text-white text-lg shrink-0">
+          {/* ── Gradient Hero Banner ── */}
+          <div className="bg-gradient-to-br from-teal-500 via-cyan-500 to-emerald-400 px-4 sm:px-8 pt-8 pb-10 rounded-b-3xl mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-white text-lg shrink-0">
                 🤖
               </div>
               <div className="min-w-0">
-                <h1 className="font-bold text-gray-800 text-lg">{t('aiChat.header.title')}</h1>
-                <p className="text-gray-500 text-sm">{t('aiChat.header.subtitle')}</p>
+                <h1 className="font-black text-white text-2xl">{t('aiChat.header.title')}</h1>
+                <p className="text-cyan-100 text-sm">{t('aiChat.header.subtitle')}</p>
               </div>
             </div>
+          </div>
 
+          <div className="flex-1 flex flex-col px-4 sm:px-8 pb-4 gap-4 max-w-3xl w-full mx-auto">
+
+            {/* ── Medicine input ── */}
             <div className="bg-white rounded-xl shadow-sm p-3 flex items-center gap-2">
               <span className="text-gray-500 text-sm whitespace-nowrap">💊 {t('aiChat.medicineInput.label')}</span>
               <input
@@ -117,6 +121,7 @@ function AIChat() {
               />
             </div>
 
+            {/* ── Chat window ── */}
             <div className="flex-1 bg-white rounded-2xl shadow-sm p-4 flex flex-col gap-4 overflow-y-auto min-h-[400px] max-h-[500px]">
               {messages.map((msg, i) => (
                 <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -153,6 +158,7 @@ function AIChat() {
               <div ref={bottomRef} />
             </div>
 
+            {/* ── Input bar ── */}
             <div className="bg-white rounded-2xl shadow-sm p-3 flex items-end gap-3">
               <textarea
                 value={input}
@@ -174,6 +180,7 @@ function AIChat() {
             <p className="text-center text-xs text-gray-400">
               ⚠️ {t('aiChat.disclaimer')}
             </p>
+
           </div>
         </div>
       </div>

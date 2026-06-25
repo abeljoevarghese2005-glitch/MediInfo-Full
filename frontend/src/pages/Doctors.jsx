@@ -312,12 +312,14 @@ function Doctors() {
         <Sidebar />
         <div className="lg:ml-56 flex-1 flex flex-col min-w-0">
           <TopBar />
-          <div className="px-4 sm:px-8 py-8">
 
-            <div className="mb-4">
-              <h1 className="text-2xl font-black text-gray-900">{t('doctors.title')}</h1>
-              <p className="text-gray-400 text-sm mt-1">{t('doctors.subtitle')}</p>
-            </div>
+          {/* ── Gradient Hero Banner ── */}
+          <div className="bg-gradient-to-br from-teal-500 via-cyan-500 to-emerald-400 px-4 sm:px-8 pt-8 pb-10 rounded-b-3xl mb-6">
+            <h1 className="text-2xl font-black text-white">{t('doctors.title')}</h1>
+            <p className="text-cyan-100 text-sm mt-1">{t('doctors.subtitle')}</p>
+          </div>
+
+          <div className="flex-1 px-4 sm:px-8 py-6 max-w-5xl w-full">
 
             <LocationBar onLocationReady={handleLocationReady} />
 
@@ -330,17 +332,21 @@ function Doctors() {
               </div>
             )}
 
+            {/* ── Specialization Filter Chips ── */}
             <div className="flex gap-2 overflow-x-auto pb-2 mb-6 scrollbar-hide">
               {SPECIALIZATIONS.map(({ value, key }) => (
                 <button key={value} onClick={() => setFilter(value)}
                   className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
-                    filter === value ? 'bg-cyan-500 text-white shadow-sm' : 'bg-white text-gray-600 border border-gray-200 hover:border-cyan-300'
+                    filter === value
+                      ? 'bg-cyan-500 text-white shadow-sm'
+                      : 'bg-white text-gray-600 border border-gray-200 hover:border-cyan-300'
                   }`}>
                   {t(`doctors.specializations.${key}`)}
                 </button>
               ))}
             </div>
 
+            {/* ── Doctor List ── */}
             {loading ? (
               <div className="text-center py-16 text-gray-400">{t('doctors.loadingDoctors')}</div>
             ) : doctors.length === 0 ? (
@@ -390,99 +396,101 @@ function Doctors() {
               </div>
             )}
 
-            {selectedDoctor && (
-              <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 px-4 pb-6 sm:pb-0">
-                <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto">
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="font-bold text-gray-800 text-lg">{t('doctors.bookAppointment')}</h2>
-                    <button onClick={() => setSelectedDoctor(null)} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
-                  </div>
-
-                  <div className="flex items-center gap-3 bg-cyan-50 rounded-xl p-3 mb-4">
-                    <div className={`w-10 h-10 ${getColor(selectedDoctor.full_name)} rounded-full flex items-center justify-center text-white font-bold shrink-0`}>
-                      {getInitials(selectedDoctor.full_name)}
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-semibold text-gray-800">Dr. {selectedDoctor.full_name}</p>
-                      <p className="text-cyan-600 text-sm">{translateSpecialization(t, selectedDoctor.specialization)}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs text-gray-400">{t('doctors.fee')}</p>
-                      <p className="font-black text-cyan-600">₹{selectedDoctor.consultation_fee || 500}</p>
-                    </div>
-                  </div>
-
-                  <div className="mb-4">
-                    <label className="text-xs font-semibold text-gray-500 mb-1 block">{t('doctors.selectDate')}</label>
-                    <input type="date" min={today} value={selectedDate}
-                      onChange={e => setSelectedDate(e.target.value)}
-                      className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-gray-800 text-sm" />
-                  </div>
-
-                  <div className="mb-4">
-                    <label className="text-xs font-semibold text-gray-500 mb-2 block">{t('doctors.selectTimeSlot')}</label>
-                    {!selectedDate ? (
-                      <p className="text-gray-400 text-xs">{t('doctors.selectDateFirst')}</p>
-                    ) : slotsLoading ? (
-                      <p className="text-gray-400 text-xs">{t('doctors.loadingSlots')}</p>
-                    ) : availableSlots.length === 0 ? (
-                      <p className="text-red-400 text-xs">{t('doctors.noAvailability')}</p>
-                    ) : (
-                      <>
-                        <div
-                          className="overflow-y-auto pr-1"
-                          style={{ maxHeight: `${slotGridMaxHeight}px` }}
-                        >
-                          <div className="grid grid-cols-4 gap-2">
-                            {availableSlots.map(({ time, past }) => {
-                              const isBooked = bookedSlots.includes(time)
-                              const isSelected = selectedTime === time
-                              const isDisabled = isBooked || past
-                              return (
-                                <button
-                                  key={time}
-                                  disabled={isDisabled}
-                                  onClick={() => !isDisabled && setSelectedTime(time)}
-                                  className={`py-2 rounded-lg text-xs font-medium transition-all ${
-                                    isDisabled
-                                      ? 'bg-gray-100 text-gray-300 cursor-not-allowed line-through'
-                                      : isSelected
-                                      ? 'bg-cyan-500 text-white'
-                                      : 'bg-gray-50 text-gray-700 hover:bg-cyan-50'
-                                  }`}>
-                                  {time}
-                                </button>
-                              )
-                            })}
-                          </div>
-                        </div>
-                        {availableSlots.length > 16 && (
-                          <p className="text-xs text-gray-400 mt-1 text-center">{t('doctors.scrollMore')}</p>
-                        )}
-                      </>
-                    )}
-                  </div>
-
-                  <div className="mb-4">
-                    <label className="text-xs font-semibold text-gray-500 mb-1 block">{t('doctors.describeIssue')}</label>
-                    <textarea value={issue} onChange={e => setIssue(e.target.value)}
-                      placeholder={t('doctors.issuePlaceholder')} rows={2}
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 resize-none" />
-                  </div>
-
-                  {error && <div className="bg-red-50 text-red-600 px-3 py-2 rounded-lg text-sm mb-4">❌ {error}</div>}
-
-                  <button onClick={handleBook} disabled={paying || !selectedTime}
-                    className="w-full bg-cyan-500 text-white py-3 rounded-xl font-bold hover:bg-cyan-600 disabled:opacity-60 flex items-center justify-center gap-2">
-                    {paying ? t('doctors.booking') : t('doctors.requestAppointment', { fee: selectedDoctor.consultation_fee ?? 500 })}
-                  </button>
-                </div>
-              </div>
-            )}
-
           </div>
         </div>
       </div>
+
+      {/* ── Booking Modal ── */}
+      {selectedDoctor && (
+        <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 px-4 pb-6 sm:pb-0">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-bold text-gray-800 text-lg">{t('doctors.bookAppointment')}</h2>
+              <button onClick={() => setSelectedDoctor(null)} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+            </div>
+
+            <div className="flex items-center gap-3 bg-cyan-50 rounded-xl p-3 mb-4">
+              <div className={`w-10 h-10 ${getColor(selectedDoctor.full_name)} rounded-full flex items-center justify-center text-white font-bold shrink-0`}>
+                {getInitials(selectedDoctor.full_name)}
+              </div>
+              <div className="flex-1">
+                <p className="font-semibold text-gray-800">Dr. {selectedDoctor.full_name}</p>
+                <p className="text-cyan-600 text-sm">{translateSpecialization(t, selectedDoctor.specialization)}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-gray-400">{t('doctors.fee')}</p>
+                <p className="font-black text-cyan-600">₹{selectedDoctor.consultation_fee || 500}</p>
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <label className="text-xs font-semibold text-gray-500 mb-1 block">{t('doctors.selectDate')}</label>
+              <input type="date" min={today} value={selectedDate}
+                onChange={e => setSelectedDate(e.target.value)}
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-gray-800 text-sm" />
+            </div>
+
+            <div className="mb-4">
+              <label className="text-xs font-semibold text-gray-500 mb-2 block">{t('doctors.selectTimeSlot')}</label>
+              {!selectedDate ? (
+                <p className="text-gray-400 text-xs">{t('doctors.selectDateFirst')}</p>
+              ) : slotsLoading ? (
+                <p className="text-gray-400 text-xs">{t('doctors.loadingSlots')}</p>
+              ) : availableSlots.length === 0 ? (
+                <p className="text-red-400 text-xs">{t('doctors.noAvailability')}</p>
+              ) : (
+                <>
+                  <div
+                    className="overflow-y-auto pr-1"
+                    style={{ maxHeight: `${slotGridMaxHeight}px` }}
+                  >
+                    <div className="grid grid-cols-4 gap-2">
+                      {availableSlots.map(({ time, past }) => {
+                        const isBooked = bookedSlots.includes(time)
+                        const isSelected = selectedTime === time
+                        const isDisabled = isBooked || past
+                        return (
+                          <button
+                            key={time}
+                            disabled={isDisabled}
+                            onClick={() => !isDisabled && setSelectedTime(time)}
+                            className={`py-2 rounded-lg text-xs font-medium transition-all ${
+                              isDisabled
+                                ? 'bg-gray-100 text-gray-300 cursor-not-allowed line-through'
+                                : isSelected
+                                ? 'bg-cyan-500 text-white'
+                                : 'bg-gray-50 text-gray-700 hover:bg-cyan-50'
+                            }`}>
+                            {time}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                  {availableSlots.length > 16 && (
+                    <p className="text-xs text-gray-400 mt-1 text-center">{t('doctors.scrollMore')}</p>
+                  )}
+                </>
+              )}
+            </div>
+
+            <div className="mb-4">
+              <label className="text-xs font-semibold text-gray-500 mb-1 block">{t('doctors.describeIssue')}</label>
+              <textarea value={issue} onChange={e => setIssue(e.target.value)}
+                placeholder={t('doctors.issuePlaceholder')} rows={2}
+                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 resize-none" />
+            </div>
+
+            {error && <div className="bg-red-50 text-red-600 px-3 py-2 rounded-lg text-sm mb-4">❌ {error}</div>}
+
+            <button onClick={handleBook} disabled={paying || !selectedTime}
+              className="w-full bg-cyan-500 text-white py-3 rounded-xl font-bold hover:bg-cyan-600 disabled:opacity-60 flex items-center justify-center gap-2">
+              {paying ? t('doctors.booking') : t('doctors.requestAppointment', { fee: selectedDoctor.consultation_fee ?? 500 })}
+            </button>
+          </div>
+        </div>
+      )}
+
     </SidebarProvider>
   )
 }
