@@ -304,7 +304,7 @@ function DoctorAppointments() {
     // upcoming 30-day range (this is the normal "schedule" view).
     const windowQuery = supabase
       .from('appointments')
-      .select('*, users!appointments_patient_id_fkey(full_name, fcm_token)')
+      .select('*, users!appointments_patient_id_fkey(full_name)')
       .eq('doctor_id', user.id)
       .gte('appointment_date', todayIST)
       .lte('appointment_date', limitIST)
@@ -318,7 +318,7 @@ function DoctorAppointments() {
     // the dashboard (which has no date filter at all).
     const pendingQuery = supabase
       .from('appointments')
-      .select('*, users!appointments_patient_id_fkey(full_name, fcm_token)')
+      .select('*, users!appointments_patient_id_fkey(full_name)')
       .eq('doctor_id', user.id)
       .eq('status', 'pending')
       .order('appointment_date', { ascending: true })
@@ -338,7 +338,9 @@ function DoctorAppointments() {
     const normalized = combined.map(a => ({
       ...a,
       patient_name: a.source === 'walkin' ? a.walkin_name : a.users?.full_name,
-      patient_fcm_token: a.users?.fcm_token,
+      // NOTE: push notifications (fcm_token) aren't implemented yet — the
+      // `users` table has no fcm_token column. Once that's added, restore
+      // `patient_fcm_token: a.users?.fcm_token` here and in the select above.
     }))
 
     if (prevAppointments.current.length > 0) {
@@ -408,7 +410,7 @@ function DoctorAppointments() {
           }),
         })
       }
-      addToast('Appointment cancelled. Patient notified.')
+      addToast('Appointment cancelled.')
       setCancelTarget(null)
     } catch (err) {
       console.error('Cancel error:', err)
@@ -674,7 +676,6 @@ function DoctorAppointments() {
 
                               {/* Time */}
                               <p className="text-sm font-bold text-gray-700">{appt.appointment_time || '—'}</p>
-
 
                               {/* Type */}
                               <span className={`text-[11px] font-semibold px-2 py-1 rounded-lg w-fit ${appt.source === 'walkin' ? 'bg-orange-50 text-orange-600' : 'bg-blue-50 text-blue-600'}`}>
