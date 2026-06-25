@@ -1,6 +1,6 @@
 import Sidebar from '../components/Sidebar'
 import { SidebarProvider } from '../components/SidebarContext'
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import TopBar from '../components/TopBar'
@@ -24,7 +24,6 @@ const formatSlot = (t) => {
   return `${hour}:${m.toString().padStart(2, '0')} ${suffix}`
 }
 
-// idx-based mock slot data, translated via common.today/common.tomorrow + formatSlot
 const MOCK_SLOT_DATA = [
   { day: 'today', time: '10:00' },
   { day: 'today', time: '13:00' },
@@ -257,7 +256,6 @@ function Home() {
     setPreviousDoctors(prev.slice(0, 2))
   }
 
-  // ✅ NEW: Realtime subscription — instant sync when any doctor updates their profile (fee, name, specialization, experience)
   useEffect(() => {
     const usersChannel = supabase
       .channel('home-doctor-profiles')
@@ -295,25 +293,35 @@ function Home() {
         <Sidebar />
         <div className="lg:ml-56 flex-1 flex flex-col min-w-0">
           <TopBar />
-          <div className="flex-1 px-4 sm:px-8 py-8 max-w-5xl w-full">
 
-            <p className="text-gray-400 text-sm font-medium mb-1">{getGreeting()}</p>
-            <h1 className="text-3xl font-black text-gray-900 mb-4">
+          {/* ── Gradient Hero Banner ── */}
+          <div className="bg-gradient-to-br from-teal-500 via-cyan-500 to-emerald-400 px-4 sm:px-8 pt-8 pb-10 rounded-b-3xl mb-6">
+            <p className="text-cyan-100 text-sm font-medium mb-1">{getGreeting()}</p>
+            <h1 className="text-3xl font-black text-white mb-5">
               {t('home.greeting', { name: user.full_name?.split(' ')[0] })}
             </h1>
 
             <LocationBar onLocationReady={handleLocationReady} />
 
-            <form onSubmit={handleSearch} className="mb-8">
-              <div className="flex items-center bg-white border border-gray-200 rounded-2xl px-4 py-3 shadow-sm gap-3 max-w-2xl">
-                <svg className="w-5 h-5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {/* Search bar */}
+            <form onSubmit={handleSearch} className="mt-4">
+              <div className="flex items-center bg-white/20 backdrop-blur-sm border border-white/30 rounded-2xl px-4 py-3 gap-3 max-w-2xl">
+                <svg className="w-5 h-5 text-white/70 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0118 0z" />
                 </svg>
-                <input type="text" value={query} onChange={e => setQuery(e.target.value)}
+                <input
+                  type="text"
+                  value={query}
+                  onChange={e => setQuery(e.target.value)}
                   placeholder={t('home.searchPlaceholder')}
-                  className="flex-1 text-sm text-gray-700 focus:outline-none bg-transparent" />
+                  className="flex-1 text-sm text-white placeholder-white/60 focus:outline-none bg-transparent"
+                />
               </div>
             </form>
+          </div>
+
+          {/* ── Page content ── */}
+          <div className="flex-1 px-4 sm:px-8 pb-8 max-w-5xl w-full">
 
             {success && (
               <div className="bg-amber-50 border border-amber-200 text-amber-700 px-4 py-3 rounded-xl mb-6 text-sm flex items-center gap-2 max-w-2xl">
@@ -324,26 +332,37 @@ function Home() {
               </div>
             )}
 
+            {/* Nearby Doctors */}
             <div className="mb-8">
               <div className="flex items-center justify-between mb-3">
                 <div>
                   <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
                     📍 {t('home.nearbyDoctors')}
-                    {nearbyLoading && <span className="text-xs font-normal text-cyan-400 animate-pulse ml-1">{t('home.sortingByDistance')}</span>}
+                    {nearbyLoading && (
+                      <span className="text-xs font-normal text-cyan-400 animate-pulse ml-1">
+                        {t('home.sortingByDistance')}
+                      </span>
+                    )}
                   </h2>
                   <p className="text-xs text-gray-400 mt-0.5">
                     {Object.keys(distanceMap).length > 0 ? t('home.sortedByDistance') : t('home.enableLocation')}
                   </p>
                 </div>
-                <button onClick={() => navigate('/doctors')} className="text-cyan-500 text-sm font-semibold hover:underline">{t('home.seeAll')}</button>
+                <button onClick={() => navigate('/doctors')} className="text-cyan-500 text-sm font-semibold hover:underline">
+                  {t('home.seeAll')}
+                </button>
               </div>
 
               {loadingDoctors ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {[1,2,3,4].map(i => <div key={i} className="bg-white rounded-2xl border border-gray-100 p-4 h-32 animate-pulse" />)}
+                  {[1,2,3,4].map(i => (
+                    <div key={i} className="bg-white rounded-2xl border border-gray-100 p-4 h-32 animate-pulse" />
+                  ))}
                 </div>
               ) : doctors.length === 0 ? (
-                <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center text-gray-400 text-sm">{t('home.noDoctorsFound')}</div>
+                <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center text-gray-400 text-sm">
+                  {t('home.noDoctorsFound')}
+                </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {doctors.map((doc, idx) => (
@@ -355,6 +374,7 @@ function Home() {
               )}
             </div>
 
+            {/* Previously Visited */}
             <div>
               <div className="mb-3">
                 <h2 className="text-base font-bold text-gray-900">🔄 {t('home.previouslyVisited')}</h2>
@@ -386,6 +406,7 @@ function Home() {
                 </div>
               )}
             </div>
+
           </div>
 
           {selectedDoctor && (
@@ -396,6 +417,7 @@ function Home() {
               onBooked={(msg) => { setSuccess(msg); setTimeout(() => setSuccess(''), 4000) }}
             />
           )}
+
         </div>
       </div>
     </SidebarProvider>

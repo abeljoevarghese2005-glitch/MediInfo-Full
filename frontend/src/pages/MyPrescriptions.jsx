@@ -20,7 +20,6 @@ function MyPrescriptions() {
   useEffect(() => {
     fetchPrescriptions()
 
-    // Realtime: instantly show new prescriptions written for this patient
     const channel = supabase
       .channel('patient-prescriptions')
       .on('postgres_changes', {
@@ -32,51 +31,48 @@ function MyPrescriptions() {
     return () => supabase.removeChannel(channel)
   }, [])
 
- const fetchPrescriptions = async () => {
-  setLoading(true)
-  
-  // Step 1: Get all prescriptions for this patient
-  const { data: prescriptionData, error: prescError } = await supabase
-    .from('prescriptions')
-    .select('*')
-    .eq('patient_id', user.id)
-    .order('created_at', { ascending: false })
+  const fetchPrescriptions = async () => {
+    setLoading(true)
 
-  if (prescError || !prescriptionData) {
+    const { data: prescriptionData, error: prescError } = await supabase
+      .from('prescriptions')
+      .select('*')
+      .eq('patient_id', user.id)
+      .order('created_at', { ascending: false })
+
+    if (prescError || !prescriptionData) {
+      setLoading(false)
+      return
+    }
+
+    const appointmentIds = [...new Set(prescriptionData.map(p => p.appointment_id).filter(Boolean))]
+
+    let appointmentsMap = {}
+    if (appointmentIds.length > 0) {
+      const { data: appts } = await supabase
+        .from('appointments')
+        .select('id, appointment_date, appointment_time, doctor_id, users!appointments_doctor_id_fkey(full_name, specialization)')
+        .in('id', appointmentIds)
+
+      if (appts) {
+        appts.forEach(a => { appointmentsMap[a.id] = a })
+      }
+    }
+
+    const normalized = prescriptionData.map(p => {
+      const appt = appointmentsMap[p.appointment_id]
+      return {
+        ...p,
+        doctor_name: appt?.users?.full_name,
+        specialization: appt?.users?.specialization,
+        appointment_date: appt?.appointment_date,
+        appointment_time: appt?.appointment_time,
+      }
+    })
+
+    setPrescriptions(normalized)
     setLoading(false)
-    return
   }
-
-  // Step 2: Get the related appointment details for each prescription
-  const appointmentIds = [...new Set(prescriptionData.map(p => p.appointment_id).filter(Boolean))]
-  
-  let appointmentsMap = {}
-  if (appointmentIds.length > 0) {
-    const { data: appts } = await supabase
-      .from('appointments')
-      .select('id, appointment_date, appointment_time, doctor_id, users!appointments_doctor_id_fkey(full_name, specialization)')
-      .in('id', appointmentIds)
-    
-    if (appts) {
-      appts.forEach(a => { appointmentsMap[a.id] = a })
-    }
-  }
-
-  // Step 3: Merge prescription + appointment data
-  const normalized = prescriptionData.map(p => {
-    const appt = appointmentsMap[p.appointment_id]
-    return {
-      ...p,
-      doctor_name: appt?.users?.full_name,
-      specialization: appt?.users?.specialization,
-      appointment_date: appt?.appointment_date,
-      appointment_time: appt?.appointment_time,
-    }
-  })
-
-  setPrescriptions(normalized)
-  setLoading(false)
-}
 
   const filtered = prescriptions.filter(p =>
     !search ||
@@ -92,50 +88,68 @@ function MyPrescriptions() {
         <Sidebar />
         <div className="lg:ml-56 flex-1 flex flex-col min-w-0">
           <TopBar />
-          <div className="flex-1 px-4 sm:px-8 py-8">
 
-            <div className="flex items-center justify-between mb-6">
+          {/* ── Gradient Hero Banner ── */}
+          <div className="bg-gradient-to-br from-teal-500 via-cyan-500 to-emerald-400 px-4 sm:px-8 pt-8 pb-10 rounded-b-3xl mb-6">
+            <div className="flex items-start justify-between">
               <div>
-                <h1 className="text-2xl font-black text-gray-900">My Prescriptions</h1>
-                <p className="text-gray-400 text-sm mt-0.5">Medicines prescribed by your doctors</p>
+                <h1 className="text-2xl font-black text-white">My Prescriptions</h1>
+                <p className="text-cyan-100 text-sm mt-1">Medicines prescribed by your doctors</p>
               </div>
-              <div className="bg-white rounded-xl shadow-sm px-4 py-2 text-center">
-                <p className="text-xl font-bold text-cyan-500">{prescriptions.length}</p>
-                <p className="text-xs text-gray-400">Total</p>
+              <div className="bg-white/20 backdrop-blur-sm rounded-2xl px-5 py-3 text-center">
+                <p className="text-2xl font-black text-white">{prescriptions.length}</p>
+                <p className="text-xs text-cyan-100">Total</p>
               </div>
             </div>
 
+            {/* Search bar inside hero */}
             {prescriptions.length > 0 && (
-              <input type="text" value={search} onChange={e => setSearch(e.target.value)}
-                placeholder="Search by doctor or medicine…"
-                className="w-full max-w-sm mb-5 pl-4 pr-4 py-2.5 text-sm bg-white rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-cyan-300" />
+              <div className="mt-5 relative">
+                <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 105 11a6 6 0 0012 0z" />
+                </svg>
+                <input
+                  type="text"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Search by doctor or medicine…"
+                  className="w-full max-w-sm pl-10 pr-4 py-2.5 text-sm bg-white/20 backdrop-blur-sm rounded-xl border border-white/30 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/50"
+                />
+              </div>
             )}
+          </div>
+
+          {/* ── Page content ── */}
+          <div className="flex-1 px-4 sm:px-8 pb-8 max-w-2xl w-full">
 
             {loading ? (
               <div className="text-gray-400 text-sm">Loading...</div>
             ) : prescriptions.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16">
-                <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mb-4">
-                  <svg className="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center mb-4">
+                  <svg className="w-8 h-8 text-cyan-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                 </div>
                 <p className="text-gray-700 font-bold mb-1">No prescriptions yet</p>
                 <p className="text-gray-400 text-sm mb-5">Prescriptions from your doctors will appear here</p>
-                <button onClick={() => navigate('/doctors')}
-                  className="bg-cyan-500 text-white px-6 py-2.5 rounded-xl text-sm font-semibold hover:bg-cyan-600">
+                <button
+                  onClick={() => navigate('/doctors')}
+                  className="bg-cyan-500 text-white px-6 py-2.5 rounded-xl text-sm font-semibold hover:bg-cyan-600"
+                >
                   Find a Doctor
                 </button>
               </div>
             ) : filtered.length === 0 ? (
               <div className="text-gray-400 text-sm py-8 text-center">No prescriptions match your search</div>
             ) : (
-              <div className="space-y-3 max-w-2xl">
+              <div className="space-y-3">
                 {filtered.map(p => (
                   <div key={p.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                     <div
                       className="flex items-center gap-4 p-5 cursor-pointer hover:bg-gray-50 transition-colors"
-                      onClick={() => setExpanded(expanded === p.id ? null : p.id)}>
+                      onClick={() => setExpanded(expanded === p.id ? null : p.id)}
+                    >
                       <div className={`w-11 h-11 ${getColor(p.doctor_name)} rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0`}>
                         {getInitials(p.doctor_name)}
                       </div>
@@ -180,6 +194,7 @@ function MyPrescriptions() {
                 ))}
               </div>
             )}
+
           </div>
         </div>
       </div>

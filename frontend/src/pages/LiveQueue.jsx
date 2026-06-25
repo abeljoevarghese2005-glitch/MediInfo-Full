@@ -285,352 +285,344 @@ function LiveQueue() {
     ? Math.round(((maxExpectedQueue - Math.min(queuePosition, maxExpectedQueue)) / maxExpectedQueue) * 100)
     : 0
 
-  // ── Loading ──────────────────────────────────────────────────────────────
-  if (loading) return (
+  // ── Shared page shell ─────────────────────────────────────────────────────
+  const Shell = ({ children }) => (
     <SidebarProvider>
       <div className="min-h-screen bg-gray-50 flex">
         <Sidebar />
-        <div className="lg:ml-56 flex-1 flex flex-col">
+        <div className="lg:ml-56 flex-1 flex flex-col min-w-0">
           <TopBar />
-          <div className="flex-1 flex items-center justify-center text-gray-400 text-sm">
-            {t('liveQueue.loading')}
+          {/* ── Gradient Hero Banner ── */}
+          <div className="bg-gradient-to-br from-teal-500 via-cyan-500 to-emerald-400 px-4 sm:px-8 pt-8 pb-10 rounded-b-3xl mb-6">
+            <h1 className="text-2xl font-black text-white">{t('liveQueue.title') || 'Live Queue'}</h1>
+            <p className="text-cyan-100 text-sm mt-1">{t('liveQueue.subtitle') || 'Real-time updates for your appointment'}</p>
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            {children}
           </div>
         </div>
       </div>
     </SidebarProvider>
+  )
+
+  // ── Loading ──────────────────────────────────────────────────────────────
+  if (loading) return (
+    <Shell>
+      <div className="flex-1 flex items-center justify-center text-gray-400 text-sm py-16">
+        {t('liveQueue.loading')}
+      </div>
+    </Shell>
   )
 
   // ── No appointment ────────────────────────────────────────────────────────
   if (!appointment) return (
-    <SidebarProvider>
-      <div className="min-h-screen bg-gray-50 flex">
-        <Sidebar />
-        <div className="lg:ml-56 flex-1 flex flex-col">
-          <TopBar />
-          <div className="flex-1 flex flex-col items-center justify-center py-16 px-8">
-            <div className="w-16 h-16 bg-cyan-50 rounded-2xl flex items-center justify-center mb-4">
-              <svg className="w-8 h-8 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-            </div>
-            <p className="text-gray-700 font-bold mb-1">{t('liveQueue.noAppointment')}</p>
-            <p className="text-gray-400 text-sm mb-5 text-center">{t('liveQueue.noAppointmentSub')}</p>
-            <button
-              onClick={() => navigate('/doctors')}
-              className="bg-cyan-500 text-white px-6 py-2.5 rounded-xl text-sm font-semibold hover:bg-cyan-600"
-            >
-              {t('liveQueue.bookDoctor')}
-            </button>
-          </div>
+    <Shell>
+      <div className="flex flex-col items-center justify-center py-16 px-8">
+        <div className="w-16 h-16 bg-cyan-50 rounded-2xl flex items-center justify-center mb-4">
+          <svg className="w-8 h-8 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          </svg>
         </div>
+        <p className="text-gray-700 font-bold mb-1">{t('liveQueue.noAppointment')}</p>
+        <p className="text-gray-400 text-sm mb-5 text-center">{t('liveQueue.noAppointmentSub')}</p>
+        <button
+          onClick={() => navigate('/doctors')}
+          className="bg-cyan-500 text-white px-6 py-2.5 rounded-xl text-sm font-semibold hover:bg-cyan-600"
+        >
+          {t('liveQueue.bookDoctor')}
+        </button>
       </div>
-    </SidebarProvider>
+    </Shell>
   )
 
   // ── Future date — appointment is not today ────────────────────────────────
   if (queueState === 'future_date') return (
-    <SidebarProvider>
-      <div className="min-h-screen bg-gray-50 flex">
-        <Sidebar />
-        <div className="lg:ml-56 flex-1 flex flex-col">
-          <TopBar />
-          <div className="flex-1 overflow-y-auto">
-            <div className="max-w-xl mx-auto px-6 py-6">
-              <button
-                onClick={() => navigate('/my-appointments')}
-                className="flex items-center gap-1.5 text-gray-500 hover:text-gray-700 text-sm font-medium mb-6"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-                {t('common.back')}
-              </button>
+    <Shell>
+      <div className="max-w-xl mx-auto px-6 pb-6">
+        <button
+          onClick={() => navigate('/my-appointments')}
+          className="flex items-center gap-1.5 text-gray-500 hover:text-gray-700 text-sm font-medium mb-6"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          {t('common.back')}
+        </button>
 
-              <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 text-center mb-4">
-                <div className="text-5xl mb-4">📅</div>
-                <p className="text-lg font-black text-gray-800 mb-2">{t('liveQueue.notToday')}</p>
-                <p className="text-gray-500 text-sm mb-1">
-                  {t('liveQueue.scheduledFor')} <span className="font-semibold text-cyan-600">{appointment.appointment_date}</span> {t('liveQueue.at')}{' '}
-                  <span className="font-semibold text-cyan-600">{formatTime(appointment.appointment_time)}</span>
-                </p>
-                <p className="text-gray-400 text-xs mt-3">
-                  {t('liveQueue.comeBack')}
-                </p>
-              </div>
+        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 text-center mb-4">
+          <div className="text-5xl mb-4">📅</div>
+          <p className="text-lg font-black text-gray-800 mb-2">{t('liveQueue.notToday')}</p>
+          <p className="text-gray-500 text-sm mb-1">
+            {t('liveQueue.scheduledFor')} <span className="font-semibold text-cyan-600">{appointment.appointment_date}</span> {t('liveQueue.at')}{' '}
+            <span className="font-semibold text-cyan-600">{formatTime(appointment.appointment_time)}</span>
+          </p>
+          <p className="text-gray-400 text-xs mt-3">
+            {t('liveQueue.comeBack')}
+          </p>
+        </div>
 
-              {/* Doctor info card */}
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-5 py-4">
-                <div className="flex items-center gap-3">
-                  <div className={`w-11 h-11 ${getColor(appointment.doctor_name)} rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0`}>
-                    {getInitials(appointment.doctor_name)}
-                  </div>
-                  <div>
-                    <p className="font-bold text-gray-900 text-sm">{appointment.doctor_name}</p>
-                    <p className="text-cyan-500 text-xs font-medium">{appointment.specialization || 'General Physician'}</p>
-                    {appointment.clinic_name && (
-                      <p className="text-gray-400 text-xs flex items-center gap-1 mt-0.5">
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                        </svg>
-                        {appointment.clinic_name}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
+        {/* Doctor info card */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-5 py-4">
+          <div className="flex items-center gap-3">
+            <div className={`w-11 h-11 ${getColor(appointment.doctor_name)} rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0`}>
+              {getInitials(appointment.doctor_name)}
+            </div>
+            <div>
+              <p className="font-bold text-gray-900 text-sm">{appointment.doctor_name}</p>
+              <p className="text-cyan-500 text-xs font-medium">{appointment.specialization || 'General Physician'}</p>
+              {appointment.clinic_name && (
+                <p className="text-gray-400 text-xs flex items-center gap-1 mt-0.5">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  </svg>
+                  {appointment.clinic_name}
+                </p>
+              )}
             </div>
           </div>
         </div>
       </div>
-    </SidebarProvider>
+    </Shell>
   )
 
   // ── Main queue UI (appointment is today) ─────────────────────────────────
   return (
-    <SidebarProvider>
-      <div className="min-h-screen bg-gray-50 flex">
-        <Sidebar />
-        <div className="lg:ml-56 flex-1 flex flex-col">
-          <TopBar />
-          <div className="flex-1 overflow-y-auto">
-            <div className="max-w-xl mx-auto px-6 py-6">
+    <Shell>
+      <div className="max-w-xl mx-auto px-6 pb-6">
 
-              <button
-                onClick={() => navigate('/my-appointments')}
-                className="flex items-center gap-1.5 text-gray-500 hover:text-gray-700 text-sm font-medium mb-6 transition-colors"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-                {t('common.back')}
-              </button>
+        <button
+          onClick={() => navigate('/my-appointments')}
+          className="flex items-center gap-1.5 text-gray-500 hover:text-gray-700 text-sm font-medium mb-6 transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          {t('common.back')}
+        </button>
 
-              {/* ── Queue position card ── */}
-              <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 mb-4 text-center">
-                <p className="text-xs font-bold text-cyan-500 uppercase tracking-widest mb-3">
-                  {t('liveQueue.inQueue')}
-                </p>
+        {/* ── Queue position card ── */}
+        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 mb-4 text-center">
+          <p className="text-xs font-bold text-cyan-500 uppercase tracking-widest mb-3">
+            {t('liveQueue.inQueue')}
+          </p>
 
-                {queuePosition === null ? (
-                  <p className="text-gray-400 text-sm py-4">{t('liveQueue.calculating')}</p>
+          {queuePosition === null ? (
+            <p className="text-gray-400 text-sm py-4">{t('liveQueue.calculating')}</p>
 
-                ) : queueState === 'next_now' ? (
-                  // ── Next + time to leave ──
-                  <>
-                    <div className="text-5xl mb-2">🎉</div>
-                    <p className="text-xl font-black text-green-500 mb-1">{t('liveQueue.youreNext')}</p>
-                    <p className="text-gray-400 text-sm mb-4">{t('liveQueue.headToClinic')}</p>
-                  </>
+          ) : queueState === 'next_now' ? (
+            // ── Next + time to leave ──
+            <>
+              <div className="text-5xl mb-2">🎉</div>
+              <p className="text-xl font-black text-green-500 mb-1">{t('liveQueue.youreNext')}</p>
+              <p className="text-gray-400 text-sm mb-4">{t('liveQueue.headToClinic')}</p>
+            </>
 
-                ) : queueState === 'next_wait' ? (
-                  // ── Next in queue but appointment time hasn't come yet ──
-                  <>
-                    <div className="text-5xl mb-2">🎉</div>
-                    <p className="text-xl font-black text-cyan-500 mb-1">{t('liveQueue.youreNext')}</p>
-                    <p className="text-gray-400 text-sm mb-1">
-                      {t('liveQueue.appointmentAt')}{' '}
-                      <span className="font-semibold text-cyan-600">{formatTime(appointment.appointment_time)}</span>
-                    </p>
-                    {leaveByTime && (
-                      <p className="text-amber-500 text-sm font-semibold mb-1">
-                        {t('liveQueue.leaveBy')} {formatTime(leaveByTime)}
-                        {getCountdown(leaveByTime) && (
-                          <span className="text-gray-400 font-normal"> · {t('liveQueue.in')} {getCountdown(leaveByTime)}</span>
-                        )}
-                      </p>
-                    )}
-                    <p className="text-gray-400 text-xs mb-4">{t('liveQueue.notifyToLeave')}</p>
-                  </>
-
-                ) : (
-                  // ── Waiting in queue ──
-                  <>
-                    <div className="text-7xl font-black text-cyan-500 leading-none mb-2">
-                      {queuePosition}
-                    </div>
-                    <p className="text-gray-500 text-sm mb-4">
-                      {t('liveQueue.patientsAhead', { count: queuePosition })}
-                    </p>
-                    <p className="text-xl font-black text-gray-900 mb-1">
-                      {t('liveQueue.minWait', { minutes: waitMinutes })}
-                    </p>
-                    {estimatedTurnTime && (
-                      <p className="text-cyan-500 text-sm font-semibold mb-1">
-                        {t('liveQueue.yourTurn')} {formatTime(estimatedTurnTime)}
-                      </p>
-                    )}
-                    {leaveByTime && (
-                      <p className="text-amber-500 text-sm font-medium mb-1">
-                        {t('liveQueue.leaveBy')} {formatTime(leaveByTime)}
-                        {getCountdown(leaveByTime) && (
-                          <span className="text-gray-400 font-normal"> · {t('liveQueue.in')} {getCountdown(leaveByTime)}</span>
-                        )}
-                      </p>
-                    )}
-                    <p className="text-gray-400 text-xs mb-5">{t('liveQueue.basedOn')}</p>
-                  </>
-                )}
-
-                <div className="flex items-center justify-center gap-1.5 mb-6">
-                  <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                  <span className="text-green-500 text-xs font-semibold">{t('liveQueue.liveUpdates')}</span>
-                </div>
-
-                <div>
-                  <div className="flex justify-between text-xs text-gray-400 mb-1.5">
-                    <span>{t('liveQueue.checkedIn')}</span>
-                    <span>{t('liveQueue.yourTurnLabel')}</span>
-                  </div>
-                  <div className="w-full bg-gray-100 rounded-full h-2.5">
-                    <div
-                      className="bg-cyan-500 h-2.5 rounded-full transition-all duration-700"
-                      style={{ width: `${progress}%` }}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* ── Contextual banners ── */}
-              {queueState === 'next_now' && (
-                <div className="bg-cyan-50 border border-cyan-200 rounded-2xl px-5 py-4 mb-4">
-                  <p className="font-bold text-cyan-700 text-sm mb-0.5">🏃 {t('liveQueue.headNow')}</p>
-                  <p className="text-cyan-500 text-xs">{t('liveQueue.nextInLine')}</p>
-                </div>
-              )}
-
-              {queueState === 'time_to_leave' && (
-                <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 mb-4">
-                  <p className="font-bold text-amber-700 text-sm mb-0.5">🚗 {t('liveQueue.timeToLeave')}</p>
-                  <p className="text-amber-600 text-xs">
-                    {t('liveQueue.basedOnTravel', { minutes: travelMins })}
-                  </p>
-                </div>
-              )}
-
-              {(queueState === 'too_early' || queueState === 'next_wait') && queuePosition !== null && queuePosition > 0 && (
-                <div className="bg-green-50 border border-green-100 rounded-2xl px-5 py-4 mb-4">
-                  <p className="font-bold text-gray-800 text-sm mb-0.5">{t('liveQueue.relaxTime')}</p>
-                  <p className="text-gray-500 text-xs">{t('liveQueue.setTravelBelow')}</p>
-                </div>
-              )}
-
-              {/* ── Travel time + notify ── */}
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-5 py-4 mb-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <svg className="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                  </svg>
-                  <p className="font-bold text-gray-800 text-sm">{t('liveQueue.setTravelTime')}</p>
-                </div>
-                <p className="text-gray-400 text-xs mb-3 ml-6">{t('liveQueue.notifyRight')}</p>
-                <div className="flex gap-2 mb-3">
-                  {TRAVEL_OPTIONS.map(opt => (
-                    <button
-                      key={opt}
-                      onClick={() => { setTravelTime(opt); setCustomMinutes(''); setNotified(false); setNotifyError('') }}
-                      className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all duration-150 ${
-                        travelTime === opt && !customMinutes
-                          ? 'bg-cyan-500 text-white shadow-sm scale-105'
-                          : 'border border-gray-200 text-gray-600 hover:border-cyan-300 hover:text-cyan-500'
-                      }`}
-                    >
-                      {travelTime === opt && !customMinutes ? `✓ ${opt}` : opt}
-                    </button>
-                  ))}
-                </div>
-                <input
-                  type="number"
-                  min="1"
-                  max="120"
-                  value={customMinutes}
-                  onChange={e => { setCustomMinutes(e.target.value); setTravelTime(''); setNotified(false); setNotifyError('') }}
-                  placeholder={t('liveQueue.customMinutes')}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-cyan-400 placeholder-gray-300"
-                />
-              </div>
-
-              {notifyError && (
-                <div className="bg-red-50 border border-red-200 text-red-600 text-xs px-4 py-2.5 rounded-xl mb-3">
-                  {notifyError}
-                </div>
-              )}
-
-              <button
-                onClick={handleNotifyWhenToLeave}
-                disabled={notified}
-                className={`w-full py-4 rounded-2xl font-bold text-sm mb-2 transition-all ${
-                  notified
-                    ? 'bg-green-500 text-white cursor-default'
-                    : 'bg-gradient-to-r from-cyan-500 to-cyan-400 text-white hover:from-cyan-600 hover:to-cyan-500 shadow-md'
-                }`}
-              >
-                {notified ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    {t('liveQueue.notified')}
-                  </span>
-                ) : (
-                  <span className="flex items-center justify-center gap-2">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                    </svg>
-                    {t('liveQueue.tellMeWhen')}
-                  </span>
-                )}
-              </button>
-              <p className="text-center text-gray-400 text-xs mb-5">
-                {notified && estimatedTurnTime
-                  ? t('liveQueue.notifySet', { minutes: travelMins, time: formatTime(estimatedTurnTime) })
-                  : t('liveQueue.noNeedToCheck')
-                }
+          ) : queueState === 'next_wait' ? (
+            // ── Next in queue but appointment time hasn't come yet ──
+            <>
+              <div className="text-5xl mb-2">🎉</div>
+              <p className="text-xl font-black text-cyan-500 mb-1">{t('liveQueue.youreNext')}</p>
+              <p className="text-gray-400 text-sm mb-1">
+                {t('liveQueue.appointmentAt')}{' '}
+                <span className="font-semibold text-cyan-600">{formatTime(appointment.appointment_time)}</span>
               </p>
+              {leaveByTime && (
+                <p className="text-amber-500 text-sm font-semibold mb-1">
+                  {t('liveQueue.leaveBy')} {formatTime(leaveByTime)}
+                  {getCountdown(leaveByTime) && (
+                    <span className="text-gray-400 font-normal"> · {t('liveQueue.in')} {getCountdown(leaveByTime)}</span>
+                  )}
+                </p>
+              )}
+              <p className="text-gray-400 text-xs mb-4">{t('liveQueue.notifyToLeave')}</p>
+            </>
 
-              {/* ── Doctor info ── */}
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-5 py-4 mb-4">
-                <div className="flex items-center gap-3">
-                  <div className={`w-11 h-11 ${getColor(appointment.doctor_name)} rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0`}>
-                    {getInitials(appointment.doctor_name)}
-                  </div>
-                  <div>
-                    <p className="font-bold text-gray-900 text-sm">{appointment.doctor_name}</p>
-                    <p className="text-cyan-500 text-xs font-medium">{appointment.specialization || 'General Physician'}</p>
-                    {appointment.clinic_name && (
-                      <p className="text-gray-400 text-xs flex items-center gap-1 mt-0.5">
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                        </svg>
-                        {appointment.clinic_name}
-                      </p>
-                    )}
-                    <p className="text-gray-400 text-xs mt-0.5">
-                      📅 {appointment.appointment_date} &nbsp;🕐 {formatTime(appointment.appointment_time)}
-                    </p>
-                  </div>
-                </div>
+          ) : (
+            // ── Waiting in queue ──
+            <>
+              <div className="text-7xl font-black text-cyan-500 leading-none mb-2">
+                {queuePosition}
               </div>
+              <p className="text-gray-500 text-sm mb-4">
+                {t('liveQueue.patientsAhead', { count: queuePosition })}
+              </p>
+              <p className="text-xl font-black text-gray-900 mb-1">
+                {t('liveQueue.minWait', { minutes: waitMinutes })}
+              </p>
+              {estimatedTurnTime && (
+                <p className="text-cyan-500 text-sm font-semibold mb-1">
+                  {t('liveQueue.yourTurn')} {formatTime(estimatedTurnTime)}
+                </p>
+              )}
+              {leaveByTime && (
+                <p className="text-amber-500 text-sm font-medium mb-1">
+                  {t('liveQueue.leaveBy')} {formatTime(leaveByTime)}
+                  {getCountdown(leaveByTime) && (
+                    <span className="text-gray-400 font-normal"> · {t('liveQueue.in')} {getCountdown(leaveByTime)}</span>
+                  )}
+                </p>
+              )}
+              <p className="text-gray-400 text-xs mb-5">{t('liveQueue.basedOn')}</p>
+            </>
+          )}
 
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  onClick={() => navigate('/doctors')}
-                  className="py-3 rounded-2xl border border-gray-200 text-gray-600 text-sm font-semibold hover:bg-gray-50 transition-colors"
-                >
-                  {t('liveQueue.reschedule')}
-                </button>
-                <button
-                  onClick={() => navigate('/my-appointments')}
-                  className="py-3 rounded-2xl border border-red-200 text-red-500 text-sm font-semibold hover:bg-red-50 transition-colors"
-                >
-                  {t('liveQueue.cancelAppt')}
-                </button>
-              </div>
+          <div className="flex items-center justify-center gap-1.5 mb-6">
+            <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+            <span className="text-green-500 text-xs font-semibold">{t('liveQueue.liveUpdates')}</span>
+          </div>
 
+          <div>
+            <div className="flex justify-between text-xs text-gray-400 mb-1.5">
+              <span>{t('liveQueue.checkedIn')}</span>
+              <span>{t('liveQueue.yourTurnLabel')}</span>
+            </div>
+            <div className="w-full bg-gray-100 rounded-full h-2.5">
+              <div
+                className="bg-cyan-500 h-2.5 rounded-full transition-all duration-700"
+                style={{ width: `${progress}%` }}
+              />
             </div>
           </div>
         </div>
+
+        {/* ── Contextual banners ── */}
+        {queueState === 'next_now' && (
+          <div className="bg-cyan-50 border border-cyan-200 rounded-2xl px-5 py-4 mb-4">
+            <p className="font-bold text-cyan-700 text-sm mb-0.5">🏃 {t('liveQueue.headNow')}</p>
+            <p className="text-cyan-500 text-xs">{t('liveQueue.nextInLine')}</p>
+          </div>
+        )}
+
+        {queueState === 'time_to_leave' && (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 mb-4">
+            <p className="font-bold text-amber-700 text-sm mb-0.5">🚗 {t('liveQueue.timeToLeave')}</p>
+            <p className="text-amber-600 text-xs">
+              {t('liveQueue.basedOnTravel', { minutes: travelMins })}
+            </p>
+          </div>
+        )}
+
+        {(queueState === 'too_early' || queueState === 'next_wait') && queuePosition !== null && queuePosition > 0 && (
+          <div className="bg-green-50 border border-green-100 rounded-2xl px-5 py-4 mb-4">
+            <p className="font-bold text-gray-800 text-sm mb-0.5">{t('liveQueue.relaxTime')}</p>
+            <p className="text-gray-500 text-xs">{t('liveQueue.setTravelBelow')}</p>
+          </div>
+        )}
+
+        {/* ── Travel time + notify ── */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-5 py-4 mb-4">
+          <div className="flex items-center gap-2 mb-1">
+            <svg className="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+            </svg>
+            <p className="font-bold text-gray-800 text-sm">{t('liveQueue.setTravelTime')}</p>
+          </div>
+          <p className="text-gray-400 text-xs mb-3 ml-6">{t('liveQueue.notifyRight')}</p>
+          <div className="flex gap-2 mb-3">
+            {TRAVEL_OPTIONS.map(opt => (
+              <button
+                key={opt}
+                onClick={() => { setTravelTime(opt); setCustomMinutes(''); setNotified(false); setNotifyError('') }}
+                className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all duration-150 ${
+                  travelTime === opt && !customMinutes
+                    ? 'bg-cyan-500 text-white shadow-sm scale-105'
+                    : 'border border-gray-200 text-gray-600 hover:border-cyan-300 hover:text-cyan-500'
+                }`}
+              >
+                {travelTime === opt && !customMinutes ? `✓ ${opt}` : opt}
+              </button>
+            ))}
+          </div>
+          <input
+            type="number"
+            min="1"
+            max="120"
+            value={customMinutes}
+            onChange={e => { setCustomMinutes(e.target.value); setTravelTime(''); setNotified(false); setNotifyError('') }}
+            placeholder={t('liveQueue.customMinutes')}
+            className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-cyan-400 placeholder-gray-300"
+          />
+        </div>
+
+        {notifyError && (
+          <div className="bg-red-50 border border-red-200 text-red-600 text-xs px-4 py-2.5 rounded-xl mb-3">
+            {notifyError}
+          </div>
+        )}
+
+        <button
+          onClick={handleNotifyWhenToLeave}
+          disabled={notified}
+          className={`w-full py-4 rounded-2xl font-bold text-sm mb-2 transition-all ${
+            notified
+              ? 'bg-green-500 text-white cursor-default'
+              : 'bg-gradient-to-r from-cyan-500 to-cyan-400 text-white hover:from-cyan-600 hover:to-cyan-500 shadow-md'
+          }`}
+        >
+          {notified ? (
+            <span className="flex items-center justify-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              {t('liveQueue.notified')}
+            </span>
+          ) : (
+            <span className="flex items-center justify-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
+              {t('liveQueue.tellMeWhen')}
+            </span>
+          )}
+        </button>
+        <p className="text-center text-gray-400 text-xs mb-5">
+          {notified && estimatedTurnTime
+            ? t('liveQueue.notifySet', { minutes: travelMins, time: formatTime(estimatedTurnTime) })
+            : t('liveQueue.noNeedToCheck')
+          }
+        </p>
+
+        {/* ── Doctor info ── */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-5 py-4 mb-4">
+          <div className="flex items-center gap-3">
+            <div className={`w-11 h-11 ${getColor(appointment.doctor_name)} rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0`}>
+              {getInitials(appointment.doctor_name)}
+            </div>
+            <div>
+              <p className="font-bold text-gray-900 text-sm">{appointment.doctor_name}</p>
+              <p className="text-cyan-500 text-xs font-medium">{appointment.specialization || 'General Physician'}</p>
+              {appointment.clinic_name && (
+                <p className="text-gray-400 text-xs flex items-center gap-1 mt-0.5">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  </svg>
+                  {appointment.clinic_name}
+                </p>
+              )}
+              <p className="text-gray-400 text-xs mt-0.5">
+                📅 {appointment.appointment_date} &nbsp;🕐 {formatTime(appointment.appointment_time)}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={() => navigate('/doctors')}
+            className="py-3 rounded-2xl border border-gray-200 text-gray-600 text-sm font-semibold hover:bg-gray-50 transition-colors"
+          >
+            {t('liveQueue.reschedule')}
+          </button>
+          <button
+            onClick={() => navigate('/my-appointments')}
+            className="py-3 rounded-2xl border border-red-200 text-red-500 text-sm font-semibold hover:bg-red-50 transition-colors"
+          >
+            {t('liveQueue.cancelAppt')}
+          </button>
+        </div>
+
       </div>
-    </SidebarProvider>
+    </Shell>
   )
 }
 

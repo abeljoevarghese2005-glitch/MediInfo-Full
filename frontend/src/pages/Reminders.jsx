@@ -62,7 +62,7 @@ function Reminders() {
   const [appointments, setAppointments] = useState([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
-  const [notifPermission, setNotifPermission] = useState('prompt') // 'granted' | 'denied' | 'prompt'
+  const [notifPermission, setNotifPermission] = useState('prompt')
   const [takenToday, setTakenToday] = useState(() => {
     try { return JSON.parse(localStorage.getItem('takenToday') || '{}') } catch { return {} }
   })
@@ -78,7 +78,6 @@ function Reminders() {
     handleCheckNotifPermission()
   }, [])
 
-  // Schedule appointment notifications whenever appointments load
   useEffect(() => {
     appointments.forEach(a => {
       if (a.status === 'confirmed') {
@@ -149,7 +148,6 @@ function Reminders() {
 
       if (error) throw error
 
-      // Schedule local notifications immediately after saving
       await scheduleReminderNotifications(data)
 
       setForm({ medicine_name:'', dosage:'', frequency:'daily', reminder_time:'08:00', start_date:'', end_date:'', notes:'' })
@@ -162,9 +160,7 @@ function Reminders() {
 
   const handleDelete = async (id) => {
     try {
-      // Cancel scheduled notifications first
       await cancelReminderNotifications(id)
-
       const { error } = await supabase
         .from('medication_reminders')
         .delete()
@@ -196,22 +192,43 @@ function Reminders() {
         <Sidebar />
         <div className="lg:ml-56 flex-1 flex flex-col min-w-0">
           <TopBar />
-          <div className="px-4 sm:px-8 py-8 max-w-4xl">
 
-            <div className="flex items-start justify-between mb-6">
+          {/* ── Gradient Hero Banner ── */}
+          <div className="bg-gradient-to-br from-teal-500 via-cyan-500 to-emerald-400 px-4 sm:px-8 pt-8 pb-10 rounded-b-3xl mb-6">
+            <div className="flex items-start justify-between">
               <div>
-                <h1 className="text-2xl font-black text-gray-900">{t('reminders.title')}</h1>
-                <p className="text-gray-400 text-sm mt-0.5">{t('reminders.subtitle')}</p>
+                <h1 className="text-2xl font-black text-white">{t('reminders.title')}</h1>
+                <p className="text-cyan-100 text-sm mt-1">{t('reminders.subtitle')}</p>
               </div>
               {tab === 'medicine' && (
                 <button
                   onClick={() => setShowForm(!showForm)}
-                  className="bg-cyan-500 text-white px-4 py-2 rounded-xl hover:bg-cyan-600 font-semibold text-sm shrink-0"
+                  className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-xl font-semibold text-sm shrink-0 backdrop-blur-sm transition-all"
                 >
                   {showForm ? t('common.cancel') : `+ ${t('reminders.add')}`}
                 </button>
               )}
             </div>
+
+            {/* Stats row inside hero */}
+            <div className="grid grid-cols-3 gap-3 mt-6">
+              <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-3 text-center">
+                <p className="text-2xl font-black text-white">{reminders.length}</p>
+                <p className="text-xs text-cyan-100 mt-0.5">{t('reminders.stats.total')}</p>
+              </div>
+              <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-3 text-center">
+                <p className="text-2xl font-black text-white">{activeCount}</p>
+                <p className="text-xs text-cyan-100 mt-0.5">{t('reminders.stats.active')}</p>
+              </div>
+              <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-3 text-center">
+                <p className="text-2xl font-black text-white">{takenCount}</p>
+                <p className="text-xs text-cyan-100 mt-0.5">{t('reminders.stats.takenToday')}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Page content ── */}
+          <div className="flex-1 px-4 sm:px-8 pb-8 max-w-4xl w-full">
 
             {/* Notification permission banner */}
             {notifPermission !== 'granted' && (
@@ -246,28 +263,16 @@ function Reminders() {
               </div>
             )}
 
-            <div className="grid grid-cols-3 gap-3 mb-6">
-              <div className="bg-white rounded-2xl p-4 border border-gray-100 text-center">
-                <p className="text-2xl font-black text-cyan-500">{reminders.length}</p>
-                <p className="text-xs text-gray-400 mt-0.5">{t('reminders.stats.total')}</p>
-              </div>
-              <div className="bg-white rounded-2xl p-4 border border-gray-100 text-center">
-                <p className="text-2xl font-black text-green-500">{activeCount}</p>
-                <p className="text-xs text-gray-400 mt-0.5">{t('reminders.stats.active')}</p>
-              </div>
-              <div className="bg-white rounded-2xl p-4 border border-gray-100 text-center">
-                <p className="text-2xl font-black text-purple-500">{takenCount}</p>
-                <p className="text-xs text-gray-400 mt-0.5">{t('reminders.stats.takenToday')}</p>
-              </div>
-            </div>
-
+            {/* Tabs */}
             <div className="flex gap-2 mb-6">
               {['medicine', 'appointments'].map(tabKey => (
                 <button
                   key={tabKey}
                   onClick={() => setTab(tabKey)}
                   className={`px-5 py-2 rounded-xl text-sm font-semibold transition-all ${
-                    tab === tabKey ? 'bg-cyan-500 text-white' : 'bg-white text-gray-500 border border-gray-200 hover:border-cyan-300'
+                    tab === tabKey
+                      ? 'bg-cyan-500 text-white shadow-sm'
+                      : 'bg-white text-gray-500 border border-gray-200 hover:border-cyan-300'
                   }`}
                 >
                   {tabKey === 'medicine' ? `💊 ${t('reminders.tabs.medicine')}` : `📅 ${t('reminders.tabs.appointments')}`}
@@ -275,6 +280,7 @@ function Reminders() {
               ))}
             </div>
 
+            {/* Add reminder form */}
             {tab === 'medicine' && showForm && (
               <div className="bg-white rounded-2xl shadow-sm p-6 mb-6 border border-gray-100">
                 <h2 className="text-base font-bold text-gray-800 mb-4">{t('reminders.form.newTitle')}</h2>
@@ -340,6 +346,7 @@ function Reminders() {
               </div>
             )}
 
+            {/* Medicine tab content */}
             {tab === 'medicine' && (
               <>
                 {loading ? (
@@ -400,6 +407,7 @@ function Reminders() {
               </>
             )}
 
+            {/* Appointments tab content */}
             {tab === 'appointments' && (
               <>
                 {appointments.length === 0 ? (

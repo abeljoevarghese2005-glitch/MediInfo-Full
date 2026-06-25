@@ -81,237 +81,239 @@ function Profile() {
 
   return (
     <SidebarProvider>
-    <div className="min-h-screen bg-gray-50 flex">
-      <Sidebar />
-      <div className="lg:ml-56 flex-1 flex flex-col">
-        <TopBar />
-        <div className="px-10 py-8">
+      <div className="min-h-screen bg-gray-50 flex">
+        <Sidebar />
+        <div className="lg:ml-56 flex-1 flex flex-col min-w-0">
+          <TopBar />
 
-          {/* Profile Header Card */}
-          <div className="bg-white rounded-2xl shadow-sm p-6 mb-6 max-w-2xl">
+          {/* ── Gradient Hero Banner (with user identity) ── */}
+          <div className="bg-gradient-to-br from-teal-500 via-cyan-500 to-emerald-400 px-4 sm:px-8 pt-8 pb-10 rounded-b-3xl mb-6">
             <div className="flex items-center gap-5">
-              <div className="w-20 h-20 bg-cyan-500 rounded-full flex items-center justify-center text-white text-3xl font-bold">
+              <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center text-white text-3xl font-bold shrink-0">
                 {user.full_name?.charAt(0).toUpperCase() || 'U'}
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-800">{user.full_name}</h1>
-                <p className="text-gray-500 mt-1">{user.phone}</p>
-                <span className={`inline-block mt-2 px-3 py-1 rounded-full text-sm font-medium capitalize ${getRoleColor(user.role)}`}>
+                <h1 className="text-2xl font-black text-white">{user.full_name}</h1>
+                <p className="text-cyan-100 text-sm mt-0.5">{user.phone}</p>
+                <span className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-semibold capitalize bg-white/20 text-white`}>
                   {t(`profile.roles.${user.role}`, user.role)}
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Tabs */}
-          <div className="flex gap-2 mb-6">
-            {tabs.map((tab) => (
-              <button
-                key={tab}
-                onClick={() => { setActiveTab(tab); setEditing(false); setError(''); setSuccess('') }}
-                className={`px-4 py-2 rounded-lg text-sm font-medium capitalize ${
-                  activeTab === tab
-                    ? 'bg-cyan-500 text-white'
-                    : 'bg-white text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                {tab === 'language' ? t('profile.languageTab') : tab === 'security' ? t('profile.security') : t('profile.profileTab')}
-              </button>
-            ))}
-          </div>
+          <div className="flex-1 px-4 sm:px-8 py-6 max-w-5xl w-full">
 
-          {/* Tab Content */}
-          <div className="bg-white rounded-2xl shadow-sm p-6 max-w-2xl">
-
-            {activeTab === 'profile' && (
-              <div className="space-y-5">
-                <div className="flex items-center justify-between">
-                  <h2 className="font-semibold text-gray-700 text-lg">{t('profile.title')}</h2>
-                  {!editing ? (
-                    <button
-                      onClick={() => setEditing(true)}
-                      className="text-cyan-500 hover:text-cyan-600 text-sm font-medium border border-cyan-300 px-3 py-1 rounded-lg"
-                    >
-                      ✏️ {t('common.edit')}
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => { setEditing(false); setForm({ full_name: user.full_name, phone: user.phone }); setError('') }}
-                      className="text-gray-500 hover:text-gray-600 text-sm font-medium border border-gray-300 px-3 py-1 rounded-lg"
-                    >
-                      {t('common.cancel')}
-                    </button>
-                  )}
-                </div>
-
-                {success && (
-                  <div className="bg-green-50 text-green-600 px-4 py-3 rounded-lg text-sm">
-                    ✅ {success}
-                  </div>
-                )}
-
-                {error && (
-                  <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg text-sm">
-                    ❌ {error}
-                  </div>
-                )}
-
-                <div className="bg-gray-50 rounded-xl p-4">
-                  <p className="text-xs text-gray-500 mb-1">{t('profile.fullName')}</p>
-                  {editing ? (
-                    <input
-                      type="text"
-                      value={form.full_name}
-                      onChange={e => setForm({ ...form, full_name: e.target.value })}
-                      className="w-full bg-white px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-gray-800"
-                    />
-                  ) : (
-                    <p className="font-medium text-gray-800">{user.full_name}</p>
-                  )}
-                </div>
-
-                <div className="bg-gray-50 rounded-xl p-4">
-                  <p className="text-xs text-gray-500 mb-1">{t('profile.phone')}</p>
-                  {editing ? (
-                    <input
-                      type="text"
-                      value={form.phone}
-                      onChange={e => setForm({ ...form, phone: e.target.value })}
-                      className="w-full bg-white px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-gray-800"
-                    />
-                  ) : (
-                    <p className="font-medium text-gray-800">{user.phone}</p>
-                  )}
-                </div>
-
-                <div className="bg-gray-50 rounded-xl p-4">
-                  <p className="text-xs text-gray-500 mb-1">{t('profile.role')}</p>
-                  <p className="font-medium text-gray-800 capitalize">{t(`profile.roles.${user.role}`, user.role)}</p>
-                </div>
-
-                <div className="bg-gray-50 rounded-xl p-4">
-                  <p className="text-xs text-gray-500 mb-1">{t('profile.userId')}</p>
-                  <p className="font-medium text-gray-800 text-sm">{user.id}</p>
-                </div>
-
-                {editing && (
-                  <button
-                    onClick={handleSave}
-                    disabled={saving}
-                    className="w-full bg-cyan-500 text-white py-3 rounded-xl hover:bg-cyan-600 font-medium"
-                  >
-                    {saving ? t('common.saving') : t('common.save')}
-                  </button>
-                )}
-
-                {!editing && (
-                  <div className="pt-2 flex gap-3">
-                    <button
-                      onClick={() => navigate('/reminders')}
-                      className="flex-1 bg-cyan-50 text-cyan-600 py-2 rounded-xl hover:bg-cyan-100 font-medium text-sm"
-                    >
-                      ⏰ {t('profile.myReminders')}
-                    </button>
-                    <button
-                      onClick={() => navigate('/ai-chat')}
-                      className="flex-1 bg-cyan-50 text-cyan-600 py-2 rounded-xl hover:bg-cyan-100 font-medium text-sm"
-                    >
-                      🤖 {t('profile.aiChat')}
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {activeTab === 'security' && (
-              <div className="space-y-5">
-                <h2 className="font-semibold text-gray-700 text-lg">{t('profile.security')}</h2>
-
-                <div className="bg-gray-50 rounded-xl p-4 flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-gray-800">{t('profile.password')}</p>
-                    <p className="text-sm text-gray-500">{t('profile.passwordManaged')}</p>
-                  </div>
-                  <span className="text-gray-400 text-sm">••••••••</span>
-                </div>
-
-                <div className="bg-gray-50 rounded-xl p-4 flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-gray-800">{t('profile.phone')}</p>
-                    <p className="text-sm text-gray-500">{t('profile.phoneLogin')}</p>
-                  </div>
-                  <span className="text-gray-600 text-sm">{user.phone}</span>
-                </div>
-
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                  <p className="text-sm text-amber-700">
-                    🔒 {t('profile.accountSecured')}
-                  </p>
-                </div>
-
+            {/* ── Tabs ── */}
+            <div className="flex gap-2 mb-6">
+              {tabs.map((tab) => (
                 <button
-                  onClick={handleLogout}
-                  className="w-full bg-red-500 text-white py-3 rounded-xl hover:bg-red-600 font-medium"
+                  key={tab}
+                  onClick={() => { setActiveTab(tab); setEditing(false); setError(''); setSuccess('') }}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium capitalize ${
+                    activeTab === tab
+                      ? 'bg-cyan-500 text-white'
+                      : 'bg-white text-gray-600 hover:bg-gray-100'
+                  }`}
                 >
-                  {t('common.logout')}
+                  {tab === 'language' ? t('profile.languageTab') : tab === 'security' ? t('profile.security') : t('profile.profileTab')}
                 </button>
-              </div>
-            )}
+              ))}
+            </div>
 
-            {activeTab === 'language' && (
-              <div className="space-y-5">
-                <div>
-                  <h2 className="font-semibold text-gray-700 text-lg">{t('profile.languageTitle')}</h2>
-                  <p className="text-sm text-gray-500 mt-1">{t('profile.languageSubtitle')}</p>
-                </div>
+            {/* ── Tab Content ── */}
+            <div className="bg-white rounded-2xl shadow-sm p-6 max-w-2xl">
 
-                {langSaved && (
-                  <div className="bg-green-50 text-green-600 px-4 py-3 rounded-lg text-sm">
-                    ✅ {t('profile.languageSaved')}
+              {activeTab === 'profile' && (
+                <div className="space-y-5">
+                  <div className="flex items-center justify-between">
+                    <h2 className="font-semibold text-gray-700 text-lg">{t('profile.title')}</h2>
+                    {!editing ? (
+                      <button
+                        onClick={() => setEditing(true)}
+                        className="text-cyan-500 hover:text-cyan-600 text-sm font-medium border border-cyan-300 px-3 py-1 rounded-lg"
+                      >
+                        ✏️ {t('common.edit')}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => { setEditing(false); setForm({ full_name: user.full_name, phone: user.phone }); setError('') }}
+                        className="text-gray-500 hover:text-gray-600 text-sm font-medium border border-gray-300 px-3 py-1 rounded-lg"
+                      >
+                        {t('common.cancel')}
+                      </button>
+                    )}
                   </div>
-                )}
 
-                <div className="grid grid-cols-2 gap-3">
-                  {LANGUAGES.map(({ code, label }) => (
+                  {success && (
+                    <div className="bg-green-50 text-green-600 px-4 py-3 rounded-lg text-sm">
+                      ✅ {success}
+                    </div>
+                  )}
+
+                  {error && (
+                    <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg text-sm">
+                      ❌ {error}
+                    </div>
+                  )}
+
+                  <div className="bg-gray-50 rounded-xl p-4">
+                    <p className="text-xs text-gray-500 mb-1">{t('profile.fullName')}</p>
+                    {editing ? (
+                      <input
+                        type="text"
+                        value={form.full_name}
+                        onChange={e => setForm({ ...form, full_name: e.target.value })}
+                        className="w-full bg-white px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-gray-800"
+                      />
+                    ) : (
+                      <p className="font-medium text-gray-800">{user.full_name}</p>
+                    )}
+                  </div>
+
+                  <div className="bg-gray-50 rounded-xl p-4">
+                    <p className="text-xs text-gray-500 mb-1">{t('profile.phone')}</p>
+                    {editing ? (
+                      <input
+                        type="text"
+                        value={form.phone}
+                        onChange={e => setForm({ ...form, phone: e.target.value })}
+                        className="w-full bg-white px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-gray-800"
+                      />
+                    ) : (
+                      <p className="font-medium text-gray-800">{user.phone}</p>
+                    )}
+                  </div>
+
+                  <div className="bg-gray-50 rounded-xl p-4">
+                    <p className="text-xs text-gray-500 mb-1">{t('profile.role')}</p>
+                    <p className="font-medium text-gray-800 capitalize">{t(`profile.roles.${user.role}`, user.role)}</p>
+                  </div>
+
+                  <div className="bg-gray-50 rounded-xl p-4">
+                    <p className="text-xs text-gray-500 mb-1">{t('profile.userId')}</p>
+                    <p className="font-medium text-gray-800 text-sm">{user.id}</p>
+                  </div>
+
+                  {editing && (
                     <button
-                      key={code}
-                      onClick={() => handleLanguageChange(code)}
-                      className={`px-4 py-3 rounded-xl text-sm font-medium border transition-colors ${
-                        i18n.language === code
-                          ? 'bg-cyan-500 text-white border-cyan-500'
-                          : 'bg-gray-50 text-gray-700 border-gray-200 hover:border-cyan-300'
-                      }`}
+                      onClick={handleSave}
+                      disabled={saving}
+                      className="w-full bg-cyan-500 text-white py-3 rounded-xl hover:bg-cyan-600 font-medium"
                     >
-                      {label}
+                      {saving ? t('common.saving') : t('common.save')}
                     </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+                  )}
 
-          {/* Quick Stats */}
-          <div className="grid grid-cols-3 gap-4 mt-6 max-w-2xl">
-            <div className="bg-white rounded-2xl shadow-sm p-4 text-center">
-              <p className="text-2xl font-bold text-cyan-500">💊</p>
-              <p className="text-xs text-gray-500 mt-1">{t('profile.medicines')}</p>
-              <p className="font-bold text-gray-800">100+</p>
+                  {!editing && (
+                    <div className="pt-2 flex gap-3">
+                      <button
+                        onClick={() => navigate('/reminders')}
+                        className="flex-1 bg-cyan-50 text-cyan-600 py-2 rounded-xl hover:bg-cyan-100 font-medium text-sm"
+                      >
+                        ⏰ {t('profile.myReminders')}
+                      </button>
+                      <button
+                        onClick={() => navigate('/ai-chat')}
+                        className="flex-1 bg-cyan-50 text-cyan-600 py-2 rounded-xl hover:bg-cyan-100 font-medium text-sm"
+                      >
+                        🤖 {t('profile.aiChat')}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === 'security' && (
+                <div className="space-y-5">
+                  <h2 className="font-semibold text-gray-700 text-lg">{t('profile.security')}</h2>
+
+                  <div className="bg-gray-50 rounded-xl p-4 flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-gray-800">{t('profile.password')}</p>
+                      <p className="text-sm text-gray-500">{t('profile.passwordManaged')}</p>
+                    </div>
+                    <span className="text-gray-400 text-sm">••••••••</span>
+                  </div>
+
+                  <div className="bg-gray-50 rounded-xl p-4 flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-gray-800">{t('profile.phone')}</p>
+                      <p className="text-sm text-gray-500">{t('profile.phoneLogin')}</p>
+                    </div>
+                    <span className="text-gray-600 text-sm">{user.phone}</span>
+                  </div>
+
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                    <p className="text-sm text-amber-700">
+                      🔒 {t('profile.accountSecured')}
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={handleLogout}
+                    className="w-full bg-red-500 text-white py-3 rounded-xl hover:bg-red-600 font-medium"
+                  >
+                    {t('common.logout')}
+                  </button>
+                </div>
+              )}
+
+              {activeTab === 'language' && (
+                <div className="space-y-5">
+                  <div>
+                    <h2 className="font-semibold text-gray-700 text-lg">{t('profile.languageTitle')}</h2>
+                    <p className="text-sm text-gray-500 mt-1">{t('profile.languageSubtitle')}</p>
+                  </div>
+
+                  {langSaved && (
+                    <div className="bg-green-50 text-green-600 px-4 py-3 rounded-lg text-sm">
+                      ✅ {t('profile.languageSaved')}
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-3">
+                    {LANGUAGES.map(({ code, label }) => (
+                      <button
+                        key={code}
+                        onClick={() => handleLanguageChange(code)}
+                        className={`px-4 py-3 rounded-xl text-sm font-medium border transition-colors ${
+                          i18n.language === code
+                            ? 'bg-cyan-500 text-white border-cyan-500'
+                            : 'bg-gray-50 text-gray-700 border-gray-200 hover:border-cyan-300'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-            <div className="bg-white rounded-2xl shadow-sm p-4 text-center">
-              <p className="text-2xl font-bold text-cyan-500">🤖</p>
-              <p className="text-xs text-gray-500 mt-1">{t('profile.aiPowered')}</p>
-              <p className="font-bold text-gray-800">Gemini</p>
+
+            {/* ── Quick Stats ── */}
+            <div className="grid grid-cols-3 gap-4 mt-6 max-w-2xl">
+              <div className="bg-white rounded-2xl shadow-sm p-4 text-center">
+                <p className="text-2xl font-bold text-cyan-500">💊</p>
+                <p className="text-xs text-gray-500 mt-1">{t('profile.medicines')}</p>
+                <p className="font-bold text-gray-800">100+</p>
+              </div>
+              <div className="bg-white rounded-2xl shadow-sm p-4 text-center">
+                <p className="text-2xl font-bold text-cyan-500">🤖</p>
+                <p className="text-xs text-gray-500 mt-1">{t('profile.aiPowered')}</p>
+                <p className="font-bold text-gray-800">Gemini</p>
+              </div>
+              <div className="bg-white rounded-2xl shadow-sm p-4 text-center">
+                <p className="text-2xl font-bold text-cyan-500">🇮🇳</p>
+                <p className="text-xs text-gray-500 mt-1">{t('profile.madeFor')}</p>
+                <p className="font-bold text-gray-800">{t('profile.india')}</p>
+              </div>
             </div>
-            <div className="bg-white rounded-2xl shadow-sm p-4 text-center">
-              <p className="text-2xl font-bold text-cyan-500">🇮🇳</p>
-              <p className="text-xs text-gray-500 mt-1">{t('profile.madeFor')}</p>
-              <p className="font-bold text-gray-800">{t('profile.india')}</p>
-            </div>
+
           </div>
         </div>
       </div>
-    </div>
-  </SidebarProvider>
+    </SidebarProvider>
   )
 }
 
