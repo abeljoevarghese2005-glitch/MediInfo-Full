@@ -1,3 +1,4 @@
+from prometheus_fastapi_instrumentator import Instrumentator
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .routers import medicines, auth, reminders, ai, appointments, push
@@ -23,6 +24,8 @@ app.include_router(reminders.router, prefix="/reminders", tags=["Reminders"])
 app.include_router(ai.router, prefix="/ai", tags=["AI"])
 app.include_router(appointments.router, prefix="/appointments", tags=["Appointments"])
 app.include_router(push.router, prefix="/push", tags=["Push Notifications"])
+
+Instrumentator().instrument(app).expose(app)
 
 @app.on_event("startup")
 async def startup():
