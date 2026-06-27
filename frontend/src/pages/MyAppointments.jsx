@@ -339,7 +339,7 @@ function MyAppointments() {
           <TopBar />
 
           {/* ── Gradient Hero Banner ── */}
-          <div className="bg-gradient-to-br from-teal-500 via-cyan-500 to-emerald-400 px-4 sm:px-8 pt-8 pb-10 rounded-b-3xl mb-6">
+          <div className="bg-gradient-to-br from-teal-500 via-cyan-500 to-emerald-400 px-4 sm:px-8 pt-8 pb-10 rounded-3xl mb-6">
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-2xl font-semibold tracking-tight text-white">{t('myAppointments.title')}</h1>
