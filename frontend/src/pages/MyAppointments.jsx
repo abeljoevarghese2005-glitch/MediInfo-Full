@@ -228,7 +228,7 @@ function MyAppointments() {
       .from('appointments')
       .select(`
         id, doctor_id, patient_id, appointment_date, appointment_time,
-        status, issue, created_at,
+        status, issue, created_at, cancellation_reason,
         users!appointments_doctor_id_fkey(full_name, specialization)
       `)
       .eq('patient_id', user.id)
@@ -339,7 +339,7 @@ function MyAppointments() {
           <TopBar />
 
           {/* ── Gradient Hero Banner ── */}
-          <div className="bg-gradient-to-br from-teal-500 via-cyan-500 to-emerald-400 px-4 sm:px-8 pt-8 pb-10 rounded-b-3xl mb-6">
+          <div className="bg-gradient-to-br from-teal-500 via-cyan-500 to-emerald-400 px-4 sm:px-8 pt-8 pb-10 rounded-3xl mb-6">
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-2xl font-semibold tracking-tight text-white">{t('myAppointments.title')}</h1>
@@ -467,6 +467,19 @@ function MyAppointments() {
                               {getStatusLabel(appt.status)}
                             </span>
                           </div>
+                          {appt.status === 'cancelled' && (
+                            <p className="text-xs text-red-500 mt-2 ml-14">
+                              {appt.cancellation_reason
+                                ? `Cancelled by doctor: ${appt.cancellation_reason}`
+                                : 'Appointment cancelled.'}
+                            </p>
+                          )}
+                          {(appt.status === 'confirmed' || appt.status === 'accepted') && (
+                            <p className="text-xs text-green-600 mt-2 ml-14">Appointment confirmed successfully!</p>
+                          )}
+                          {appt.status === 'completed' && (
+                            <p className="text-xs text-gray-500 mt-2 ml-14">Appointment completed. Get well soon!</p>
+                          )}
                         </div>
                       ))}
                     </div>

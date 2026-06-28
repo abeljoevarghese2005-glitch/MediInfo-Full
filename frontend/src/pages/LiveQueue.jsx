@@ -293,9 +293,9 @@ function LiveQueue() {
         <div className="lg:ml-56 flex-1 flex flex-col min-w-0">
           <TopBar />
           {/* ── Gradient Hero Banner ── */}
-          <div className="bg-gradient-to-br from-teal-500 via-cyan-500 to-emerald-400 px-4 sm:px-8 pt-8 pb-10 rounded-b-3xl mb-6">
-            <h1 className="text-2xl font-semibold tracking-tight text-white">{t('liveQueue.title') || 'Live Queue'}</h1>
-            <p className="text-cyan-100 text-sm mt-1">{t('liveQueue.subtitle') || 'Real-time updates for your appointment'}</p>
+          <div className="bg-gradient-to-br from-teal-500 via-cyan-500 to-emerald-400 px-4 sm:px-8 pt-8 pb-10 rounded-3xl mb-6">
+            <h1 className="text-2xl font-semibold tracking-tight text-white">Live Queue</h1>
+<p className="text-cyan-100 text-sm mt-1">Real-time updates for your appointment</p>
           </div>
           <div className="flex-1 overflow-y-auto">
             {children}

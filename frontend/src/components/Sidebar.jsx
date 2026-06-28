@@ -93,7 +93,7 @@ function SidebarContent({ onClose }) {
               className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
                 active
                   ? 'bg-green-50 text-emerald-700 border-l-4 border-emerald-600'
-                  : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
+                  : 'text-gray-500 hover:bg-green-100 hover:text-gray-800'
               }`}
             >
               <span className={active ? 'text-emerald-600' : 'text-gray-400'}>{item.icon}</span>
@@ -130,7 +130,7 @@ function Sidebar() {
 
   return (
     <>
-      <div className="hidden lg:flex w-56 bg-white border-r border-gray-100 flex-col py-6 px-3 fixed top-0 left-0 h-full z-20">
+      <div className="hidden lg:flex w-56 bg-green-50 border-r border-gray-100 flex-col py-6 px-3 fixed top-0 left-0 h-full z-20">
         <SidebarContent onClose={() => {}} />
       </div>
 
@@ -142,7 +142,7 @@ function Sidebar() {
       )}
 
       <div
-        className={`fixed top-0 left-0 h-full w-64 bg-white z-30 flex flex-col py-6 px-3 shadow-2xl transition-transform duration-300 ease-in-out lg:hidden ${
+        className={`fixed top-0 left-0 h-full w-64 bg-green-50 z-30 flex flex-col py-6 px-3 shadow-2xl transition-transform duration-300 ease-in-out lg:hidden ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >

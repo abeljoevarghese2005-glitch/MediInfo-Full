@@ -87,7 +87,7 @@ function Profile() {
           <TopBar />
 
           {/* ── Gradient Hero Banner (with user identity) ── */}
-          <div className="bg-gradient-to-br from-teal-500 via-cyan-500 to-emerald-400 px-4 sm:px-8 pt-8 pb-10 rounded-b-3xl mb-6">
+          <div className="bg-gradient-to-br from-teal-500 via-cyan-500 to-emerald-400 px-4 sm:px-8 pt-8 pb-10 rounded-3xl mb-6">
             <div className="flex items-center gap-5">
               <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center text-white text-3xl font-semibold shrink-0">
                 {user.full_name?.charAt(0).toUpperCase() || 'U'}

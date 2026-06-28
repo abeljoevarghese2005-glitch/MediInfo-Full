@@ -295,7 +295,7 @@ function Home() {
           <TopBar />
 
           {/* ── Gradient Hero Banner ── */}
-          <div className="bg-gradient-to-br from-teal-500 via-cyan-500 to-emerald-400 px-4 sm:px-8 pt-8 pb-10 rounded-b-3xl mb-6">
+          <div className="bg-gradient-to-br from-teal-500 via-cyan-500 to-emerald-400 px-4 sm:px-8 pt-8 pb-10 rounded-3xl mb-6">
             <p className="text-cyan-100 text-sm font-medium mb-1">{getGreeting()}</p>
             <h1 className="text-3xl font-semibold tracking-tight text-white mb-5">
               {t('home.greeting', { name: user.full_name?.split(' ')[0] })}
@@ -305,7 +305,7 @@ function Home() {
 
             {/* Search bar */}
             <form onSubmit={handleSearch} className="mt-4">
-              <div className="flex items-center bg-white/20 backdrop-blur-sm border border-white/30 rounded-2xl px-4 py-3 gap-3 max-w-2xl transition-colors hover:bg-white/30">
+              <div className="flex items-center bg-white/20 backdrop-blur-sm border border-white rounded-2xl px-4 py-3 gap-3 max-w-2xl transition-colors hover:bg-white/30">
                 <svg className="w-5 h-5 text-white/70 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0118 0z" />
                 </svg>
@@ -313,7 +313,7 @@ function Home() {
                   type="text"
                   value={query}
                   onChange={e => setQuery(e.target.value)}
-                  placeholder={t('home.searchPlaceholder')}
+                  placeholder="Find doctors / track appointments / view prescriptions"
                   className="flex-1 text-sm text-white placeholder-white/60 focus:outline-none bg-transparent"
                 />
               </div>
