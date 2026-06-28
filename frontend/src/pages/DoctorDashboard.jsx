@@ -144,7 +144,10 @@ function DoctorDashboard() {
       .order('appointment_date', { ascending: true })
 
     if (!error && data) {
-      setAppointments(data.map(a => ({ ...a, patient_name: a.users?.full_name })))
+      setAppointments(data.map(a => ({
+        ...a,
+        patient_name: a.source === 'walkin' ? a.walkin_name : a.users?.full_name,
+      })))
     }
     setLoading(false)
   }
@@ -164,9 +167,18 @@ function DoctorDashboard() {
   const weekTotal = weekAppts.length
   const completionRate = weekTotal > 0 ? Math.round((weekCompleted / weekTotal) * 100) : 0
 
-  // Upcoming: next 5 from today onward
+  // Upcoming: next 5 from today onward, excluding cancelled AND completed
+  // (a "completed" appointment has already happened — it doesn't belong in
+  // an "upcoming" list regardless of its date/time), sorted so the soonest
+  // appointment is always first (date, then time within the same day).
   const upcoming5 = appointments
-    .filter(a => a.appointment_date >= today && a.status !== 'cancelled')
+    .filter(a => a.appointment_date >= today && a.status !== 'cancelled' && a.status !== 'completed')
+    .sort((a, b) => {
+      if (a.appointment_date !== b.appointment_date) {
+        return a.appointment_date.localeCompare(b.appointment_date)
+      }
+      return (a.appointment_time || '').localeCompare(b.appointment_time || '')
+    })
     .slice(0, 5)
 
   // Selected-day appointments: every appointment on the date currently
@@ -337,7 +349,12 @@ function DoctorDashboard() {
                             {appt.patient_name?.charAt(0).toUpperCase() || '?'}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-gray-800 truncate">{appt.patient_name || 'Walk-in Patient'}</p>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <p className="text-sm font-semibold text-gray-800 truncate">{appt.patient_name || 'Walk-in Patient'}</p>
+                              {appt.source === 'walkin' && (
+                                <span className="text-[10px] font-bold bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full shrink-0">Walk-in</span>
+                              )}
+                            </div>
                             <p className="text-xs text-gray-400 truncate">{appt.issue || 'General consultation'}</p>
                           </div>
                           <div className="text-right shrink-0">
