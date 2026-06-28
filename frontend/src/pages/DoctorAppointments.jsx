@@ -85,8 +85,99 @@ function WalkInModal({ doctorId, onClose, onSuccess }) {
   const [time, setTime] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [slots, setSlots] = useState([])
+  const [loadingSlots, setLoadingSlots] = useState(true)
+  const [dayDisabled, setDayDisabled] = useState(false)
 
   const todayIST = new Date().toLocaleDateString('en-CA')
+
+  const DAY_KEYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+
+  useEffect(() => {
+    fetchAvailabilityAndBuildSlots()
+  }, [])
+
+  // Pulls the doctor's current availability fresh from the database every
+  // time the modal opens, so edits made in "Update Availability" are
+  // reflected immediately the next time a walk-in is added.
+  //
+  // IMPORTANT: `users.availability` is stored as a JSON *string* (the
+  // profile page saves it via JSON.stringify), not a JSON/jsonb object —
+  // it must be parsed before indexing into it by day name, otherwise every
+  // lookup silently returns undefined and the modal always falls back to
+  // "no availability set", regardless of what the doctor actually saved.
+  const fetchAvailabilityAndBuildSlots = async () => {
+    setLoadingSlots(true)
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('users')
+        .select('availability')
+        .eq('id', doctorId)
+        .single()
+
+      if (fetchError) throw fetchError
+
+      let parsedAvailability = null
+      if (data?.availability) {
+        try {
+          parsedAvailability = typeof data.availability === 'string'
+            ? JSON.parse(data.availability)
+            : data.availability // already an object, in case the column type changes later
+        } catch {
+          parsedAvailability = null
+        }
+      }
+
+      const dayKey = DAY_KEYS[new Date().getDay()]
+      const dayConfig = parsedAvailability?.[dayKey]
+
+      if (!dayConfig || !dayConfig.enabled || !Array.isArray(dayConfig.ranges) || dayConfig.ranges.length === 0) {
+        setDayDisabled(true)
+        setSlots([])
+        setLoadingSlots(false)
+        return
+      }
+
+      setDayDisabled(false)
+      setSlots(generateSlotsFromRanges(dayConfig.ranges))
+    } catch (err) {
+      setDayDisabled(true)
+      setSlots([])
+    }
+    setLoadingSlots(false)
+  }
+
+  // Builds 15-minute slots across one or more time ranges for today,
+  // skipping any slot earlier than right now, and handling a range that
+  // crosses midnight (e.g. start "20:00" end "00:00" meaning "until midnight").
+  const generateSlotsFromRanges = (ranges) => {
+    const now = new Date()
+    const nowMinutes = now.getHours() * 60 + Math.ceil(now.getMinutes() / 15) * 15
+    const allSlots = new Set()
+
+    ranges.forEach(({ start, end }) => {
+      if (!start || !end) return
+      const [startH, startM] = start.split(':').map(Number)
+      const [endH, endM] = end.split(':').map(Number)
+      let startMinutes = startH * 60 + startM
+      let endMinutes = endH * 60 + endM
+
+      if (endMinutes <= startMinutes) {
+        endMinutes = 24 * 60
+      }
+
+      const effectiveStart = Math.max(startMinutes, nowMinutes)
+
+      for (let m = effectiveStart; m < endMinutes; m += 15) {
+        const h = Math.floor(m / 60)
+        const min = m % 60
+        if (h >= 24) break
+        allSlots.add(`${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`)
+      }
+    })
+
+    return Array.from(allSlots).sort()
+  }
 
   const handleSubmit = async () => {
     if (!name.trim()) { setError('Patient name is required'); return }
@@ -115,23 +206,6 @@ function WalkInModal({ doctorId, onClose, onSuccess }) {
     }
     setSubmitting(false)
   }
-
-  const generateTodaySlots = () => {
-    const slots = []
-    const now = new Date()
-    let h = now.getHours()
-    let m = Math.ceil(now.getMinutes() / 15) * 15
-    if (m === 60) { h += 1; m = 0 }
-    const endH = 21
-    while (h < endH || (h === endH && m === 0)) {
-      slots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`)
-      m += 15
-      if (m === 60) { h += 1; m = 0 }
-    }
-    return slots
-  }
-
-  const slots = generateTodaySlots()
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
@@ -163,8 +237,12 @@ function WalkInModal({ doctorId, onClose, onSuccess }) {
           </div>
           <div>
             <label className="text-xs font-semibold text-gray-500 mb-2 block">Time Slot *</label>
-            {slots.length === 0 ? (
-              <p className="text-xs text-red-400">No slots available for today</p>
+            {loadingSlots ? (
+              <p className="text-xs text-gray-400">Loading available slots…</p>
+            ) : dayDisabled ? (
+              <p className="text-xs text-red-400">You haven't set your availability for today. Update it in your profile to add walk-ins.</p>
+            ) : slots.length === 0 ? (
+              <p className="text-xs text-red-400">No slots remaining for today</p>
             ) : (
               <div className="grid grid-cols-4 gap-2 max-h-36 overflow-y-auto pr-1">
                 {slots.map(s => (
@@ -300,8 +378,6 @@ function DoctorAppointments() {
     limit.setDate(limit.getDate() + 30)
     const limitIST = limit.toLocaleDateString('en-CA')
 
-    // Window query: confirmed/completed/cancelled appointments within the
-    // upcoming 30-day range (this is the normal "schedule" view).
     const windowQuery = supabase
       .from('appointments')
       .select('*, users!appointments_patient_id_fkey(full_name)')
@@ -310,12 +386,6 @@ function DoctorAppointments() {
       .lte('appointment_date', limitIST)
       .order('appointment_date', { ascending: true })
 
-    // Pending query: ALL pending requests, regardless of date.
-    // Pending requests must never be hidden by the date window — a patient
-    // can request a date outside the 30-day range, or a date/timezone
-    // rounding difference can push a "today" request just outside the
-    // window, silently dropping it from this page while it still shows on
-    // the dashboard (which has no date filter at all).
     const pendingQuery = supabase
       .from('appointments')
       .select('*, users!appointments_patient_id_fkey(full_name)')
@@ -327,8 +397,6 @@ function DoctorAppointments() {
 
     if (error || !data) { setLoading(false); return }
 
-    // Merge the two result sets, de-duping by id (a pending appointment that
-    // already falls inside the 30-day window would otherwise be counted twice)
     const combined = [...data]
     if (!pendingError && pendingData) {
       const existingIds = new Set(data.map(a => a.id))
@@ -338,9 +406,6 @@ function DoctorAppointments() {
     const normalized = combined.map(a => ({
       ...a,
       patient_name: a.source === 'walkin' ? a.walkin_name : a.users?.full_name,
-      // NOTE: push notifications (fcm_token) aren't implemented yet — the
-      // `users` table has no fcm_token column. Once that's added, restore
-      // `patient_fcm_token: a.users?.fcm_token` here and in the select above.
     }))
 
     if (prevAppointments.current.length > 0) {
@@ -396,20 +461,6 @@ function DoctorAppointments() {
         .eq('id', id)
       if (error) throw error
       setAppointments(prev => prev.map(a => a.id === id ? { ...a, status: 'cancelled', cancellation_reason: reason } : a))
-      const appt = appointments.find(a => a.id === id)
-      if (appt?.patient_fcm_token) {
-        const { data: { session } } = await supabase.auth.getSession()
-        await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-notification`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
-          body: JSON.stringify({
-            token: appt.patient_fcm_token,
-            title: 'Appointment Cancelled',
-            body: `Your appointment on ${appt.appointment_date} at ${appt.appointment_time} was cancelled. Reason: ${reason}`,
-            data: { type: 'appointment_cancelled', appointment_id: String(id) },
-          }),
-        })
-      }
       addToast('Appointment cancelled.')
       setCancelTarget(null)
     } catch (err) {
