@@ -381,7 +381,12 @@ function DoctorDashboard() {
                   </div>
                 </div>
 
-                {/* Recent Activity */}
+                {/* Recent Activity — commented out for now since it largely
+                    overlaps with Upcoming Appointments / the selected-day
+                    panel while test data is all clustered on one day. The
+                    underlying `recentActivity` data and `activityMeta`
+                    helper above are left untouched — to bring this back,
+                    just uncomment the block below.
                 <div className="bg-white rounded-2xl shadow-sm p-5">
                   <h2 className="text-sm font-bold text-gray-800 mb-4">Recent Activity</h2>
                   {loading ? (
@@ -408,6 +413,7 @@ function DoctorDashboard() {
                     </div>
                   )}
                 </div>
+                */}
 
               </div>
 
