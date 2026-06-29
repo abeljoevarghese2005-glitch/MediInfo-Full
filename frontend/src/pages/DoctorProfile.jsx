@@ -67,6 +67,15 @@ const EMPTY_FORM = {
   license_number: '', time_per_patient: 15,
 }
 
+const EMPTY_BIO_FORM = {
+  description: '',
+  bio: '',
+  services: [],
+  awards: [],
+}
+
+const EMPTY_QUAL = { degree: '', institution: '', year: '' }
+
 function Field({ icon, label, value, editing, field, type = 'text', form, setForm, prefix }) {
   return (
     <div className="flex flex-col gap-1">
@@ -145,7 +154,7 @@ function DoctorProfile() {
   const navigate = useNavigate()
   const { t, i18n } = useTranslation()
   const user = JSON.parse(localStorage.getItem('user') || '{}')
-  const [activeTab, setActiveTab] = useState('info')
+  const [activeTab, setActiveTab] = useState('profile')
   const [profile, setProfile] = useState(null)
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState(EMPTY_FORM)
@@ -156,6 +165,24 @@ function DoctorProfile() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [langSaved, setLangSaved] = useState(false)
+
+  // About & Bio state
+  const [bioForm, setBioForm] = useState(EMPTY_BIO_FORM)
+  const [editingBio, setEditingBio] = useState(false)
+  const [savingBio, setSavingBio] = useState(false)
+  const [savedBio, setSavedBio] = useState(false)
+  const [serviceInput, setServiceInput] = useState('')
+  const [awardInput, setAwardInput] = useState('')
+
+  // Qualifications state
+  const [qualifications, setQualifications] = useState([])
+  const [editingQual, setEditingQual] = useState(false)
+  const [savingQual, setSavingQual] = useState(false)
+  const [savedQual, setSavedQual] = useState(false)
+  const [editQual, setEditQual] = useState([])
+
+  // Stats state
+  const [stats, setStats] = useState({ patients: 0, avgWait: 0, rating: 0, reviews: 0 })
 
   useEffect(() => {
     if (user.role !== 'doctor') { navigate('/home'); return }
@@ -188,6 +215,27 @@ function DoctorProfile() {
         license_number: normalized.license_number || '',
         time_per_patient: normalized.time_per_patient || 15,
       })
+      setBioForm({
+        description: normalized.description || '',
+        bio: normalized.bio || '',
+        services: normalized.services || [],
+        awards: normalized.awards || [],
+      })
+      const quals = normalized.qualifications
+      const parsedQuals = Array.isArray(quals) ? quals : (quals ? JSON.parse(quals) : [])
+      setQualifications(parsedQuals)
+      setEditQual(JSON.parse(JSON.stringify(parsedQuals)))
+
+      // Fetch stats
+      const [{ count: patientCount }, { data: reviewData }, { data: apptData }] = await Promise.all([
+        supabase.from('appointments').select('patient_id', { count: 'exact', head: true }).eq('doctor_id', user.id),
+        supabase.from('reviews').select('rating').eq('doctor_id', user.id),
+        supabase.from('appointments').select('duration_minutes').eq('doctor_id', user.id).eq('status', 'completed'),
+      ])
+      const avgRating = reviewData?.length ? (reviewData.reduce((s, r) => s + r.rating, 0) / reviewData.length).toFixed(1) : 0
+      const avgWait = apptData?.length ? Math.round(apptData.reduce((s, a) => s + (a.duration_minutes || normalized.time_per_patient || 15), 0) / apptData.length) : (normalized.time_per_patient || 15)
+      setStats({ patients: patientCount || 0, avgWait, rating: avgRating, reviews: reviewData?.length || 0 })
+
     } catch { setError('Failed to load profile. Please refresh.') }
     setLoading(false)
   }
@@ -209,7 +257,6 @@ function DoctorProfile() {
         .single()
       if (error) throw error
 
-      // Sync doctor_availability table so booking slots are always up to date
       const availRows = []
       for (const day of DAYS) {
         const d = editAvail[day]
@@ -242,6 +289,64 @@ function DoctorProfile() {
     setSaving(false)
   }
 
+  const handleSaveBio = async () => {
+    setSavingBio(true)
+    setError('')
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({
+          description: bioForm.description || null,
+          bio: bioForm.bio || null,
+          services: bioForm.services.length ? bioForm.services : null,
+          awards: bioForm.awards.length ? bioForm.awards : null,
+        })
+        .eq('id', user.id)
+      if (error) throw error
+      setEditingBio(false)
+      setSavedBio(true)
+      setTimeout(() => setSavedBio(false), 4000)
+    } catch (e) { setError(e.message || 'Failed to save. Please try again.') }
+    setSavingBio(false)
+  }
+
+  const handleSaveQual = async () => {
+    setSavingQual(true)
+    setError('')
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ qualifications: editQual })
+        .eq('id', user.id)
+      if (error) throw error
+      setQualifications(JSON.parse(JSON.stringify(editQual)))
+      setEditingQual(false)
+      setSavedQual(true)
+      setTimeout(() => setSavedQual(false), 4000)
+    } catch (e) { setError(e.message || 'Failed to save. Please try again.') }
+    setSavingQual(false)
+  }
+
+  const addService = () => {
+    const v = serviceInput.trim()
+    if (!v || bioForm.services.includes(v)) return
+    setBioForm(prev => ({ ...prev, services: [...prev.services, v] }))
+    setServiceInput('')
+  }
+  const removeService = (s) => setBioForm(prev => ({ ...prev, services: prev.services.filter(x => x !== s) }))
+
+  const addAward = () => {
+    const v = awardInput.trim()
+    if (!v) return
+    setBioForm(prev => ({ ...prev, awards: [...prev.awards, v] }))
+    setAwardInput('')
+  }
+  const removeAward = (idx) => setBioForm(prev => ({ ...prev, awards: prev.awards.filter((_, i) => i !== idx) }))
+
+  const addQual = () => setEditQual(prev => [...prev, { ...EMPTY_QUAL }])
+  const removeQual = (idx) => setEditQual(prev => prev.filter((_, i) => i !== idx))
+  const updateQual = (idx, field, value) => setEditQual(prev => prev.map((q, i) => i === idx ? { ...q, [field]: value } : q))
+
   const toggleDay = (day) => setEditAvail(prev => ({ ...prev, [day]: { ...prev[day], enabled: !prev[day].enabled } }))
   const updateRange = (day, idx, field, value) => setEditAvail(prev => {
     const ranges = prev[day].ranges.map((r, i) => i === idx ? { ...r, [field]: value } : r)
@@ -261,6 +366,43 @@ function DoctorProfile() {
   const currentTpp = editing ? form.time_per_patient : (profile?.time_per_patient || 15)
   const displayName = profile?.full_name || user.full_name || 'Doctor'
   const initials = displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+
+  const TABS = [
+    { id: 'profile', label: 'Profile' },
+    { id: 'about', label: 'About & Bio' },
+    { id: 'qualifications', label: 'Qualifications' },
+    { id: 'language', label: t('profile.languageTab') },
+  ]
+
+  const showEditButton =
+    (activeTab === 'profile' && !editing) ||
+    (activeTab === 'about' && !editingBio) ||
+    (activeTab === 'qualifications' && !editingQual)
+
+  const showSaveCancel =
+    (activeTab === 'profile' && editing) ||
+    (activeTab === 'about' && editingBio) ||
+    (activeTab === 'qualifications' && editingQual)
+
+  const handleEditClick = () => {
+    if (activeTab === 'profile') startEdit()
+    else if (activeTab === 'about') setEditingBio(true)
+    else if (activeTab === 'qualifications') { setEditQual(JSON.parse(JSON.stringify(qualifications))); setEditingQual(true) }
+  }
+
+  const handleCancelClick = () => {
+    if (activeTab === 'profile') cancelEdit()
+    else if (activeTab === 'about') { setBioForm({ description: profile?.description || '', bio: profile?.bio || '', services: profile?.services || [], awards: profile?.awards || [] }); setEditingBio(false) }
+    else if (activeTab === 'qualifications') { setEditQual(JSON.parse(JSON.stringify(qualifications))); setEditingQual(false) }
+  }
+
+  const handleSaveClick = () => {
+    if (activeTab === 'profile') handleSave()
+    else if (activeTab === 'about') handleSaveBio()
+    else if (activeTab === 'qualifications') handleSaveQual()
+  }
+
+  const isSaving = saving || savingBio || savingQual
 
   if (loading) return (
     <SidebarProvider>
@@ -282,9 +424,9 @@ function DoctorProfile() {
           <DoctorTopBar />
           <div className="flex-1 px-4 sm:px-6 lg:px-10 py-6 max-w-6xl">
 
-            {saved && (
+            {(saved || savedBio || savedQual) && (
               <div className="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl text-sm font-medium flex items-center gap-2">
-                ✅ Profile updated. Patients will see your new availability when booking.
+                ✅ {saved ? 'Profile updated. Patients will see your new availability when booking.' : 'Changes saved successfully.'}
               </div>
             )}
             {error && (
@@ -295,47 +437,64 @@ function DoctorProfile() {
               ← Back to dashboard
             </button>
 
+            {/* Header card */}
             <div className="relative bg-gradient-to-br from-slate-50 to-blue-50/60 border border-gray-100 rounded-3xl p-6 mb-6 shadow-sm overflow-hidden">
-              <div className="relative flex items-center gap-5">
+              <div className="relative flex items-start gap-5">
                 <div className="w-20 h-20 bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-2xl flex items-center justify-center text-white font-black text-2xl shadow-md shrink-0">{initials}</div>
                 <div className="flex-1 min-w-0">
                   <h1 className="text-2xl font-black text-gray-900">Dr. {displayName}</h1>
                   <p className="text-sm text-cyan-600 font-semibold">{profile?.specialization || 'General Physician'} · {profile?.experience_years || 0} yrs</p>
                   {profile?.clinic_name && <p className="text-sm text-gray-500 mt-0.5">{profile.clinic_name}</p>}
+
+                  {/* Stats row */}
+                  <div className="flex flex-wrap gap-4 mt-4">
+                    {[
+                      { label: 'Patients', value: stats.patients },
+                      { label: 'Rating', value: stats.rating > 0 ? `${stats.rating} ★` : '—' },
+                      { label: 'Avg. wait', value: `${stats.avgWait} min` },
+                      { label: 'Reviews', value: stats.reviews },
+                    ].map(({ label, value }) => (
+                      <div key={label} className="flex flex-col items-center bg-white border border-gray-100 rounded-xl px-4 py-2 shadow-sm min-w-[70px]">
+                        <span className="text-base font-black text-gray-900">{value}</span>
+                        <span className="text-xs text-gray-400 font-medium">{label}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                {activeTab === 'info' && (
-                  !editing ? (
-                    <button onClick={startEdit} className="shrink-0 bg-cyan-500 hover:bg-cyan-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-sm transition-colors">Edit profile</button>
-                  ) : (
-                    <div className="flex gap-2 shrink-0">
-                      <button onClick={cancelEdit} className="border border-gray-200 bg-white text-gray-600 px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-gray-50">Cancel</button>
-                      <button onClick={handleSave} disabled={saving} className="bg-cyan-500 hover:bg-cyan-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-sm disabled:opacity-60">
-                        {saving ? 'Saving…' : 'Save changes'}
+
+                {/* Edit / Save / Cancel buttons — hidden on language tab */}
+                {activeTab !== 'language' && (
+                  <div className="shrink-0">
+                    {showEditButton && (
+                      <button onClick={handleEditClick} className="bg-cyan-500 hover:bg-cyan-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-sm transition-colors">
+                        Edit profile
                       </button>
-                    </div>
-                  )
+                    )}
+                    {showSaveCancel && (
+                      <div className="flex gap-2">
+                        <button onClick={handleCancelClick} className="border border-gray-200 bg-white text-gray-600 px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-gray-50">Cancel</button>
+                        <button onClick={handleSaveClick} disabled={isSaving} className="bg-cyan-500 hover:bg-cyan-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-sm disabled:opacity-60">
+                          {isSaving ? 'Saving…' : 'Save changes'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
 
             {/* Tabs */}
-            <div className="flex gap-2 mb-6">
-              {['info', 'language'].map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium ${
-                    activeTab === tab
-                      ? 'bg-cyan-500 text-white'
-                      : 'bg-white text-gray-600 hover:bg-gray-100'
-                  }`}
-                >
-                  {tab === 'language' ? t('profile.languageTab') : t('doctorProfile.tabs.info')}
+            <div className="flex gap-2 mb-6 flex-wrap">
+              {TABS.map(({ id, label }) => (
+                <button key={id} onClick={() => setActiveTab(id)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === id ? 'bg-cyan-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-100'}`}>
+                  {label}
                 </button>
               ))}
             </div>
 
-            {activeTab === 'info' && (
+            {/* Profile tab */}
+            {activeTab === 'profile' && (
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 items-start">
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                   <h2 className="text-base font-black text-gray-800 mb-5">Basic information</h2>
@@ -376,30 +535,172 @@ function DoctorProfile() {
               </div>
             )}
 
+            {/* About & Bio tab */}
+            {activeTab === 'about' && (
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 items-start">
+                {/* Short description + Bio */}
+                <div className="flex flex-col gap-5">
+                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                    <h2 className="text-base font-black text-gray-800 mb-1">Short description</h2>
+                    <p className="text-xs text-gray-400 mb-4">Headline shown on your public profile.</p>
+                    {editingBio ? (
+                      <textarea rows={3} value={bioForm.description}
+                        onChange={e => setBioForm(prev => ({ ...prev, description: e.target.value }))}
+                        placeholder="e.g. Compassionate cardiologist focused on preventive care and patient education."
+                        className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-cyan-300 resize-none" />
+                    ) : (
+                      <p className="text-sm text-gray-800 bg-gray-50 rounded-xl px-3 py-2.5 min-h-[72px]">
+                        {bioForm.description || <span className="text-gray-300">No description added yet.</span>}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                    <h2 className="text-base font-black text-gray-800 mb-4">Biography</h2>
+                    {editingBio ? (
+                      <textarea rows={6} value={bioForm.bio}
+                        onChange={e => setBioForm(prev => ({ ...prev, bio: e.target.value }))}
+                        placeholder="Write a detailed biography about your experience, specializations, research, etc."
+                        className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-cyan-300 resize-none" />
+                    ) : (
+                      <p className="text-sm text-gray-800 bg-gray-50 rounded-xl px-3 py-2.5 min-h-[120px] whitespace-pre-wrap">
+                        {bioForm.bio || <span className="text-gray-300">No biography added yet.</span>}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Services + Awards */}
+                <div className="flex flex-col gap-5">
+                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                    <h2 className="text-base font-black text-gray-800 mb-4">Services offered</h2>
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {bioForm.services.map(s => (
+                        <span key={s} className="flex items-center gap-1.5 bg-cyan-50 border border-cyan-100 text-cyan-700 text-xs font-semibold px-3 py-1.5 rounded-full">
+                          {s}
+                          {editingBio && (
+                            <button onClick={() => removeService(s)} className="text-cyan-400 hover:text-red-500 transition-colors">
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
+                            </button>
+                          )}
+                        </span>
+                      ))}
+                      {bioForm.services.length === 0 && !editingBio && (
+                        <span className="text-sm text-gray-300">No services added yet.</span>
+                      )}
+                    </div>
+                    {editingBio && (
+                      <div className="flex gap-2">
+                        <input value={serviceInput} onChange={e => setServiceInput(e.target.value)}
+                          onKeyDown={e => e.key === 'Enter' && addService()}
+                          placeholder="Add a service and press Enter"
+                          className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-300" />
+                        <button onClick={addService} className="bg-cyan-500 hover:bg-cyan-600 text-white w-9 h-9 rounded-xl flex items-center justify-center shrink-0">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" /></svg>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                    <h2 className="text-base font-black text-gray-800 mb-4">Awards & recognition</h2>
+                    <div className="space-y-2 mb-3">
+                      {bioForm.awards.map((a, idx) => (
+                        <div key={idx} className="flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-2.5">
+                          <span className="text-cyan-500 text-base">🏆</span>
+                          <span className="text-sm text-gray-800 flex-1">{a}</span>
+                          {editingBio && (
+                            <button onClick={() => removeAward(idx)} className="text-gray-300 hover:text-red-400 transition-colors">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      {bioForm.awards.length === 0 && !editingBio && (
+                        <span className="text-sm text-gray-300">No awards added yet.</span>
+                      )}
+                    </div>
+                    {editingBio && (
+                      <div className="flex gap-2">
+                        <input value={awardInput} onChange={e => setAwardInput(e.target.value)}
+                          onKeyDown={e => e.key === 'Enter' && addAward()}
+                          placeholder="Add an award and press Enter"
+                          className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-300" />
+                        <button onClick={addAward} className="bg-cyan-500 hover:bg-cyan-600 text-white w-9 h-9 rounded-xl flex items-center justify-center shrink-0">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" /></svg>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Qualifications tab */}
+            {activeTab === 'qualifications' && (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 max-w-3xl">
+                <h2 className="text-base font-black text-gray-800 mb-5">Qualifications & education</h2>
+                <div className="space-y-3">
+                  {(editingQual ? editQual : qualifications).map((q, idx) => (
+                    <div key={idx} className="flex items-center gap-3 bg-gray-50 rounded-2xl px-4 py-3">
+                      <div className="w-9 h-9 bg-cyan-500 rounded-full flex items-center justify-center shrink-0">
+                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l9-5-9-5-9 5 9 5z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l6.16-3.422A12.083 12.083 0 0112 21.5 12.083 12.083 0 015.84 10.578L12 14z" /></svg>
+                      </div>
+                      {editingQual ? (
+                        <>
+                          <input value={q.degree} onChange={e => updateQual(idx, 'degree', e.target.value)}
+                            placeholder="Degree (e.g. MBBS)"
+                            className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-300 bg-white" />
+                          <input value={q.institution} onChange={e => updateQual(idx, 'institution', e.target.value)}
+                            placeholder="Institution"
+                            className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-300 bg-white" />
+                          <input value={q.year} onChange={e => updateQual(idx, 'year', e.target.value)}
+                            placeholder="Year"
+                            className="w-20 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-300 bg-white" />
+                          <button onClick={() => removeQual(idx)} className="text-gray-300 hover:text-red-400 transition-colors shrink-0">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
+                          </button>
+                        </>
+                      ) : (
+                        <div className="flex-1 flex items-center gap-3">
+                          <span className="text-sm font-bold text-gray-800">{q.degree}</span>
+                          <span className="text-gray-300">·</span>
+                          <span className="text-sm text-gray-600">{q.institution}</span>
+                          <span className="text-gray-300">·</span>
+                          <span className="text-sm text-gray-500">{q.year}</span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {qualifications.length === 0 && !editingQual && (
+                    <p className="text-sm text-gray-300 px-2">No qualifications added yet.</p>
+                  )}
+                </div>
+                {editingQual && (
+                  <button onClick={addQual} className="mt-4 flex items-center gap-2 text-sm text-cyan-600 font-semibold hover:text-cyan-700">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" /></svg>
+                    Add qualification
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Language tab */}
             {activeTab === 'language' && (
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 max-w-2xl space-y-5">
                 <div>
                   <h2 className="font-semibold text-gray-700 text-lg">{t('profile.languageTitle')}</h2>
                   <p className="text-sm text-gray-500 mt-1">{t('profile.languageSubtitle')}</p>
                 </div>
-
                 {langSaved && (
                   <div className="bg-green-50 text-green-600 px-4 py-3 rounded-lg text-sm">
                     ✅ {t('profile.languageSaved')}
                   </div>
                 )}
-
                 <div className="grid grid-cols-2 gap-3">
                   {LANGUAGES.map(({ code, label }) => (
-                    <button
-                      key={code}
-                      onClick={() => handleLanguageChange(code)}
-                      className={`px-4 py-3 rounded-xl text-sm font-medium border transition-colors ${
-                        i18n.language === code
-                          ? 'bg-cyan-500 text-white border-cyan-500'
-                          : 'bg-gray-50 text-gray-700 border-gray-200 hover:border-cyan-300'
-                      }`}
-                    >
+                    <button key={code} onClick={() => handleLanguageChange(code)}
+                      className={`px-4 py-3 rounded-xl text-sm font-medium border transition-colors ${i18n.language === code ? 'bg-cyan-500 text-white border-cyan-500' : 'bg-gray-50 text-gray-700 border-gray-200 hover:border-cyan-300'}`}>
                       {label}
                     </button>
                   ))}

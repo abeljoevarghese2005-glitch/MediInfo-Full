@@ -4,6 +4,7 @@ import { supabase, initSupabaseStorage } from './lib/supabase'
 import { App as CapApp } from '@capacitor/app'
 import './i18n'
 
+const PatientDoctorProfile = lazy(() => import('./pages/PatientDoctorProfile'))
 const Landing = lazy(() => import('./pages/Landing'))
 const Login = lazy(() => import('./pages/Login'))
 const Register = lazy(() => import('./pages/Register'))
@@ -180,6 +181,7 @@ function App() {
           <Route path="/doctor-live-queue" element={<DoctorRoute><DoctorLiveQueue /></DoctorRoute>} />
           <Route path="/doctor-profile" element={<DoctorRoute><DoctorProfile /></DoctorRoute>} />
           <Route path="/doctor-prescriptions" element={<DoctorRoute><DoctorPrescriptions /></DoctorRoute>} />
+          <Route path="/doctor/:id" element={<PatientRoute><PatientDoctorProfile /></PatientRoute>} />       
         </Routes>
       </Suspense>
     </BrowserRouter>

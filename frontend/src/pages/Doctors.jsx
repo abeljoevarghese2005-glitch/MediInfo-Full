@@ -8,11 +8,6 @@ import LocationBar from '../components/LocationBar'
 import { supabase } from '../lib/supabase'
 import { translateSpecialization } from '../utils/specializations'
 
-// Used for the filter chips, which need the "All" option in addition to
-// the real specializations. The translation lookup itself now comes from
-// the shared src/utils/specializations.js helper (single source of truth),
-// so this array is only used here for rendering the chips and as the
-// filter state values — not for translating doctor.specialization.
 const SPECIALIZATIONS = [
   { value: 'All', key: 'all' },
   { value: 'General Physician', key: 'generalPhysician' },
@@ -84,7 +79,6 @@ function Doctors() {
   const locationRef = useRef(userLocation)
   useEffect(() => { locationRef.current = userLocation }, [userLocation])
 
-  // ✅ Keep a ref to the currently selected doctor/date so realtime callbacks always see latest values
   const selectedDoctorRef = useRef(selectedDoctor)
   const selectedDateRef = useRef(selectedDate)
   useEffect(() => { selectedDoctorRef.current = selectedDoctor }, [selectedDoctor])
@@ -219,14 +213,12 @@ function Doctors() {
     fetchDoctors(loc, filter)
   }, [filter, fetchDoctors])
 
-  // ✅ NEW: Realtime subscriptions — instant sync when doctors update profile or availability
   useEffect(() => {
     const availabilityChannel = supabase
       .channel('patient-doctor-availability')
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'doctor_availability',
       }, (payload) => {
-        // If the patient currently has a booking modal open for this doctor, re-fetch slots instantly
         const doc = selectedDoctorRef.current
         const date = selectedDateRef.current
         const changedDoctorId = payload.new?.doctor_id || payload.old?.doctor_id
@@ -242,13 +234,11 @@ function Doctors() {
         event: 'UPDATE', schema: 'public', table: 'users',
         filter: `role=eq.doctor`,
       }, (payload) => {
-        // Update fee/experience/name instantly in the doctors list without a full refetch
         setDoctors(prev => prev.map(d =>
           d.id === payload.new.id
-            ? { ...d, ...payload.new, distance_km: d.distance_km } // preserve distance_km, it's not in users table
+            ? { ...d, ...payload.new, distance_km: d.distance_km }
             : d
         ))
-        // Also update the selected doctor in the open modal, if relevant
         setSelectedDoctor(prev => (prev && prev.id === payload.new.id) ? { ...prev, ...payload.new, distance_km: prev.distance_km } : prev)
       })
       .subscribe()
@@ -313,7 +303,6 @@ function Doctors() {
         <div className="lg:ml-56 flex-1 flex flex-col min-w-0">
           <TopBar />
 
-          {/* ── Gradient Hero Banner ── */}
           <div className="bg-gradient-to-br from-teal-500 via-cyan-500 to-emerald-400 px-4 sm:px-8 pt-8 pb-10 rounded-3xl mb-6">
             <h1 className="text-2xl font-semibold tracking-tight text-white">{t('doctors.title')}</h1>
             <p className="text-cyan-100 text-sm mt-1">{t('doctors.subtitle')}</p>
@@ -332,7 +321,6 @@ function Doctors() {
               </div>
             )}
 
-            {/* ── Specialization Filter Chips ── */}
             <div className="flex gap-2 overflow-x-auto pb-2 mb-6 scrollbar-hide">
               {SPECIALIZATIONS.map(({ value, key }) => (
                 <button key={value} onClick={() => setFilter(value)}
@@ -346,7 +334,6 @@ function Doctors() {
               ))}
             </div>
 
-            {/* ── Doctor List ── */}
             {loading ? (
               <div className="text-center py-16 text-gray-400">{t('doctors.loadingDoctors')}</div>
             ) : doctors.length === 0 ? (
@@ -361,7 +348,11 @@ function Doctors() {
                   <p className="text-xs text-gray-400 mb-1">{t('doctors.sortedByDistance')}</p>
                 )}
                 {doctors.map(doctor => (
-                  <div key={doctor.id} className="bg-white rounded-2xl shadow-sm p-5">
+                  <div
+                    key={doctor.id}
+                    className="bg-white rounded-2xl shadow-sm p-5 cursor-pointer hover:shadow-md transition-shadow"
+                    onClick={() => navigate(`/doctor/${doctor.id}`)}
+                  >
                     <div className="flex items-center gap-4">
                       <div className={`w-14 h-14 ${getColor(doctor.full_name)} rounded-full flex items-center justify-center text-white text-xl font-semibold shrink-0`}>
                         {getInitials(doctor.full_name)}
@@ -379,7 +370,8 @@ function Doctors() {
                       <div className="text-right shrink-0">
                         <p className="text-emerald-700 font-bold text-sm tracking-tight">₹{doctor.consultation_fee || 500}</p>
                         <button
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation()
                             setSelectedDoctor(doctor)
                             setError('')
                             setSelectedDate('')
@@ -395,12 +387,11 @@ function Doctors() {
                 ))}
               </div>
             )}
-
           </div>
         </div>
       </div>
 
-      {/* ── Booking Modal ── */}
+      {/* Booking Modal */}
       {selectedDoctor && (
         <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 px-4 pb-6 sm:pb-0">
           <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto">
@@ -440,10 +431,7 @@ function Doctors() {
                 <p className="text-red-400 text-xs">{t('doctors.noAvailability')}</p>
               ) : (
                 <>
-                  <div
-                    className="overflow-y-auto pr-1"
-                    style={{ maxHeight: `${slotGridMaxHeight}px` }}
-                  >
+                  <div className="overflow-y-auto pr-1" style={{ maxHeight: `${slotGridMaxHeight}px` }}>
                     <div className="grid grid-cols-4 gap-2">
                       {availableSlots.map(({ time, past }) => {
                         const isBooked = bookedSlots.includes(time)
@@ -490,7 +478,6 @@ function Doctors() {
           </div>
         </div>
       )}
-
     </SidebarProvider>
   )
 }
