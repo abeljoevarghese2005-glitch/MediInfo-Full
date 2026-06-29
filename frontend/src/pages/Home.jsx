@@ -307,7 +307,8 @@ function Home() {
             <form onSubmit={handleSearch} className="mt-4">
               <div className="flex items-center bg-white/20 backdrop-blur-sm border border-white rounded-2xl px-4 py-3 gap-3 max-w-2xl transition-colors hover:bg-white/30">
                 <svg className="w-5 h-5 text-white/70 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 1010.5 3a7.5 7.5 0 005.303 12.803z" />
+                <circle cx="11" cy="11" r="8" strokeWidth={2} />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" strokeWidth={2} strokeLinecap="round" />
                 </svg>
                 <input
                   type="text"
