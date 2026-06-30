@@ -142,8 +142,12 @@ function BookingModal({ doctor, idx, onClose, onBooked }) {
 
 function DoctorCard({ doctor, idx, onBook, distanceMap }) {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm hover:shadow-md transition-shadow">
+    <div
+      onClick={() => navigate(`/doctor/${doctor.id}`)}
+      className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+    >
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3">
           <div className={`w-11 h-11 ${getColor(doctor.full_name)} rounded-full flex items-center justify-center text-white font-bold text-sm`}>
@@ -171,8 +175,10 @@ function DoctorCard({ doctor, idx, onBook, distanceMap }) {
 
       <div className="flex items-center justify-between">
         <span className="text-xs text-gray-500">{mockSlot(t, idx)}</span>
-        <button onClick={() => onBook(doctor, idx)}
-          className="bg-emerald-700 text-white text-xs font-bold tracking-tight px-4 py-2 rounded-xl transition-colors hover:bg-emerald-500">
+        <button
+          onClick={(e) => { e.stopPropagation(); onBook(doctor, idx) }}
+          className="bg-emerald-700 text-white text-xs font-bold tracking-tight px-4 py-2 rounded-xl transition-colors hover:bg-emerald-500"
+        >
           {t('home.bookNow')}
         </button>
       </div>
