@@ -63,15 +63,13 @@ function DoctorDashboard() {
   const [appointments, setAppointments] = useState([])
   const [loading, setLoading] = useState(true)
   const [nearbyPatients, setNearbyPatients] = useState([])
+  const [ratingData, setRatingData] = useState({ avg: null, count: 0 })
 
   const todayStr = new Date().toLocaleDateString('en-CA')
   const [weekStart, setWeekStart] = useState(() => getWeekStart(new Date()))
   const [selectedDateStr, setSelectedDateStr] = useState(todayStr)
   const weekDays = getWeekDays(weekStart)
 
-  // Boost Visibility card: shown only once every 30 days (rolling from last
-  // dismissal), and can be closed by the doctor. Re-appears automatically
-  // once the cooldown window has passed since the last time it was closed.
   const [showBoostCard, setShowBoostCard] = useState(false)
 
   useEffect(() => {
@@ -109,6 +107,7 @@ function DoctorDashboard() {
   useEffect(() => {
     if (user.role !== 'doctor') { navigate('/home'); return }
     fetchAppointments()
+    fetchRating()
 
     const channel = supabase
       .channel('doctor-appointments')
@@ -118,8 +117,32 @@ function DoctorDashboard() {
       }, () => fetchAppointments())
       .subscribe()
 
-    return () => supabase.removeChannel(channel)
+    const reviewChannel = supabase
+      .channel('doctor-reviews')
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'reviews',
+        filter: `doctor_id=eq.${user.id}`,
+      }, () => fetchRating())
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+      supabase.removeChannel(reviewChannel)
+    }
   }, [])
+
+  const fetchRating = async () => {
+    const { data } = await supabase
+      .from('reviews')
+      .select('rating')
+      .eq('doctor_id', user.id)
+    if (data && data.length > 0) {
+      const avg = data.reduce((s, r) => s + r.rating, 0) / data.length
+      setRatingData({ avg: avg.toFixed(1), count: data.length })
+    } else {
+      setRatingData({ avg: null, count: 0 })
+    }
+  }
 
   const handleLocationReady = useCallback(async (loc) => {
     if (!loc) return
@@ -153,9 +176,26 @@ function DoctorDashboard() {
   }
 
   const today = new Date().toLocaleDateString('en-CA')
-  const todayCount = appointments.filter(a => a.appointment_date === today).length
+  const yesterday = (() => { const d = new Date(); d.setDate(d.getDate() - 1); return d.toLocaleDateString('en-CA') })()
+
+  const todayCount = appointments.filter(a => a.appointment_date === today && (a.status === 'confirmed' || a.status === 'completed')).length
   const pendingCount = appointments.filter(a => a.status === 'pending').length
-  const confirmedCount = appointments.filter(a => a.status === 'confirmed').length
+
+  // % change in completed appointments: today vs yesterday
+  const todayCompletedCount = appointments.filter(a => a.appointment_date === today && a.status === 'completed').length
+  const yesterdayCompletedCount = appointments.filter(a => a.appointment_date === yesterday && a.status === 'completed').length
+  let patientsChangeLabel = null
+  let patientsChangeColor = 'text-gray-400'
+  if (yesterdayCompletedCount === 0 && todayCompletedCount === 0) {
+    patientsChangeLabel = 'No change'
+  } else if (yesterdayCompletedCount === 0) {
+    patientsChangeLabel = '+100%'
+    patientsChangeColor = 'text-green-500'
+  } else {
+    const pct = Math.round(((todayCompletedCount - yesterdayCompletedCount) / yesterdayCompletedCount) * 100)
+    patientsChangeLabel = `${pct >= 0 ? '+' : ''}${pct}%`
+    patientsChangeColor = pct >= 0 ? 'text-green-500' : 'text-red-500'
+  }
 
   // Weekly stats
   const weekStartStr = weekStart.toLocaleDateString('en-CA')
@@ -167,10 +207,21 @@ function DoctorDashboard() {
   const weekTotal = weekAppts.length
   const completionRate = weekTotal > 0 ? Math.round((weekCompleted / weekTotal) * 100) : 0
 
-  // Upcoming: next 5 from today onward, excluding cancelled AND completed
-  // (a "completed" appointment has already happened — it doesn't belong in
-  // an "upcoming" list regardless of its date/time), sorted so the soonest
-  // appointment is always first (date, then time within the same day).
+  // "Accepted" card: now correctly scoped to the CURRENT calendar week
+  // (not the calendar widget's selected week — always real "this week")
+  const realWeekStart = getWeekStart(new Date()).toLocaleDateString('en-CA')
+  const realWeekEndDate = getWeekStart(new Date())
+  realWeekEndDate.setDate(realWeekEndDate.getDate() + 6)
+  const realWeekEnd = realWeekEndDate.toLocaleDateString('en-CA')
+  const acceptedThisWeekCount = appointments.filter(a =>
+    a.status === 'confirmed' &&
+    a.appointment_date >= realWeekStart &&
+    a.appointment_date <= realWeekEnd
+  ).length
+
+  // Used elsewhere (Profile stats panel) — total ever confirmed
+  const confirmedCount = appointments.filter(a => a.status === 'confirmed').length
+
   const upcoming5 = appointments
     .filter(a => a.appointment_date >= today && a.status !== 'cancelled' && a.status !== 'completed')
     .sort((a, b) => {
@@ -181,13 +232,10 @@ function DoctorDashboard() {
     })
     .slice(0, 5)
 
-  // Selected-day appointments: every appointment on the date currently
-  // selected in the calendar widget, shown in the panel below it.
   const selectedDayAppointments = appointments
     .filter(a => a.appointment_date === selectedDateStr)
     .sort((a, b) => (a.appointment_time || '').localeCompare(b.appointment_time || ''))
 
-  // Recent activity: last 5 non-pending
   const recentActivity = [...appointments]
     .filter(a => a.status !== 'pending')
     .sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at))
@@ -275,12 +323,15 @@ function DoctorDashboard() {
 
             {/* Stat Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <StatCard icon="📅" value={todayCount} label="Today's patients" sub="+12%" subColor="text-green-500" />
+              <StatCard icon="📅" value={todayCount} label="Today's patients"
+                sub={patientsChangeLabel} subColor={patientsChangeColor} />
               <StatCard icon="⚡" value={pendingCount} label="Pending requests"
                 sub={pendingCount > 0 ? 'Action needed' : 'All clear'}
                 subColor={pendingCount > 0 ? 'text-amber-500' : 'text-green-500'} />
-              <StatCard icon="👥" value={confirmedCount} label="Accepted" sub="This week" subColor="text-cyan-500" />
-              <StatCard icon="⭐" value={user.rating || 4.9} label="Rating" sub="232 reviews" subColor="text-gray-400" />
+              <StatCard icon="👥" value={acceptedThisWeekCount} label="Accepted" sub="This week" subColor="text-cyan-500" />
+              <StatCard icon="⭐" value={ratingData.avg ?? '—'} label="Rating"
+                sub={ratingData.count > 0 ? `${ratingData.count} reviews` : 'No reviews yet'}
+                subColor="text-gray-400" />
             </div>
 
             {/* Quick Actions */}
@@ -392,45 +443,11 @@ function DoctorDashboard() {
                       <p className="text-xs text-gray-400 mt-1">Completion rate</p>
                     </div>
                     <div className="text-center bg-amber-50 rounded-xl py-4">
-                      <p className="text-2xl font-black text-amber-500">{user.rating || '4.9'} ⭐</p>
+                      <p className="text-2xl font-black text-amber-500">{ratingData.avg ?? '—'} ⭐</p>
                       <p className="text-xs text-gray-400 mt-1">Avg rating</p>
                     </div>
                   </div>
                 </div>
-
-                {/* Recent Activity — commented out for now since it largely
-                    overlaps with Upcoming Appointments / the selected-day
-                    panel while test data is all clustered on one day. The
-                    underlying `recentActivity` data and `activityMeta`
-                    helper above are left untouched — to bring this back,
-                    just uncomment the block below.
-                <div className="bg-white rounded-2xl shadow-sm p-5">
-                  <h2 className="text-sm font-bold text-gray-800 mb-4">Recent Activity</h2>
-                  {loading ? (
-                    <div className="text-sm text-gray-300 text-center py-4">Loading…</div>
-                  ) : recentActivity.length === 0 ? (
-                    <div className="text-sm text-gray-300 text-center py-4">No recent activity</div>
-                  ) : (
-                    <div className="space-y-2">
-                      {recentActivity.map(appt => {
-                        const { icon, color, bg, label } = activityMeta(appt.status)
-                        return (
-                          <div key={appt.id} className={`flex items-center gap-3 px-3 py-2.5 ${bg} rounded-xl`}>
-                            <span className="text-base shrink-0">{icon}</span>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-gray-800 truncate">
-                                {appt.patient_name || 'Walk-in Patient'}
-                              </p>
-                              <p className="text-xs text-gray-400">{fmtDate(appt.appointment_date)} · {appt.appointment_time}</p>
-                            </div>
-                            <span className={`text-xs font-bold shrink-0 ${color}`}>{label}</span>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
-                */}
 
               </div>
 
@@ -514,10 +531,7 @@ function DoctorDashboard() {
                   )}
                 </div>
 
-                {/* Selected-day appointments panel — replaces the old
-                    always-visible Boost Visibility card. Matches the height
-                    of the Recent Activity panel, scrolls internally if the
-                    selected day has more appointments than fit. */}
+                {/* Selected-day appointments panel */}
                 <div className="bg-white rounded-2xl shadow-sm p-5 flex flex-col" style={{ height: '320px' }}>
                   <div className="flex items-center justify-between mb-3 shrink-0">
                     <h3 className="text-sm font-bold text-gray-800">{fmtSelectedDateLabel(selectedDateStr)}</h3>
@@ -553,8 +567,7 @@ function DoctorDashboard() {
                   </div>
                 </div>
 
-                {/* Boost Visibility — only shown once every 30 days since
-                    last dismissal, dismissible via the close button */}
+                {/* Boost Visibility */}
                 {showBoostCard && (
                   <div className="relative bg-gradient-to-br from-cyan-500 to-cyan-700 rounded-2xl p-5 text-white">
                     <button onClick={dismissBoostCard}
