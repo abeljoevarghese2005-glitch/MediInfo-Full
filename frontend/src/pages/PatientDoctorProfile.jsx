@@ -11,7 +11,16 @@ const avatarColors = ['bg-cyan-500', 'bg-purple-500', 'bg-green-500', 'bg-orange
 const getColor = (name) => avatarColors[(name?.charCodeAt(0) || 0) % avatarColors.length]
 const getInitials = (name) => name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'D'
 
+const GRADIENT_BG = 'bg-gradient-to-br from-teal-500 via-cyan-500 to-emerald-400'
+const GRADIENT_BTN = 'bg-gradient-to-r from-teal-500 via-cyan-500 to-emerald-500 hover:opacity-90 text-white'
+
 const DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+
+const MODE_META = {
+  in_clinic: { label: 'In-clinic', icon: '🏥' },
+  video: { label: 'Video', icon: '🎥' },
+  home_visit: { label: 'Home visit', icon: '🏠' },
+}
 
 function generateSlots(start, end, duration = 15) {
   const slots = []
@@ -49,7 +58,7 @@ function ReviewBar({ label, pct }) {
     <div className="flex items-center gap-2">
       <span className="text-xs text-gray-500 w-3 shrink-0">{label}</span>
       <div className="flex-1 bg-gray-100 rounded-full h-2">
-        <div className="bg-emerald-500 h-2 rounded-full transition-all" style={{ width: `${pct}%` }} />
+        <div className="bg-gradient-to-r from-teal-500 to-emerald-400 h-2 rounded-full transition-all" style={{ width: `${pct}%` }} />
       </div>
       <span className="text-xs text-gray-400 w-7 text-right shrink-0">{pct}%</span>
     </div>
@@ -73,6 +82,9 @@ function PatientDoctorProfile() {
   const [slots, setSlots] = useState([])
   const [bookedSlots, setBookedSlots] = useState([])
   const [slotsLoading, setSlotsLoading] = useState(false)
+
+  // Consultation mode — real, doctor-set (in_clinic / video / home_visit)
+  const [consultationType, setConsultationType] = useState('in_clinic')
 
   // Stats
   const [stats, setStats] = useState({ patients: 0, avgWait: 0, rating: 0, reviews: 0 })
@@ -113,6 +125,25 @@ function PatientDoctorProfile() {
     if (selectedDate && doctor) fetchSlots(selectedDate)
     else { setSlots([]); setBookedSlots([]) }
   }, [selectedDate, doctor])
+
+  // Set default consultation mode once doctor data is loaded — based on what doctor actually offers
+  useEffect(() => {
+    if (doctor) {
+      const modes = getAvailableModes(doctor)
+      if (modes.length > 0 && !modes.includes(consultationType)) {
+        setConsultationType(modes[0])
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [doctor])
+
+  const getAvailableModes = (d) => {
+    const modes = []
+    if (d?.offers_in_clinic !== false) modes.push('in_clinic')
+    if (d?.offers_video) modes.push('video')
+    if (d?.offers_home_visit) modes.push('home_visit')
+    return modes
+  }
 
   const fetchDoctor = async () => {
     setLoading(true)
@@ -242,6 +273,7 @@ function PatientDoctorProfile() {
         appointment_time: selectedTime,
         issue: issue || null,
         status: 'pending',
+        consultation_type: consultationType,
       })
       if (bookErr) throw bookErr
       setBookSuccess(`Appointment request sent to Dr. ${doctor.full_name}!`)
@@ -280,6 +312,8 @@ function PatientDoctorProfile() {
     ? doctor.qualifications
     : (doctor?.qualifications ? (() => { try { return JSON.parse(doctor.qualifications) } catch { return [] } })() : [])
 
+  const availableModes = doctor ? getAvailableModes(doctor) : []
+
   const timeAgo = (dateStr) => {
     const diff = Date.now() - new Date(dateStr).getTime()
     const days = Math.floor(diff / 86400000)
@@ -310,7 +344,7 @@ function PatientDoctorProfile() {
           <TopBar />
           <div className="flex items-center justify-center flex-1 flex-col gap-3">
             <p className="text-gray-500">{error || 'Doctor not found.'}</p>
-            <button onClick={() => navigate('/doctors')} className="text-emerald-600 underline text-sm">Back to doctors</button>
+            <button onClick={() => navigate('/doctors')} className="text-cyan-600 underline text-sm">Back to doctors</button>
           </div>
         </div>
       </div>
@@ -333,13 +367,13 @@ function PatientDoctorProfile() {
             {/* Header card */}
             <div className="bg-white rounded-2xl p-5 shadow-sm mb-4">
               <div className="flex items-start gap-4">
-                <div className={`w-16 h-16 ${getColor(doctor.full_name)} rounded-2xl flex items-center justify-center text-white font-black text-xl shrink-0`}>
+                <div className={`w-16 h-16 ${GRADIENT_BG} rounded-2xl flex items-center justify-center text-white font-black text-xl shrink-0`}>
                   {getInitials(doctor.full_name)}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h1 className="text-xl font-black text-gray-900">Dr. {doctor.full_name}</h1>
-                    <span className="flex items-center gap-1 bg-emerald-50 text-emerald-600 text-xs font-semibold px-2 py-0.5 rounded-full border border-emerald-100">
+                    <span className="flex items-center gap-1 bg-cyan-50 text-teal-700 text-xs font-semibold px-2 py-0.5 rounded-full border border-cyan-100">
                       <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                       Verified
                     </span>
@@ -369,10 +403,10 @@ function PatientDoctorProfile() {
                     ⭐ {stats.rating} · {stats.reviews} reviews
                   </span>
                 )}
-                <span className="flex items-center gap-1 bg-blue-50 text-blue-700 text-xs font-semibold px-3 py-1.5 rounded-full border border-blue-100">
+                <span className="flex items-center gap-1 bg-cyan-50 text-teal-700 text-xs font-semibold px-3 py-1.5 rounded-full border border-cyan-100">
                   ⏱ ~{stats.avgWait} min wait
                 </span>
-                <span className="flex items-center gap-1 bg-emerald-50 text-emerald-700 text-xs font-semibold px-3 py-1.5 rounded-full border border-emerald-100">
+                <span className="flex items-center gap-1 bg-cyan-50 text-teal-700 text-xs font-semibold px-3 py-1.5 rounded-full border border-cyan-100">
                   ₹ ₹{doctor.consultation_fee || 500} fee
                 </span>
                 {availableToday && (
@@ -397,14 +431,33 @@ function PatientDoctorProfile() {
                 </div>
               )}
 
+              {/* Consultation mode — only shown if doctor actually offers it, real data only */}
+              {availableModes.length > 1 && (
+                <div className="flex bg-gray-50 rounded-xl p-1 mb-4 border border-gray-100">
+                  {availableModes.map(mode => (
+                    <button key={mode} onClick={() => setConsultationType(mode)}
+                      className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                        consultationType === mode ? `${GRADIENT_BTN} shadow-sm` : 'text-gray-500'
+                      }`}>
+                      {MODE_META[mode].icon} {MODE_META[mode].label}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {availableModes.length === 1 && (
+                <p className="text-xs text-gray-400 mb-4 flex items-center gap-1">
+                  {MODE_META[availableModes[0]].icon} {MODE_META[availableModes[0]].label} consultation only
+                </p>
+              )}
+
               {/* Day picker */}
               <div className="flex gap-2 overflow-x-auto pb-2 mb-4 scrollbar-hide">
                 {dateOptions.map(({ date, dayShort, dayNum }) => (
                   <button key={date} onClick={() => setSelectedDate(date)}
                     className={`flex flex-col items-center px-3 py-2.5 rounded-xl shrink-0 min-w-[52px] transition-all ${
                       selectedDate === date
-                        ? 'bg-emerald-600 text-white shadow-sm'
-                        : 'bg-gray-50 text-gray-600 border border-gray-100 hover:border-emerald-300'
+                        ? `${GRADIENT_BTN} shadow-sm`
+                        : 'bg-gray-50 text-gray-600 border border-gray-100 hover:border-cyan-300'
                     }`}>
                     <span className="text-xs font-medium">{dayShort}</span>
                     <span className="text-base font-black">{dayNum}</span>
@@ -431,8 +484,8 @@ function PatientDoctorProfile() {
                           isDisabled
                             ? 'bg-gray-100 text-gray-300 cursor-not-allowed line-through'
                             : isSelected
-                            ? 'bg-emerald-600 text-white shadow-sm'
-                            : 'bg-gray-50 text-gray-700 border border-gray-100 hover:border-emerald-400 active:bg-emerald-50'
+                            ? `${GRADIENT_BTN} shadow-sm`
+                            : 'bg-gray-50 text-gray-700 border border-gray-100 hover:border-cyan-400 active:bg-cyan-50'
                         }`}>
                         {time}
                       </button>
@@ -445,14 +498,14 @@ function PatientDoctorProfile() {
               <textarea value={issue} onChange={e => setIssue(e.target.value)}
                 placeholder="Describe your issue (optional)"
                 rows={2}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-emerald-400 mb-3" />
+                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-cyan-400 mb-3" />
 
               {bookError && <p className="text-red-500 text-sm mb-3">❌ {bookError}</p>}
 
               <button onClick={handleBook} disabled={booking || !selectedTime}
                 className={`w-full py-4 rounded-xl font-bold text-base transition-all ${
                   selectedTime
-                    ? 'bg-emerald-600 text-white hover:bg-emerald-500 active:bg-emerald-700'
+                    ? `${GRADIENT_BTN}`
                     : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                 } disabled:opacity-60`}>
                 {booking ? 'Booking…' : selectedTime ? `Book for ${selectedTime}` : 'Select a time slot'}
@@ -476,8 +529,8 @@ function PatientDoctorProfile() {
                 <h2 className="text-base font-black text-gray-900 mb-3">Services</h2>
                 <div className="flex flex-wrap gap-2">
                   {doctor.services.map(s => (
-                    <span key={s} className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-100 text-emerald-700 text-sm font-medium px-3 py-1.5 rounded-full">
-                      <svg className="w-3.5 h-3.5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                    <span key={s} className="flex items-center gap-1.5 bg-cyan-50 border border-cyan-100 text-teal-700 text-sm font-medium px-3 py-1.5 rounded-full">
+                      <svg className="w-3.5 h-3.5 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
                       {s}
                     </span>
                   ))}
@@ -492,7 +545,7 @@ function PatientDoctorProfile() {
                 <div className="space-y-3">
                   {qualifications.map((q, idx) => (
                     <div key={idx} className="flex items-center gap-3">
-                      <div className="w-9 h-9 bg-emerald-500 rounded-full flex items-center justify-center shrink-0">
+                      <div className={`w-9 h-9 ${GRADIENT_BG} rounded-full flex items-center justify-center shrink-0`}>
                         <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l9-5-9-5-9 5 9 5z" />
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l6.16-3.422A12.083 12.083 0 0112 21.5 12.083 12.083 0 015.84 10.578L12 14z" />
@@ -515,7 +568,7 @@ function PatientDoctorProfile() {
                 <div className="space-y-2">
                   {doctor.awards.map((a, idx) => (
                     <div key={idx} className="flex items-center gap-2">
-                      <span className="text-emerald-500 text-base shrink-0">🏆</span>
+                      <span className="text-teal-500 text-base shrink-0">🏆</span>
                       <span className="text-sm text-gray-700">{a}</span>
                     </div>
                   ))}
@@ -588,10 +641,10 @@ function PatientDoctorProfile() {
                     <textarea value={myReview} onChange={e => setMyReview(e.target.value)}
                       placeholder="Share your experience (optional)"
                       rows={3}
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-emerald-400 mb-3" />
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-cyan-400 mb-3" />
                     {reviewError && <p className="text-red-500 text-sm mb-2">{reviewError}</p>}
                     <button onClick={handleSubmitReview} disabled={submittingReview || !myRating}
-                      className="w-full py-3 bg-emerald-600 text-white rounded-xl font-bold text-sm disabled:opacity-50 hover:bg-emerald-500 active:bg-emerald-700 transition-colors">
+                      className={`w-full py-3 ${GRADIENT_BTN} rounded-xl font-bold text-sm disabled:opacity-50 transition-colors`}>
                       {submittingReview ? 'Submitting…' : 'Submit review'}
                     </button>
                   </>

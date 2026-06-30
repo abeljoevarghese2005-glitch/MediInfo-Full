@@ -28,6 +28,12 @@ const LANGUAGES = [
   { code: 'pa', label: 'ਪੰਜਾਬੀ' },
 ]
 
+const CONSULTATION_MODES = [
+  { key: 'offers_in_clinic', label: 'In-clinic', icon: '🏥' },
+  { key: 'offers_video', label: 'Video consultation', icon: '🎥' },
+  { key: 'offers_home_visit', label: 'Home visit', icon: '🏠' },
+]
+
 function normalizeAvail(raw) {
   if (!raw) return DEFAULT_AVAIL
   let parsed
@@ -65,6 +71,7 @@ const EMPTY_FORM = {
   full_name: '', phone: '', email: '', specialization: '',
   consultation_fee: 500, experience_years: 0, clinic_name: '',
   license_number: '', time_per_patient: 15,
+  offers_in_clinic: true, offers_video: false, offers_home_visit: false,
 }
 
 const EMPTY_BIO_FORM = {
@@ -97,6 +104,15 @@ function Field({ icon, label, value, editing, field, type = 'text', form, setFor
         </p>
       )}
     </div>
+  )
+}
+
+function ToggleSwitch({ on, onClick, disabled }) {
+  return (
+    <button onClick={onClick} disabled={disabled}
+      className={`relative w-11 h-6 rounded-full transition-colors duration-200 shrink-0 ${on ? 'bg-cyan-500' : 'bg-gray-200'} ${disabled ? 'cursor-default opacity-80' : 'cursor-pointer'}`}>
+      <span className={`absolute top-[3px] left-[3px] w-[18px] h-[18px] bg-white rounded-full shadow transition-transform duration-200 ${on ? 'translate-x-[20px]' : 'translate-x-0'}`} />
+    </button>
   )
 }
 
@@ -214,6 +230,9 @@ function DoctorProfile() {
         clinic_name: normalized.clinic_name || '',
         license_number: normalized.license_number || '',
         time_per_patient: normalized.time_per_patient || 15,
+        offers_in_clinic: normalized.offers_in_clinic !== false,
+        offers_video: !!normalized.offers_video,
+        offers_home_visit: !!normalized.offers_home_visit,
       })
       setBioForm({
         description: normalized.description || '',
@@ -354,6 +373,8 @@ function DoctorProfile() {
   })
   const addRange = (day) => setEditAvail(prev => ({ ...prev, [day]: { ...prev[day], ranges: [...prev[day].ranges, { start: '09:00', end: '17:00' }] } }))
   const removeRange = (day, idx) => setEditAvail(prev => ({ ...prev, [day]: { ...prev[day], ranges: prev[day].ranges.filter((_, i) => i !== idx) } }))
+
+  const toggleConsultMode = (key) => setForm(prev => ({ ...prev, [key]: !prev[key] }))
 
   const handleLanguageChange = (code) => {
     i18n.changeLanguage(code)
@@ -496,17 +517,35 @@ function DoctorProfile() {
             {/* Profile tab */}
             {activeTab === 'profile' && (
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 items-start">
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                  <h2 className="text-base font-black text-gray-800 mb-5">Basic information</h2>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <Field icon="👤" label="Full name" field="full_name" value={profile?.full_name} editing={editing} form={form} setForm={setForm} prefix="Dr. " />
-                    <Field icon="📞" label="Phone" field="phone" type="tel" value={profile?.phone} editing={editing} form={form} setForm={setForm} />
-                    <Field icon="✉️" label="Email" field="email" type="email" value={profile?.email} editing={editing} form={form} setForm={setForm} />
-                    <Field icon="🩺" label="Specialization" field="specialization" value={profile?.specialization} editing={editing} form={form} setForm={setForm} />
-                    <Field icon="📅" label="Experience (years)" field="experience_years" type="number" value={profile?.experience_years} editing={editing} form={form} setForm={setForm} />
-                    <Field icon="🏥" label="Clinic / Hospital" field="clinic_name" value={profile?.clinic_name} editing={editing} form={form} setForm={setForm} />
-                    <Field icon="💰" label="Consultation Fee (₹)" field="consultation_fee" type="number" value={profile?.consultation_fee} prefix="₹" editing={editing} form={form} setForm={setForm} />
-                    <Field icon="🔒" label="License number" field="license_number" value={profile?.license_number} editing={editing} form={form} setForm={setForm} />
+                <div className="flex flex-col gap-5">
+                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                    <h2 className="text-base font-black text-gray-800 mb-5">Basic information</h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <Field icon="👤" label="Full name" field="full_name" value={profile?.full_name} editing={editing} form={form} setForm={setForm} prefix="Dr. " />
+                      <Field icon="📞" label="Phone" field="phone" type="tel" value={profile?.phone} editing={editing} form={form} setForm={setForm} />
+                      <Field icon="✉️" label="Email" field="email" type="email" value={profile?.email} editing={editing} form={form} setForm={setForm} />
+                      <Field icon="🩺" label="Specialization" field="specialization" value={profile?.specialization} editing={editing} form={form} setForm={setForm} />
+                      <Field icon="📅" label="Experience (years)" field="experience_years" type="number" value={profile?.experience_years} editing={editing} form={form} setForm={setForm} />
+                      <Field icon="🏥" label="Clinic / Hospital" field="clinic_name" value={profile?.clinic_name} editing={editing} form={form} setForm={setForm} />
+                      <Field icon="💰" label="Consultation Fee (₹)" field="consultation_fee" type="number" value={profile?.consultation_fee} prefix="₹" editing={editing} form={form} setForm={setForm} />
+                      <Field icon="🔒" label="License number" field="license_number" value={profile?.license_number} editing={editing} form={form} setForm={setForm} />
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                    <h2 className="text-base font-black text-gray-800 mb-1">Consultation modes</h2>
+                    <p className="text-xs text-gray-400 mb-4">Choose how patients can consult you. These are shown on your public profile.</p>
+                    <div className="space-y-3">
+                      {CONSULTATION_MODES.map(({ key, label, icon }) => {
+                        const value = editing ? form[key] : (key === 'offers_in_clinic' ? profile?.[key] !== false : !!profile?.[key])
+                        return (
+                          <div key={key} className="flex items-center justify-between bg-gray-50 border border-gray-100 rounded-xl px-4 py-3">
+                            <span className="text-sm font-semibold text-gray-700 flex items-center gap-2">{icon} {label}</span>
+                            <ToggleSwitch on={value} disabled={!editing} onClick={() => toggleConsultMode(key)} />
+                          </div>
+                        )
+                      })}
+                    </div>
                   </div>
                 </div>
 
