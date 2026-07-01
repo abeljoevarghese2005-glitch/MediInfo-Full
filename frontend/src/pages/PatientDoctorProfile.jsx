@@ -240,12 +240,11 @@ function PatientDoctorProfile() {
       })
       setSlots(withPast)
 
-      const { data: existing } = await supabase
-        .from('appointments')
-        .select('appointment_time')
-        .eq('doctor_id', id)
-        .eq('appointment_date', date)
-        .in('status', ['pending', 'confirmed', 'accepted'])
+      const { data: existing, error: slotErr } = await supabase.rpc('get_booked_slots', {
+        p_doctor_id: id,
+        p_date: date,
+      })
+      if (slotErr) throw slotErr
       setBookedSlots(existing ? existing.map(a => a.appointment_time.slice(0, 5)) : [])
     } catch { setSlots([]); setBookedSlots([]) }
     setSlotsLoading(false)
