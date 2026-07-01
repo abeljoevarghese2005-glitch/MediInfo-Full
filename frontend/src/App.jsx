@@ -23,7 +23,7 @@ const DoctorAppointments = lazy(() => import('./pages/DoctorAppointments'))
 const DoctorLiveQueue = lazy(() => import('./pages/DoctorLiveQueue'))
 const DoctorProfile = lazy(() => import('./pages/DoctorProfile'))
 const DoctorPrescriptions = lazy(() => import('./pages/DoctorPrescriptions'))
-
+const DoctorReviews = lazy(() => import('./pages/DoctorReviews'))
 const HOME_ROUTES = ['/home', '/doctor-dashboard']
 
 const Loading = () => (
@@ -182,6 +182,7 @@ function App() {
           <Route path="/doctor-profile" element={<DoctorRoute><DoctorProfile /></DoctorRoute>} />
           <Route path="/doctor-prescriptions" element={<DoctorRoute><DoctorPrescriptions /></DoctorRoute>} />
           <Route path="/doctor/:id" element={<PatientRoute><PatientDoctorProfile /></PatientRoute>} />       
+          <Route path="/doctor-reviews" element={<DoctorRoute><DoctorReviews /></DoctorRoute>} />
         </Routes>
       </Suspense>
     </BrowserRouter>
