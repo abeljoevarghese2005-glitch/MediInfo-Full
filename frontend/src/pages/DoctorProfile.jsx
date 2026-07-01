@@ -469,17 +469,18 @@ function DoctorProfile() {
 
                   {/* Stats row */}
                   <div className="flex flex-wrap gap-4 mt-4">
-                    {[
-                      { label: 'Patients', value: stats.patients },
-                      { label: 'Rating', value: stats.rating > 0 ? `${stats.rating} ★` : '—' },
-                      { label: 'Avg. wait', value: `${stats.avgWait} min` },
-                      { label: 'Reviews', value: stats.reviews },
-                    ].map(({ label, value }) => (
-                      <div key={label} className="flex flex-col items-center bg-white border border-gray-100 rounded-xl px-4 py-2 shadow-sm min-w-[70px]">
-                        <span className="text-base font-black text-gray-900">{value}</span>
-                        <span className="text-xs text-gray-400 font-medium">{label}</span>
-                      </div>
-                    ))}
+                  {[
+                    { label: 'Patients', value: stats.patients },
+                    { label: 'Rating', value: stats.rating > 0 ? `${stats.rating} ★` : '—' },
+                    { label: 'Avg. wait', value: `${stats.avgWait} min` },
+                    { label: 'Reviews', value: stats.reviews, onClick: () => navigate('/doctor-reviews') },
+                   ].map(({ label, value, onClick }) => (
+                    <div key={label} onClick={onClick}
+                    className={`flex flex-col items-center bg-white border border-gray-100 rounded-xl px-4 py-2 shadow-sm min-w-[70px] ${onClick ? 'cursor-pointer hover:border-cyan-300 hover:bg-cyan-50 transition-colors' : ''}`}>
+                    <span className="text-base font-black text-gray-900">{value}</span>
+                    <span className="text-xs text-gray-400 font-medium">{label}</span>
+                    </div>
+                  ))}
                   </div>
                 </div>
 
