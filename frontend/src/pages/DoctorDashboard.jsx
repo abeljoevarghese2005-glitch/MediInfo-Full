@@ -42,9 +42,9 @@ const getWeekStart = (date) => {
 const BOOST_VISIBILITY_KEY = 'mediinfo_boost_visibility_dismissed_at'
 const BOOST_VISIBILITY_COOLDOWN_DAYS = 30
 
-function StatCard({ icon, value, label, sub, subColor = 'text-cyan-500' }) {
+function StatCard({ icon, value, label, sub, subColor = 'text-cyan-500', onClick }) {
   return (
-    <div className="bg-white rounded-2xl shadow-sm p-5 flex flex-col gap-2 relative overflow-hidden group hover:shadow-md transition-shadow">
+    <div onClick={onClick} className={`bg-white rounded-2xl shadow-sm p-5 flex flex-col gap-2 relative overflow-hidden group hover:shadow-md transition-shadow ${onClick ? 'cursor-pointer' : ''}`}>
       <div className="flex items-center justify-between">
         <span className="text-gray-300">{icon}</span>
       </div>
@@ -330,8 +330,9 @@ function DoctorDashboard() {
                 subColor={pendingCount > 0 ? 'text-amber-500' : 'text-green-500'} />
               <StatCard icon="👥" value={acceptedThisWeekCount} label="Accepted" sub="This week" subColor="text-cyan-500" />
               <StatCard icon="⭐" value={ratingData.avg ?? '—'} label="Rating"
-                sub={ratingData.count > 0 ? `${ratingData.count} reviews` : 'No reviews yet'}
-                subColor="text-gray-400" />
+  sub={ratingData.count > 0 ? `${ratingData.count} reviews` : 'No reviews yet'}
+  subColor="text-gray-400"
+  onClick={() => navigate('/doctor-reviews')} />
             </div>
 
             {/* Quick Actions */}
