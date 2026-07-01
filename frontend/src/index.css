@@ -7,6 +7,10 @@
    (scoped with --mi- prefix so nothing here collides with
    existing app styles or the primary/secondary tailwind colors)
    ============================================================ */
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
 
 :root {
   --mi-background: oklch(0.985 0.006 95);

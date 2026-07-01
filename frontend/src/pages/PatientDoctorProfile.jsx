@@ -435,7 +435,7 @@ function PatientDoctorProfile() {
                 <div className="flex bg-gray-50 rounded-xl p-1 mb-4 border border-gray-100">
                   {availableModes.map(mode => (
                     <button key={mode} onClick={() => setConsultationType(mode)}
-                      className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                      className={`flex-1 min-w-0 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-semibold transition-all ${
                         consultationType === mode ? `${GRADIENT_BTN} shadow-sm` : 'text-gray-500'
                       }`}>
                       {MODE_META[mode].icon} {MODE_META[mode].label}
