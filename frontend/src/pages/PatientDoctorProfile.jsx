@@ -472,7 +472,7 @@ function PatientDoctorProfile() {
               ) : slots.length === 0 ? (
                 <p className="text-sm text-red-400 mb-4">No availability on this day.</p>
               ) : (
-                <div className="grid grid-cols-3 gap-2 mb-4">
+                <div className="grid grid-cols-3 gap-2 mb-4 max-h-80 overflow-y-auto pr-1 thin-scrollbar">
                   {slots.map(({ time, past }) => {
                     const isBooked = bookedSlots.includes(time)
                     const isSelected = selectedTime === time
