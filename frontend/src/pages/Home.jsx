@@ -393,8 +393,10 @@ function Home() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {previousDoctors.map((appt) => (
-                    <div key={appt.id} className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm flex items-center justify-between">
+                  {previousDoctors.map((appt, idx) => (
+                    <div key={appt.id}
+                      onClick={() => navigate(`/doctor/${appt.doctor_id}`)}
+                      className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm flex items-center justify-between cursor-pointer hover:shadow-md transition-shadow">
                       <div className="flex items-center gap-3">
                         <div className={`w-10 h-10 ${getColor(appt.doctor_name)} rounded-full flex items-center justify-center text-white font-bold text-xs`}>
                           {getInitials(appt.doctor_name)}
@@ -404,7 +406,15 @@ function Home() {
                           <p className="text-emerald-600 text-xs font-medium">{translateSpecialization(t, appt.specialization)}</p>
                         </div>
                       </div>
-                      <button onClick={() => navigate('/doctors')}
+                      <button onClick={(e) => {
+                          e.stopPropagation()
+                          setSelectedDoctor({
+                            id: appt.doctor_id,
+                            full_name: appt.doctor_name,
+                            specialization: appt.specialization,
+                          })
+                          setSelectedIdx(idx)
+                        }}
                         className="text-emerald-700 text-xs font-bold tracking-tight bg-green-50 px-3 py-1.5 rounded-lg transition-colors hover:bg-green-100 hover:text-emerald-600">
                         {t('home.rebook')}
                       </button>
