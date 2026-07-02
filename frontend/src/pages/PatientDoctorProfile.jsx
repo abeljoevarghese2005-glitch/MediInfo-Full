@@ -327,7 +327,7 @@ function PatientDoctorProfile() {
     <SidebarProvider>
       <div className="min-h-screen bg-green-50 flex">
         <Sidebar />
-        <div className="lg:ml-56 flex-1 flex flex-col">
+        <div className="lg:ml-56 flex-1 flex flex-col min-w-0">
           <TopBar />
           <div className="flex items-center justify-center flex-1 text-gray-400 text-sm">Loading…</div>
         </div>
@@ -339,7 +339,7 @@ function PatientDoctorProfile() {
     <SidebarProvider>
       <div className="min-h-screen bg-green-50 flex">
         <Sidebar />
-        <div className="lg:ml-56 flex-1 flex flex-col">
+        <div className="lg:ml-56 flex-1 flex flex-col min-w-0">
           <TopBar />
           <div className="flex items-center justify-center flex-1 flex-col gap-3">
             <p className="text-gray-500">{error || 'Doctor not found.'}</p>
@@ -354,7 +354,7 @@ function PatientDoctorProfile() {
     <SidebarProvider>
       <div className="min-h-screen bg-gray-50 flex overflow-x-hidden">
         <Sidebar />
-        <div className="lg:ml-56 flex-1 flex flex-col">
+        <div className="lg:ml-56 flex-1 flex flex-col min-w-0">
           <TopBar />
           <div className="flex-1 px-4 sm:px-6 lg:px-8 py-4 max-w-2xl w-full min-w-0 mx-auto pb-24 overflow-x-hidden">
 
