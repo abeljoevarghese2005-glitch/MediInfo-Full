@@ -278,6 +278,27 @@ function MyAppointments() {
     setAppointments(normalized)
     setLastUpdated(new Date())
     setLoading(false)
+
+    const now = new Date()
+    const toExpire = normalized.filter(a => {
+      if (a.status !== 'pending') return false
+      const apptDateTime = new Date(`${a.appointment_date}T${a.appointment_time}`)
+      return apptDateTime < now
+    })
+
+    if (toExpire.length > 0) {
+      const ids = toExpire.map(a => a.id)
+      const { error } = await supabase
+        .from('appointments')
+        .update({ status: 'expired' })
+        .in('id', ids)
+
+      if (!error) {
+        setAppointments(prev =>
+          prev.map(a => ids.includes(a.id) ? { ...a, status: 'expired' } : a)
+        )
+      }
+    }
   }
 
   useEffect(() => {
@@ -313,12 +334,14 @@ function MyAppointments() {
   const upcoming = appointments.filter(a =>
     a.status !== 'cancelled' &&
     a.status !== 'completed' &&
+    a.status !== 'expired' &&
     a.appointment_date >= today
   )
   const past = appointments
   .filter(a =>
     a.status === 'cancelled' ||
     a.status === 'completed' ||
+    a.status === 'expired' ||
     a.appointment_date < today
   )
   .sort((a, b) => {
@@ -336,6 +359,8 @@ function MyAppointments() {
         return 'bg-red-100 text-red-600'
       case 'completed':
         return 'bg-gray-100 text-gray-500'
+      case 'expired':
+        return 'bg-gray-100 text-gray-400'
       default:
         return 'bg-amber-100 text-amber-700'
     }
@@ -535,6 +560,9 @@ function MyAppointments() {
                           )}
                           {appt.status === 'completed' && (
                             <p className="text-xs text-gray-500 mt-2 ml-14">Appointment completed. Get well soon!</p>
+                          )}
+                          {appt.status === 'expired' && (
+                            <p className="text-xs text-gray-400 mt-2 ml-14">{t('myAppointments.requestExpiredMessage')}</p>
                           )}
                         </div>
                       ))}

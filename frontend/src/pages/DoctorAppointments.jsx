@@ -439,6 +439,27 @@ function DoctorAppointments() {
     setAppointments(normalized)
     setLastUpdated(new Date())
     setLoading(false)
+
+    const now = new Date()
+    const toExpire = normalized.filter(a => {
+      if (a.status !== 'pending') return false
+      const apptDateTime = new Date(`${a.appointment_date}T${a.appointment_time}`)
+      return apptDateTime < now
+    })
+
+    if (toExpire.length > 0) {
+      const ids = toExpire.map(a => a.id)
+      const { error } = await supabase
+        .from('appointments')
+        .update({ status: 'expired' })
+        .in('id', ids)
+
+      if (!error) {
+        setAppointments(prev =>
+          prev.map(a => ids.includes(a.id) ? { ...a, status: 'expired' } : a)
+        )
+      }
+    }
   }
 
   useEffect(() => {
@@ -499,6 +520,7 @@ function DoctorAppointments() {
     cancelled: 'bg-red-100 text-red-600',
     pending: 'bg-amber-100 text-amber-700',
     completed: 'bg-gray-100 text-gray-500',
+    expired: 'bg-gray-100 text-gray-400',
   }
 
   const todayStr = new Date().toLocaleDateString('en-CA')
@@ -513,6 +535,7 @@ function DoctorAppointments() {
   const confirmedCount = appointments.filter(a => a.status === 'confirmed').length
   const cancelledCount = appointments.filter(a => a.status === 'cancelled').length
   const completedCount = appointments.filter(a => a.status === 'completed').length
+  const expiredCount = appointments.filter(a => a.status === 'expired').length
 
   const displayed = appointments.filter(a => {
     if (dateFilter === 'today' && a.appointment_date !== todayStr) return false
@@ -556,6 +579,7 @@ function DoctorAppointments() {
     { key: 'confirmed', label: `Accepted (${confirmedCount})` },
     { key: 'completed', label: `Completed (${completedCount})` },
     { key: 'cancelled', label: `Cancelled (${cancelledCount})` },
+    { key: 'expired', label: `Expired (${expiredCount})` },
   ]
 
   return (

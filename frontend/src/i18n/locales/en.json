@@ -194,8 +194,10 @@
       "confirmed": "confirmed",
       "cancelled": "cancelled",
       "completed": "completed",
-      "pending": "pending"
+      "pending": "pending",
+      "expired": "Request expired"
     },
+    "requestExpiredMessage": "Doctor didn't respond in time. Please book again.",
     "modal": {
       "title": "Reschedule Appointment",
       "warningText": "Rescheduling resets your appointment to pending. A rescheduling fee may be deducted by the clinic.",
