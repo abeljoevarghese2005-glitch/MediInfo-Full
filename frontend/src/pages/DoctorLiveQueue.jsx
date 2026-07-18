@@ -54,6 +54,12 @@ function DoctorLiveQueue() {
         .eq('doctor_id', user.id)
         .in('status', ['confirmed', 'completed'])
         .eq('appointment_date', today)
+        // Video consultations have their own dedicated flow (Join Video
+        // Consultation button), so they're excluded from the in-person
+        // live queue entirely. Everything else (in_clinic, and any
+        // appointment without a consultation_type set) behaves exactly
+        // as before.
+        .neq('consultation_type', 'video')
         .order('appointment_time', { ascending: true })
       if (error) throw error
       setQueue((data || []).map(a => ({
@@ -98,7 +104,7 @@ function DoctorLiveQueue() {
       <div className="min-h-screen bg-[#f0f4f8] flex">
         <DoctorSidebar />
 
-        {/* ✅ NEW: Prescription modal */}
+        {/* Prescription modal */}
         {prescribeTarget && (
           <PrescriptionModal
             appointment={prescribeTarget}
@@ -110,7 +116,7 @@ function DoctorLiveQueue() {
           />
         )}
 
-        {/* ✅ NEW: simple toast */}
+        {/* simple toast */}
         {toastMsg && (
           <div className="fixed top-5 right-5 z-50 bg-cyan-600 text-white px-4 py-3 rounded-xl shadow-lg text-sm font-medium">
             🔔 {toastMsg}
@@ -253,7 +259,7 @@ function DoctorLiveQueue() {
                           <div key={p.id} className="flex items-center gap-3 px-5 py-3">
                             <div className={`w-8 h-8 rounded-full ${getColor(p.patient_name)} opacity-50 flex items-center justify-center text-white font-bold text-xs shrink-0`}>{getInitials(p.patient_name)}</div>
                             <p className="text-sm text-gray-400 line-through truncate flex-1">{p.patient_name}</p>
-                            {/* ✅ NEW: allow prescribing for already-completed patients too */}
+                            {/* allow prescribing for already-completed patients too */}
                             <button
                               onClick={() => setPrescribeTarget(p)}
                               className="text-cyan-500 text-xs font-semibold hover:underline shrink-0">

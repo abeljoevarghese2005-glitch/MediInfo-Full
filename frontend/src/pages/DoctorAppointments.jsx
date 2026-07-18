@@ -363,6 +363,10 @@ function DoctorAppointments() {
   const [showWalkIn, setShowWalkIn] = useState(false)
   const [prescribeTarget, setPrescribeTarget] = useState(null)
   const [detailTarget, setDetailTarget] = useState(null)
+  // ✅ NEW: ticks every 30s so the "Join Video Consultation" button's join
+  // window (5 min before -> appointment end) updates live without a refresh.
+  // Mirrors the same pattern used on the patient side in MyAppointments.jsx.
+  const [now, setNow] = useState(new Date())
   const prevAppointments = useRef([])
   const toastCounter = useRef(0)
 
@@ -370,6 +374,20 @@ function DoctorAppointments() {
     const id = ++toastCounter.current
     setToasts(prev => [...prev, { id, message, type }])
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 6000)
+  }
+
+  // ✅ NEW: true when this is a video appointment and we're within
+  // [appointment_time - 5min, appointment_time + duration_minutes].
+  const isVideoJoinable = (appt, referenceNow) => {
+    if (appt.consultation_type !== 'video') return false
+    if (!appt.appointment_date || !appt.appointment_time) return false
+    const [h, m] = appt.appointment_time.split(':').map(Number)
+    const apptDateTime = new Date(`${appt.appointment_date}T00:00:00`)
+    apptDateTime.setHours(h, m, 0, 0)
+    const durationMinutes = appt.duration_minutes || 15
+    const windowStart = new Date(apptDateTime.getTime() - 5 * 60000)
+    const windowEnd = new Date(apptDateTime.getTime() + durationMinutes * 60000)
+    return referenceNow >= windowStart && referenceNow <= windowEnd
   }
 
   const fetchAppointments = async () => {
@@ -436,6 +454,12 @@ function DoctorAppointments() {
       .subscribe()
 
     return () => supabase.removeChannel(channel)
+  }, [])
+
+  // ✅ NEW: keep `now` fresh so the video join-window check stays accurate
+  useEffect(() => {
+    const interval = setInterval(() => setNow(new Date()), 30000)
+    return () => clearInterval(interval)
   }, [])
 
   const handleConfirm = async (id) => {
@@ -769,10 +793,31 @@ function DoctorAppointments() {
                                       className="px-2.5 py-1.5 border border-cyan-200 text-cyan-600 text-xs font-semibold rounded-lg hover:bg-cyan-50 transition-colors">
                                       Prescribe
                                     </button>
-                                    <button onClick={() => navigate('/doctor-live-queue')}
-                                      className="px-2.5 py-1.5 bg-cyan-500 text-white text-xs font-semibold rounded-lg hover:bg-cyan-600 transition-colors">
-                                      Start
-                                    </button>
+
+                                    {/* ✅ NEW: video appointments get their own join flow
+                                        instead of the in-clinic "Start" button, which
+                                        routes to the queue. Everything else is untouched. */}
+                                    {appt.consultation_type === 'video' ? (
+                                      isVideoJoinable(appt, now) ? (
+                                        <button
+                                          onClick={() => navigate('/video-call', { state: { appointment: appt } })}
+                                          className="px-2.5 py-1.5 bg-emerald-600 text-white text-xs font-semibold rounded-lg hover:bg-emerald-500 transition-colors">
+                                          Join Video Consultation
+                                        </button>
+                                      ) : (
+                                        <button disabled
+                                          title="Opens 5 minutes before the scheduled time"
+                                          className="px-2.5 py-1.5 bg-gray-100 text-gray-400 text-xs font-semibold rounded-lg cursor-not-allowed">
+                                          Video Not Started
+                                        </button>
+                                      )
+                                    ) : (
+                                      <button onClick={() => navigate('/doctor-live-queue')}
+                                        className="px-2.5 py-1.5 bg-cyan-500 text-white text-xs font-semibold rounded-lg hover:bg-cyan-600 transition-colors">
+                                        Start
+                                      </button>
+                                    )}
+
                                     <button onClick={() => setCancelTarget(appt)} disabled={acting === appt.id}
                                       className="px-2.5 py-1.5 border border-red-200 text-red-500 text-xs font-semibold rounded-lg hover:bg-red-50 disabled:opacity-50 transition-colors">
                                       Cancel
