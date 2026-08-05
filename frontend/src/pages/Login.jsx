@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import { Capacitor } from '@capacitor/core'
 import { supabase } from '../lib/supabase'
+import { subscribeToPush } from '../hooks/usePushNotifications'
 
 function Login() {
   const [form, setForm] = useState({ phone: '', password: '' })
@@ -37,6 +39,11 @@ function Login() {
 
       localStorage.setItem('token', data.session.access_token)
       localStorage.setItem('user', JSON.stringify(profile))
+
+      // Only register for native push on the installed app (not the plain website)
+      if (Capacitor.isNativePlatform()) {
+        subscribeToPush()
+      }
 
       if (profile.role === 'doctor') {
         navigate('/doctor-dashboard')

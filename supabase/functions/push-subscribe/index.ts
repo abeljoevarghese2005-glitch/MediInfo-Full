@@ -14,9 +14,9 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     const body = await req.json()
-    const { endpoint, keys } = body
-    const { p256dh, auth } = keys
-    const { error } = await supabase.from('push_subscriptions').upsert({ user_id: user.id, endpoint, p256dh, auth, is_active: true }, { onConflict: 'user_id' })
+    const { fcm_token } = body
+    if (!fcm_token) return new Response(JSON.stringify({ error: 'fcm_token is required' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    const { error } = await supabase.from('push_subscriptions').upsert({ user_id: user.id, fcm_token, is_active: true }, { onConflict: 'user_id' })
     if (error) throw error
     return new Response(JSON.stringify({ message: 'Subscribed successfully' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   } catch (err) {
