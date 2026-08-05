@@ -1,4 +1,4 @@
-package com.mediinfo.app;
+package com.niraamo.app;
 
 import android.os.Bundle;
 import com.getcapacitor.BridgeActivity;

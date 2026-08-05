@@ -44,7 +44,7 @@ function Register() {
     try {
       // Use phone-based fake email for Supabase Auth
       // FIXED - always use phone for auth, real email stored in profile only
-      const email = `${form.phone.replace(/\s+/g, '')}@mediinfo.app`
+      const email = `${form.phone.replace(/\s+/g, '')}@niraamo.app`
 
       // Step 1: Create auth user in Supabase
       const { data: authData, error: authError } = await supabase.auth.signUp({

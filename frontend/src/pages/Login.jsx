@@ -19,7 +19,7 @@ function Login() {
       const isEmail = form.phone.includes('@')
       const email = isEmail
         ? form.phone.trim()
-        : `${form.phone.replace(/\s+/g, '')}@mediinfo.app`
+        : `${form.phone.replace(/\s+/g, '')}@niraamo.app`
 
       const { data, error: authError } = await supabase.auth.signInWithPassword({
         email,
