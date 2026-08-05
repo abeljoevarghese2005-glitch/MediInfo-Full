@@ -44,7 +44,7 @@ AwEHoUQDQgAESsBDAQFK0FgTPfTUKKZ96frVGJiroUDDiWI0BpRp3sDhytfZbrcg
 ovY/WXammUBlXQrAZqdKoSsPJdbC+VxNfA==
 -----END EC PRIVATE KEY-----"""
 
-VAPID_CLAIMS = {"sub": "mailto:admin@mediinfo.app"}
+VAPID_CLAIMS = {"sub": "mailto:admin@niraamo.app"}
 
 # ── Routes ─────────────────────────────────────────────────
 @router.post("/subscribe")

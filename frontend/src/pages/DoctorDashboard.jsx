@@ -39,7 +39,7 @@ const getWeekStart = (date) => {
   return d
 }
 
-const BOOST_VISIBILITY_KEY = 'mediinfo_boost_visibility_dismissed_at'
+const BOOST_VISIBILITY_KEY = 'niraamo_boost_visibility_dismissed_at'
 const BOOST_VISIBILITY_COOLDOWN_DAYS = 30
 
 function StatCard({ icon, value, label, sub, subColor = 'text-cyan-500', onClick }) {

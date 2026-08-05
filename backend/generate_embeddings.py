@@ -1,5 +1,5 @@
 """
-generate_embeddings.py  —  MediInfo improved embedding pipeline
+generate_embeddings.py  —  Niraamo improved embedding pipeline
 
 What changed vs the original
 ──────────────────────────────────────────────────────────────────────────────

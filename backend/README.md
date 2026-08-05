@@ -1,6 +1,6 @@
-# MediInfo Backend
+# Niraamo Backend
 
-FastAPI backend for the MediInfo healthcare app.
+FastAPI backend for the Niraamo healthcare app.
 
 ## Setup
 

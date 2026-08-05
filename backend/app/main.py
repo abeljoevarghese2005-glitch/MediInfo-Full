@@ -5,8 +5,8 @@ from .routers import medicines, auth, reminders, ai, appointments, push
 from .scheduler import start_scheduler
 
 app = FastAPI(
-    title="MediInfo API",
-    description="Backend API for the MediInfo healthcare app",
+    title="Niraamo API",
+    description="Backend API for the Niraamo healthcare app",
     version="1.0.0"
 )
 
@@ -34,7 +34,7 @@ async def startup():
 @app.get("/")
 def root():
     return {
-        "message": "Welcome to MediInfo API",
+        "message": "Welcome to Niraamo API",
         "status": "running",
         "docs": "/docs"
     }

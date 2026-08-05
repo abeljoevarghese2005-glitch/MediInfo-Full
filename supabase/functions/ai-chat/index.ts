@@ -123,7 +123,7 @@ async function hybridRagSearch(supabase: any, question: string, topK: number, ex
 
 function formatHistory(history: Array<{role: string, content?: string, text?: string}>): string {
   return history.map(m => {
-    const label = m.role === 'user' ? 'User' : 'MediInfo AI'
+    const label = m.role === 'user' ? 'User' : 'Niraamo AI'
     const text = m.content ?? m.text ?? ''
     return `${label}: ${text}`
   }).join('\n')
@@ -163,7 +163,7 @@ serve(async (req) => {
     const outOfScopeKeywords = ['cricket','football','movie','film','actor','stock','weather','recipe','cook','sport','politics','election','celebrity','song','game','travel','hotel','flight']
     if (outOfScopeKeywords.some(kw => question.toLowerCase().includes(kw))) {
       return new Response(JSON.stringify({
-        answer: "I'm MediInfo AI and I can only help with medicine and health-related questions. Please ask me about medicines, dosages, side effects, drug interactions, or similar topics.",
+        answer: "I'm Niraamo AI and I can only help with medicine and health-related questions. Please ask me about medicines, dosages, side effects, drug interactions, or similar topics.",
         session_id: '',
       }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
@@ -197,7 +197,7 @@ serve(async (req) => {
       ? 'You have some information — be helpful.'
       : 'No specific records found — answer from general medical knowledge.'
 
-    const prompt = `You are MediInfo AI, a knowledgeable and friendly medical assistant for Indian users.
+    const prompt = `You are Niraamo AI, a knowledgeable and friendly medical assistant for Indian users.
 You speak like a helpful pharmacist — clear, warm, and trustworthy.
 
 LANGUAGE RULES (CRITICAL - follow exactly):
@@ -225,7 +225,7 @@ ${context || 'No specific medicine information available for this query.'}
 
 ${historySection}USER: ${question}
 
-MediInfo AI:`
+Niraamo AI:`
 
     const answer = await geminiGenerate(prompt)
 

@@ -93,8 +93,8 @@ function PrivacyContent() {
         <p>
           Niraamo is operated by the Niraamo team, currently serving users
           in India. For any privacy-related queries, contact us at{' '}
-          <a href="mailto:privacy@mediinfo.app" className="text-emerald-600 font-medium hover:underline">
-            privacy@mediinfo.app
+          <a href="mailto:privacy@niraamo.app" className="text-emerald-600 font-medium hover:underline">
+            privacy@niraamo.app
           </a>
           .
         </p>
@@ -186,7 +186,7 @@ function PrivacyContent() {
             'Correct inaccurate or incomplete data',
             'Delete your account and associated data',
             'Withdraw consent for location access at any time via your device settings',
-            'Raise a grievance by contacting us at privacy@mediinfo.app',
+            'Raise a grievance by contacting us at privacy@niraamo.app',
           ]}
         />
         <p className="pt-2">We will respond to all requests within 30 days.</p>
@@ -280,8 +280,8 @@ function PrivacyContent() {
         <p>For any questions, concerns, or requests regarding this Privacy Policy:</p>
         <p>
           Email:{' '}
-          <a href="mailto:privacy@mediinfo.app" className="text-emerald-600 font-medium hover:underline">
-            privacy@mediinfo.app
+          <a href="mailto:privacy@niraamo.app" className="text-emerald-600 font-medium hover:underline">
+            privacy@niraamo.app
           </a>
           <br />
           Address: India
@@ -392,8 +392,8 @@ function TermsContent() {
       <Section title="11. Contact Us">
         <p>
           For any questions about these Terms of Service, contact us at{' '}
-          <a href="mailto:privacy@mediinfo.app" className="text-emerald-600 font-medium hover:underline">
-            privacy@mediinfo.app
+          <a href="mailto:privacy@niraamo.app" className="text-emerald-600 font-medium hover:underline">
+            privacy@niraamo.app
           </a>
           .
         </p>

@@ -12,7 +12,7 @@ import ml from './locales/ml.json'
 import gu from './locales/gu.json'
 import pa from './locales/pa.json'
 
-const savedLang = localStorage.getItem('mediinfo_lang') || 'en'
+const savedLang = localStorage.getItem('niraamo_lang') || 'en'
 
 i18n
   .use(initReactI18next)

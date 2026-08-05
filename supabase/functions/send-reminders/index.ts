@@ -75,7 +75,7 @@ async function sendFCM(fcmToken: string, title: string, body: string, data?: Rec
       notification: { title, body },
       android: {
         priority: 'high',
-        notification: { sound: 'default', channel_id: 'mediinfo_reminders' },
+        notification: { sound: 'default', channel_id: 'niraamo_reminders' },
       },
       data: data || {},
     },
