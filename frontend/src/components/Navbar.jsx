@@ -17,7 +17,7 @@ function Navbar() {
         <div className="w-8 h-8 bg-cyan-500 rounded-lg flex items-center justify-center">
           <span className="text-white font-bold text-sm">M</span>
         </div>
-        <span className="text-xl font-bold text-gray-800">MediInfo</span>
+        <span className="text-xl font-bold text-gray-800">Niraamo</span>
       </Link>
 
       <div className="flex items-center gap-4">

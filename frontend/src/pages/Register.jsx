@@ -111,7 +111,7 @@ function Register() {
             <span className="text-white font-bold text-xl">M</span>
           </div>
           <h1 className="text-2xl font-bold text-gray-800">Create account</h1>
-          <p className="text-gray-500 text-sm mt-1">Join MediInfo today</p>
+          <p className="text-gray-500 text-sm mt-1">Join Niraamo today</p>
         </div>
 
         <div className="flex rounded-xl border border-gray-200 p-1 mb-5 gap-1">

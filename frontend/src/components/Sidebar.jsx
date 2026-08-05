@@ -77,7 +77,7 @@ function SidebarContent({ onClose }) {
         <div className="w-9 h-9 bg-emerald-600 rounded-xl flex items-center justify-center shadow-sm">
           <span className="text-white font-semibold text-base">M</span>
         </div>
-        <span className="text-xl font-semibold text-gray-900 tracking-tight">MediInfo</span>
+        <span className="text-xl font-semibold text-gray-900 tracking-tight">Niraamo</span>
       </Link>
 
       <p className="text-xs font-medium text-gray-400 uppercase tracking-widest mb-2 px-3">{t('nav.menu')}</p>

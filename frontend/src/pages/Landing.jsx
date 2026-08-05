@@ -159,7 +159,7 @@ function Landing() {
           <div className="w-9 h-9 bg-gradient-to-br from-mi-primary to-sky-400 rounded-xl flex items-center justify-center shadow-sm">
             <span className="text-white font-black text-base font-display">M</span>
           </div>
-          <span className="text-xl font-black text-foreground tracking-tight">MediInfo</span>
+          <span className="text-xl font-black text-foreground tracking-tight">Niraamo</span>
         </Link>
         <div className="hidden md:flex items-center gap-6 text-sm font-medium text-muted-foreground">
           <a href="#specialties" className="hover:text-mi-primary transition-colors">Specialties</a>
@@ -353,7 +353,7 @@ function Landing() {
       {/* ── CTA ── */}
       <section data-reveal className="py-20 px-6 bg-gradient-to-r from-mi-primary to-sky-500 text-center text-white">
         <h2 className="font-display text-3xl md:text-4xl font-bold mb-4">Ready to take charge of your health?</h2>
-        <p className="text-cyan-100 mb-8 text-lg">Join thousands of patients booking smarter with MediInfo.</p>
+        <p className="text-cyan-100 mb-8 text-lg">Join thousands of patients booking smarter with Niraamo.</p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link to="/register"
             className="bg-white text-mi-primary font-bold px-8 py-4 rounded-xl hover:bg-gray-50 transition-colors shadow-sm">
@@ -372,11 +372,11 @@ function Landing() {
           <div className="w-7 h-7 bg-mi-primary rounded-lg flex items-center justify-center">
             <span className="text-white font-black text-xs font-display">M</span>
           </div>
-          <span className="text-white font-bold">MediInfo</span>
+          <span className="text-white font-bold">Niraamo</span>
         </div>
         <p className="mb-2">AI-powered healthcare, made for India.</p>
         <p className="text-gray-600 text-xs">⚠️ For informational purposes only. Always consult a licensed healthcare professional.</p>
-        <p className="text-gray-700 text-xs mt-4">© 2026 MediInfo. All rights reserved.</p>
+        <p className="text-gray-700 text-xs mt-4">© 2026 Niraamo. All rights reserved.</p>
       </footer>
     </div>
   )

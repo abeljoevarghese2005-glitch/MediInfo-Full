@@ -59,7 +59,7 @@ function DoctorSidebarContent({ onClose }) {
         <div className="w-9 h-9 bg-gradient-to-br from-cyan-400 to-cyan-600 rounded-xl flex items-center justify-center shadow-sm">
           <span className="text-white font-black text-base">M</span>
         </div>
-        <span className="text-xl font-black text-gray-900 tracking-tight">MediInfo</span>
+        <span className="text-xl font-black text-gray-900 tracking-tight">Niraamo</span>
       </Link>
 
       {/* Section label */}

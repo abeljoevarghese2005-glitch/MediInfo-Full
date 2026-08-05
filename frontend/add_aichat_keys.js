@@ -22,17 +22,17 @@ const newKeys = {
   en: {
     aiChat: {
       header: {
-        title: "MediInfo AI",
+        title: "Niraamo AI",
         subtitle: "Powered by Gemini · Ask about any medicine"
       },
       medicineInput: {
         label: "Medicine(s):",
         placeholder: "e.g. Paracetamol, Ibuprofen (optional)"
       },
-      greeting: "Hello! I'm MediInfo AI 🤖 Ask me anything about medicines — side effects, dosage, interactions, pregnancy safety, and more!",
+      greeting: "Hello! I'm Niraamo AI 🤖 Ask me anything about medicines — side effects, dosage, interactions, pregnancy safety, and more!",
       inputPlaceholder: "Ask about side effects, dosage, interactions...",
       send: "Send",
-      disclaimer: "MediInfo AI is for informational purposes only. Always consult a doctor.",
+      disclaimer: "Niraamo AI is for informational purposes only. Always consult a doctor.",
       errorFallback: "Something went wrong. Please try again."
     }
   },

@@ -12,7 +12,7 @@ const REMINDERS_EN = {
   errorPrefix: 'Error',
   notifBanner: {
     title: 'Allow notifications',
-    blocked: 'Notifications blocked — enable in device Settings → Apps → MediInfo',
+    blocked: 'Notifications blocked — enable in device Settings → Apps → Niraamo',
     prompt: 'Get medicine reminders at exactly the right time',
     allow: 'Allow',
     activeTitle: 'Notifications active',
@@ -77,7 +77,7 @@ const TRANSLATIONS = {
     errorPrefix: 'त्रुटि',
     notifBanner: {
       title: 'सूचनाएं चालू करें',
-      blocked: 'सूचनाएं अवरुद्ध हैं — डिवाइस सेटिंग्स → ऐप्स → MediInfo में चालू करें',
+      blocked: 'सूचनाएं अवरुद्ध हैं — डिवाइस सेटिंग्स → ऐप्स → Niraamo में चालू करें',
       prompt: 'सही समय पर दवा रिमाइंडर पाएं',
       allow: 'अनुमति दें',
       activeTitle: 'सूचनाएं सक्रिय हैं',
@@ -125,7 +125,7 @@ const TRANSLATIONS = {
     errorPrefix: 'त्रुटी',
     notifBanner: {
       title: 'सूचना सुरू करा',
-      blocked: 'सूचना अवरोधित आहेत — डिव्हाइस सेटिंग्ज → अॅप्स → MediInfo मध्ये सुरू करा',
+      blocked: 'सूचना अवरोधित आहेत — डिव्हाइस सेटिंग्ज → अॅप्स → Niraamo मध्ये सुरू करा',
       prompt: 'योग्य वेळी औषध रिमाइंडर मिळवा',
       allow: 'परवानगी द्या',
       activeTitle: 'सूचना सक्रिय आहेत',
@@ -173,7 +173,7 @@ const TRANSLATIONS = {
     errorPrefix: 'பிழை',
     notifBanner: {
       title: 'அறிவிப்புகளை அனுமதிக்கவும்',
-      blocked: 'அறிவிப்புகள் தடுக்கப்பட்டுள்ளன — சாதன அமைப்புகள் → ஆப்ஸ் → MediInfo இல் இயக்கவும்',
+      blocked: 'அறிவிப்புகள் தடுக்கப்பட்டுள்ளன — சாதன அமைப்புகள் → ஆப்ஸ் → Niraamo இல் இயக்கவும்',
       prompt: 'சரியான நேரத்தில் மருந்து நினைவூட்டல்களைப் பெறுங்கள்',
       allow: 'அனுமதி',
       activeTitle: 'அறிவிப்புகள் செயலில் உள்ளன',
@@ -221,7 +221,7 @@ const TRANSLATIONS = {
     errorPrefix: 'లోపం',
     notifBanner: {
       title: 'నోటిఫికేషన్‌లను అనుమతించండి',
-      blocked: 'నోటిఫికేషన్‌లు బ్లాక్ చేయబడ్డాయి — డివైస్ సెట్టింగ్‌లు → యాప్‌లు → MediInfo లో ఎనేబుల్ చేయండి',
+      blocked: 'నోటిఫికేషన్‌లు బ్లాక్ చేయబడ్డాయి — డివైస్ సెట్టింగ్‌లు → యాప్‌లు → Niraamo లో ఎనేబుల్ చేయండి',
       prompt: 'సరైన సమయంలో మందుల రిమైండర్‌లు పొందండి',
       allow: 'అనుమతించు',
       activeTitle: 'నోటిఫికేషన్‌లు యాక్టివ్‌గా ఉన్నాయి',
@@ -269,7 +269,7 @@ const TRANSLATIONS = {
     errorPrefix: 'ದೋಷ',
     notifBanner: {
       title: 'ಅಧಿಸೂಚನೆಗಳನ್ನು ಅನುಮತಿಸಿ',
-      blocked: 'ಅಧಿಸೂಚನೆಗಳು ನಿರ್ಬಂಧಿಸಲ್ಪಟ್ಟಿವೆ — ಡಿವೈಸ್ ಸೆಟ್ಟಿಂಗ್‌ಗಳು → ಆಪ್‌ಗಳು → MediInfo ನಲ್ಲಿ ಸಕ್ರಿಯಗೊಳಿಸಿ',
+      blocked: 'ಅಧಿಸೂಚನೆಗಳು ನಿರ್ಬಂಧಿಸಲ್ಪಟ್ಟಿವೆ — ಡಿವೈಸ್ ಸೆಟ್ಟಿಂಗ್‌ಗಳು → ಆಪ್‌ಗಳು → Niraamo ನಲ್ಲಿ ಸಕ್ರಿಯಗೊಳಿಸಿ',
       prompt: 'ಸರಿಯಾದ ಸಮಯದಲ್ಲಿ ಔಷಧಿ ರಿಮೈಂಡರ್‌ಗಳನ್ನು ಪಡೆಯಿರಿ',
       allow: 'ಅನುಮತಿಸಿ',
       activeTitle: 'ಅಧಿಸೂಚನೆಗಳು ಸಕ್ರಿಯವಾಗಿವೆ',
@@ -317,7 +317,7 @@ const TRANSLATIONS = {
     errorPrefix: 'ত্রুটি',
     notifBanner: {
       title: 'বিজ্ঞপ্তি চালু করুন',
-      blocked: 'বিজ্ঞপ্তি ব্লক করা আছে — ডিভাইস সেটিংস → অ্যাপস → MediInfo-এ চালু করুন',
+      blocked: 'বিজ্ঞপ্তি ব্লক করা আছে — ডিভাইস সেটিংস → অ্যাপস → Niraamo-এ চালু করুন',
       prompt: 'ঠিক সময়ে ওষুধের রিমাইন্ডার পান',
       allow: 'অনুমতি দিন',
       activeTitle: 'বিজ্ঞপ্তি সক্রিয়',
@@ -365,7 +365,7 @@ const TRANSLATIONS = {
     errorPrefix: 'പിശക്',
     notifBanner: {
       title: 'അറിയിപ്പുകൾ അനുവദിക്കുക',
-      blocked: 'അറിയിപ്പുകൾ ബ്ലോക്ക് ചെയ്തിരിക്കുന്നു — ഡിവൈസ് സെറ്റിംഗ്സ് → ആപ്സ് → MediInfo ൽ പ്രവർത്തനക്ഷമമാക്കുക',
+      blocked: 'അറിയിപ്പുകൾ ബ്ലോക്ക് ചെയ്തിരിക്കുന്നു — ഡിവൈസ് സെറ്റിംഗ്സ് → ആപ്സ് → Niraamo ൽ പ്രവർത്തനക്ഷമമാക്കുക',
       prompt: 'ശരിയായ സമയത്ത് മരുന്ന് റിമൈൻഡറുകൾ നേടുക',
       allow: 'അനുവദിക്കുക',
       activeTitle: 'അറിയിപ്പുകൾ സജീവമാണ്',
@@ -413,7 +413,7 @@ const TRANSLATIONS = {
     errorPrefix: 'ભૂલ',
     notifBanner: {
       title: 'સૂચનાઓ ચાલુ કરો',
-      blocked: 'સૂચનાઓ અવરોધિત છે — ડિવાઇસ સેટિંગ્સ → એપ્સ → MediInfo માં સક્રિય કરો',
+      blocked: 'સૂચનાઓ અવરોધિત છે — ડિવાઇસ સેટિંગ્સ → એપ્સ → Niraamo માં સક્રિય કરો',
       prompt: 'યોગ્ય સમયે દવા રિમાઇન્ડર મેળવો',
       allow: 'મંજૂરી આપો',
       activeTitle: 'સૂચનાઓ સક્રિય છે',
@@ -461,7 +461,7 @@ const TRANSLATIONS = {
     errorPrefix: 'ਗਲਤੀ',
     notifBanner: {
       title: 'ਸੂਚਨਾਵਾਂ ਚਾਲੂ ਕਰੋ',
-      blocked: 'ਸੂਚਨਾਵਾਂ ਬਲੌਕ ਹਨ — ਡਿਵਾਈਸ ਸੈਟਿੰਗਜ਼ → ਐਪਸ → MediInfo ਵਿੱਚ ਚਾਲੂ ਕਰੋ',
+      blocked: 'ਸੂਚਨਾਵਾਂ ਬਲੌਕ ਹਨ — ਡਿਵਾਈਸ ਸੈਟਿੰਗਜ਼ → ਐਪਸ → Niraamo ਵਿੱਚ ਚਾਲੂ ਕਰੋ',
       prompt: 'ਸਹੀ ਸਮੇਂ ਤੇ ਦਵਾਈ ਰਿਮਾਈਂਡਰ ਪਾਓ',
       allow: 'ਇਜਾਜ਼ਤ ਦਿਓ',
       activeTitle: 'ਸੂਚਨਾਵਾਂ ਸਰਗਰਮ ਹਨ',

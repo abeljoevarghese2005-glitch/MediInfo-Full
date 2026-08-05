@@ -25,7 +25,7 @@ function DoctorTopBar() {
         <div className="w-7 h-7 bg-cyan-500 rounded-lg flex items-center justify-center">
           <span className="text-white font-black text-xs">M</span>
         </div>
-        <span className="text-base font-black text-gray-900">MediInfo</span>
+        <span className="text-base font-black text-gray-900">Niraamo</span>
       </div>
       <div className="hidden lg:block" />
       <div className="flex items-center gap-3">

@@ -2,7 +2,7 @@ import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.mediinfo.app',
-  appName: 'MediInfo',
+  appName: 'Niraamo',
   webDir: 'dist',
   server: {
     androidScheme: 'https',
