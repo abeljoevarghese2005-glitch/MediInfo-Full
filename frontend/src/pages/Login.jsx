@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import { Capacitor } from '@capacitor/core'
 import { supabase } from '../lib/supabase'
+import { subscribeToPush } from '../hooks/usePushNotifications'
 
 function Login() {
   const [form, setForm] = useState({ phone: '', password: '' })
@@ -17,7 +19,7 @@ function Login() {
       const isEmail = form.phone.includes('@')
       const email = isEmail
         ? form.phone.trim()
-        : `${form.phone.replace(/\s+/g, '')}@mediinfo.app`
+        : `${form.phone.replace(/\s+/g, '')}@niraamo.app`
 
       const { data, error: authError } = await supabase.auth.signInWithPassword({
         email,
@@ -38,6 +40,11 @@ function Login() {
       localStorage.setItem('token', data.session.access_token)
       localStorage.setItem('user', JSON.stringify(profile))
 
+      // Only register for native push on the installed app (not the plain website)
+      if (Capacitor.isNativePlatform()) {
+        subscribeToPush()
+      }
+
       if (profile.role === 'doctor') {
         navigate('/doctor-dashboard')
       } else {
@@ -57,7 +64,7 @@ function Login() {
             <span className="text-white font-bold text-xl">M</span>
           </div>
           <h1 className="text-2xl font-bold text-gray-800">Welcome back</h1>
-          <p className="text-gray-500 text-sm mt-1">Login to your MediInfo account</p>
+          <p className="text-gray-500 text-sm mt-1">Login to your Niraamo account</p>
         </div>
         {error && (
           <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg mb-4 text-sm">

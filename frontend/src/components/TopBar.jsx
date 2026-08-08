@@ -27,7 +27,7 @@ function TopBar() {
         <div className="w-7 h-7 bg-emerald-600 rounded-lg flex items-center justify-center">
           <span className="text-white font-semibold text-xs">M</span>
         </div>
-        <span className="text-base font-semibold tracking-tight text-gray-900">MediInfo</span>
+        <span className="text-base font-semibold tracking-tight text-gray-900">Niraamo</span>
       </Link>
       <div className="hidden lg:block" />
       <div className="flex items-center gap-2 sm:gap-4">

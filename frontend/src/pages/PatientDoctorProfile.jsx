@@ -327,7 +327,7 @@ function PatientDoctorProfile() {
     <SidebarProvider>
       <div className="min-h-screen bg-green-50 flex">
         <Sidebar />
-        <div className="lg:ml-56 flex-1 flex flex-col">
+        <div className="lg:ml-56 flex-1 flex flex-col min-w-0">
           <TopBar />
           <div className="flex items-center justify-center flex-1 text-gray-400 text-sm">Loading…</div>
         </div>
@@ -339,7 +339,7 @@ function PatientDoctorProfile() {
     <SidebarProvider>
       <div className="min-h-screen bg-green-50 flex">
         <Sidebar />
-        <div className="lg:ml-56 flex-1 flex flex-col">
+        <div className="lg:ml-56 flex-1 flex flex-col min-w-0">
           <TopBar />
           <div className="flex items-center justify-center flex-1 flex-col gap-3">
             <p className="text-gray-500">{error || 'Doctor not found.'}</p>
@@ -352,11 +352,11 @@ function PatientDoctorProfile() {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen bg-gray-50 flex">
+      <div className="min-h-screen bg-gray-50 flex overflow-x-hidden">
         <Sidebar />
-        <div className="lg:ml-56 flex-1 flex flex-col">
+        <div className="lg:ml-56 flex-1 flex flex-col min-w-0">
           <TopBar />
-          <div className="flex-1 px-4 sm:px-6 lg:px-8 py-4 max-w-2xl w-full mx-auto pb-24">
+          <div className="flex-1 px-4 sm:px-6 lg:px-8 py-4 max-w-2xl w-full min-w-0 mx-auto pb-24 overflow-x-hidden">
 
             {/* Back button */}
             <button onClick={() => navigate('/doctors')} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mb-4 py-2">
@@ -435,10 +435,10 @@ function PatientDoctorProfile() {
                 <div className="flex bg-gray-50 rounded-xl p-1 mb-4 border border-gray-100">
                   {availableModes.map(mode => (
                     <button key={mode} onClick={() => setConsultationType(mode)}
-                      className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-semibold transition-all ${
-                        consultationType === mode ? `${GRADIENT_BTN} shadow-sm` : 'text-gray-500'
-                      }`}>
-                      {MODE_META[mode].icon} {MODE_META[mode].label}
+                      className={`flex-1 min-w-0 flex items-center justify-center gap-1 py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition-all truncate ${
+                      consultationType === mode ? `${GRADIENT_BTN} shadow-sm` : 'text-gray-500'
+                    }`}>
+                      <span className="truncate">{MODE_META[mode].icon} {MODE_META[mode].label}</span>
                     </button>
                   ))}
                 </div>
@@ -472,7 +472,7 @@ function PatientDoctorProfile() {
               ) : slots.length === 0 ? (
                 <p className="text-sm text-red-400 mb-4">No availability on this day.</p>
               ) : (
-                <div className="grid grid-cols-3 gap-2 mb-4">
+                <div className="grid grid-cols-3 gap-2 mb-4 max-h-80 overflow-y-auto pr-1 thin-scrollbar">
                   {slots.map(({ time, past }) => {
                     const isBooked = bookedSlots.includes(time)
                     const isSelected = selectedTime === time

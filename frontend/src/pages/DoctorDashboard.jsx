@@ -39,7 +39,7 @@ const getWeekStart = (date) => {
   return d
 }
 
-const BOOST_VISIBILITY_KEY = 'mediinfo_boost_visibility_dismissed_at'
+const BOOST_VISIBILITY_KEY = 'niraamo_boost_visibility_dismissed_at'
 const BOOST_VISIBILITY_COOLDOWN_DAYS = 30
 
 function StatCard({ icon, value, label, sub, subColor = 'text-cyan-500', onClick }) {
@@ -167,12 +167,36 @@ function DoctorDashboard() {
       .order('appointment_date', { ascending: true })
 
     if (!error && data) {
-      setAppointments(data.map(a => ({
+      const normalized = data.map(a => ({
         ...a,
         patient_name: a.source === 'walkin' ? a.walkin_name : a.users?.full_name,
-      })))
+      }))
+      setAppointments(normalized)
+      setLoading(false)
+
+      const now = new Date()
+      const toExpire = normalized.filter(a => {
+        if (a.status !== 'pending') return false
+        const apptDateTime = new Date(`${a.appointment_date}T${a.appointment_time}`)
+        return apptDateTime < now
+      })
+
+      if (toExpire.length > 0) {
+        const ids = toExpire.map(a => a.id)
+        const { error: expireError } = await supabase
+          .from('appointments')
+          .update({ status: 'expired' })
+          .in('id', ids)
+
+        if (!expireError) {
+          setAppointments(prev =>
+            prev.map(a => ids.includes(a.id) ? { ...a, status: 'expired' } : a)
+          )
+        }
+      }
+    } else {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   const today = new Date().toLocaleDateString('en-CA')
@@ -223,7 +247,7 @@ function DoctorDashboard() {
   const confirmedCount = appointments.filter(a => a.status === 'confirmed').length
 
   const upcoming5 = appointments
-    .filter(a => a.appointment_date >= today && a.status !== 'cancelled' && a.status !== 'completed')
+    .filter(a => a.appointment_date >= today && a.status !== 'cancelled' && a.status !== 'completed' && a.status !== 'expired')
     .sort((a, b) => {
       if (a.appointment_date !== b.appointment_date) {
         return a.appointment_date.localeCompare(b.appointment_date)
@@ -269,6 +293,7 @@ function DoctorDashboard() {
     cancelled: 'bg-red-100 text-red-600',
     pending: 'bg-amber-100 text-amber-700',
     completed: 'bg-gray-100 text-gray-500',
+    expired: 'bg-gray-100 text-gray-400',
   }
 
   return (

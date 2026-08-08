@@ -1,6 +1,6 @@
-# MediInfo Backend
+# Niraamo Backend
 
-FastAPI backend for the MediInfo healthcare app.
+FastAPI backend for the Niraamo healthcare app.
 
 ## Setup
 
@@ -18,4 +18,5 @@ FastAPI backend for the MediInfo healthcare app.
 5. Run the server:
    uvicorn app.main:app --reload
 
-6. Visit http://127.0.0.1:8000/docs
+
+6. Visit http://127.0.0.1:8000/docs   

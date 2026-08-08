@@ -378,7 +378,7 @@ function DoctorProfile() {
 
   const handleLanguageChange = (code) => {
     i18n.changeLanguage(code)
-    localStorage.setItem('mediinfo_lang', code)
+    localStorage.setItem('niraamo_lang', code)
     setLangSaved(true)
     setTimeout(() => setLangSaved(false), 2000)
   }

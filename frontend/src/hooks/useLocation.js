@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Geolocation } from '@capacitor/geolocation'
 
-const STORAGE_KEY = 'mediinfo_user_location'
+const STORAGE_KEY = 'niraamo_user_location'
 
 const getStored = () => {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) }

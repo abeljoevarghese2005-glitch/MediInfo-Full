@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 /* ============================================================
-   MEDIINFO LANDING — THEME TOKENS
+   NIRAAMO LANDING — THEME TOKENS
    (scoped with --mi- prefix so nothing here collides with
    existing app styles or the primary/secondary tailwind colors)
    ============================================================ */
@@ -186,4 +186,23 @@ body.mi-landing {
   .mi-landing .mi-sheen {
     display: none;
   }
+  
+}
+
+.thin-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.thin-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.thin-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #d1d5db; /* gray-300 */
+  border-radius: 9999px;
+}
+.thin-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: #9ca3af; /* gray-400 */
+}
+.thin-scrollbar {
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: #d1d5db transparent; /* Firefox */
 }

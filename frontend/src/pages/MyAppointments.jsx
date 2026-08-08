@@ -14,6 +14,18 @@ const formatDate = (dateStr) =>
 
 const DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
 
+// Returns true if this video appointment can be joined right now:
+// window opens 5 minutes before appointment_time and stays open until
+// appointment_time + duration_minutes (defaults to 15 if not set).
+function isVideoJoinable(appt, now) {
+  if (appt.consultation_type !== 'video') return false
+  const apptDateTime = new Date(`${appt.appointment_date}T${appt.appointment_time}`)
+  if (isNaN(apptDateTime.getTime())) return false
+  const joinWindowStart = new Date(apptDateTime.getTime() - 5 * 60000)
+  const callEnd = new Date(apptDateTime.getTime() + (appt.duration_minutes || 15) * 60000)
+  return now >= joinWindowStart && now <= callEnd
+}
+
 function generateSlots(start, end, duration = 15) {
   const slots = []
   const [sh, sm] = start.split(':').map(Number)
@@ -214,6 +226,7 @@ function MyAppointments() {
   const [toasts, setToasts] = useState([])
   const [lastUpdated, setLastUpdated] = useState(null)
   const [rescheduling, setRescheduling] = useState(null)
+  const [now, setNow] = useState(new Date())
   const prevAppointments = useRef([])
   const toastCounter = useRef(0)
 
@@ -223,12 +236,19 @@ function MyAppointments() {
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 5000)
   }
 
+  // Ticks every 30s so the "Join Video Consultation" button can
+  // appear/disappear as the join window opens/closes, without a page refresh.
+  useEffect(() => {
+    const interval = setInterval(() => setNow(new Date()), 30000)
+    return () => clearInterval(interval)
+  }, [])
+
   const fetchAppointments = async () => {
     const { data, error } = await supabase
       .from('appointments')
       .select(`
         id, doctor_id, patient_id, appointment_date, appointment_time,
-        status, issue, created_at, cancellation_reason,
+        status, issue, created_at, cancellation_reason, consultation_type, duration_minutes,
         users!appointments_doctor_id_fkey(full_name, specialization)
       `)
       .eq('patient_id', user.id)
@@ -258,6 +278,27 @@ function MyAppointments() {
     setAppointments(normalized)
     setLastUpdated(new Date())
     setLoading(false)
+
+    const now = new Date()
+    const toExpire = normalized.filter(a => {
+      if (a.status !== 'pending') return false
+      const apptDateTime = new Date(`${a.appointment_date}T${a.appointment_time}`)
+      return apptDateTime < now
+    })
+
+    if (toExpire.length > 0) {
+      const ids = toExpire.map(a => a.id)
+      const { error } = await supabase
+        .from('appointments')
+        .update({ status: 'expired' })
+        .in('id', ids)
+
+      if (!error) {
+        setAppointments(prev =>
+          prev.map(a => ids.includes(a.id) ? { ...a, status: 'expired' } : a)
+        )
+      }
+    }
   }
 
   useEffect(() => {
@@ -284,17 +325,23 @@ function MyAppointments() {
     setCancelling(null)
   }
 
+  const handleJoinVideoCall = (appt) => {
+    navigate('/video-call', { state: { appointment: appt } })
+  }
+
   const today = new Date().toLocaleDateString('en-CA')
 
   const upcoming = appointments.filter(a =>
     a.status !== 'cancelled' &&
     a.status !== 'completed' &&
+    a.status !== 'expired' &&
     a.appointment_date >= today
   )
   const past = appointments
   .filter(a =>
     a.status === 'cancelled' ||
     a.status === 'completed' ||
+    a.status === 'expired' ||
     a.appointment_date < today
   )
   .sort((a, b) => {
@@ -312,6 +359,8 @@ function MyAppointments() {
         return 'bg-red-100 text-red-600'
       case 'completed':
         return 'bg-gray-100 text-gray-500'
+      case 'expired':
+        return 'bg-gray-100 text-gray-400'
       default:
         return 'bg-amber-100 text-amber-700'
     }
@@ -387,7 +436,27 @@ function MyAppointments() {
                   <div>
                     <p className="text-xs font-medium text-gray-400 uppercase tracking-widest mb-3">{t('myAppointments.upcoming')}</p>
                     <div className="space-y-3">
-                      {upcoming.map(appt => (
+                      {upcoming.map(appt => {
+                        const showJoinVideo = (appt.status === 'confirmed' || appt.status === 'accepted') && isVideoJoinable(appt, now)
+
+                        // TEMP DEBUG — remove once the join-window bug is confirmed/fixed.
+                        // Logs the exact raw values for any 'video' appointment so we can see
+                        // whether it's a data issue (consultation_type/format) or a timezone issue.
+                        if (appt.consultation_type === 'video') {
+                          console.log('[VideoDebug]', appt.id, {
+                            consultation_type: appt.consultation_type,
+                            status: appt.status,
+                            appointment_date: appt.appointment_date,
+                            appointment_time_raw: appt.appointment_time,
+                            duration_minutes: appt.duration_minutes,
+                            combinedString: `${appt.appointment_date}T${appt.appointment_time}`,
+                            parsedApptDateTime: new Date(`${appt.appointment_date}T${appt.appointment_time}`).toString(),
+                            nowLocal: now.toString(),
+                            showJoinVideo,
+                          })
+                        }
+
+                        return (
                         <div key={appt.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
                           <div className="flex items-start justify-between mb-3">
                             <div className="flex items-center gap-3">
@@ -407,6 +476,17 @@ function MyAppointments() {
                               {getStatusLabel(appt.status)}
                             </span>
                           </div>
+
+                          {showJoinVideo && (
+                            <button onClick={() => handleJoinVideoCall(appt)}
+                              className="w-full mb-2 bg-emerald-700 text-white py-2.5 rounded-xl text-sm font-bold tracking-tight transition-colors hover:bg-emerald-500 flex items-center justify-center gap-2">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              </svg>
+                              Join Video Consultation
+                            </button>
+                          )}
+
                           {(appt.status === 'confirmed' || appt.status === 'accepted') ? (
                             <div className="flex flex-wrap gap-2">
                               <button onClick={() => navigate('/live-queue', { state: { appointment: appt } })}
@@ -439,7 +519,8 @@ function MyAppointments() {
                             </div>
                           )}
                         </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   </div>
                 )}
@@ -479,6 +560,9 @@ function MyAppointments() {
                           )}
                           {appt.status === 'completed' && (
                             <p className="text-xs text-gray-500 mt-2 ml-14">Appointment completed. Get well soon!</p>
+                          )}
+                          {appt.status === 'expired' && (
+                            <p className="text-xs text-gray-400 mt-2 ml-14">{t('myAppointments.requestExpiredMessage')}</p>
                           )}
                         </div>
                       ))}

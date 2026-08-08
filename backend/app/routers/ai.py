@@ -230,7 +230,7 @@ def save_to_session(session_id: str, role: str, text: str):
 def format_history(history: list[dict]) -> str:
     lines = []
     for msg in history:
-        label = "User" if msg["role"] == "user" else "MediInfo AI"
+        label = "User" if msg["role"] == "user" else "Niraamo AI"
         lines.append(f"{label}: {msg['text']}")
     return "\n".join(lines)
 
@@ -329,7 +329,7 @@ def ask_ai(question: AIQuestion, db: Session = Depends(get_db)):
         q_lower = question.question.lower()
         if any(kw in q_lower for kw in out_of_scope_keywords) and not context:
             out_of_scope_answer = (
-                "I'm MediInfo AI and I can only help with medicine and health-related questions. "
+                "I'm Niraamo AI and I can only help with medicine and health-related questions. "
                 "Please ask me about medicines, dosages, side effects, drug interactions, or similar topics."
             )
             save_to_session(session_id, "user", question.question)
@@ -353,7 +353,7 @@ def ask_ai(question: AIQuestion, db: Session = Depends(get_db)):
         else:
             confidence_note = "LOW confidence — no matching records found; using general knowledge."
 
-        prompt = f"""You are MediInfo AI, a knowledgeable and friendly medical assistant for Indian users.
+        prompt = f"""You are Niraamo AI, a knowledgeable and friendly medical assistant for Indian users.
 You speak like a helpful pharmacist — clear, warm, and trustworthy.
 
 LANGUAGE RULES (most important rule):
@@ -412,7 +412,7 @@ MEDICINE INFORMATION:
 
 {history_section}USER: {question.question}
 
-MediInfo AI:"""
+Niraamo AI:"""
 
         answer = gemini_generate(prompt)
 
@@ -451,7 +451,7 @@ def compare_medicines(medicine1: str, medicine2: str, db: Session = Depends(get_
             rag2 = hybrid_rag_search(db, medicine2, top_k=2)
             context = rag1 + "\n" + rag2
 
-        prompt = f"""You are MediInfo AI, a knowledgeable and friendly medical assistant for Indian users.
+        prompt = f"""You are Niraamo AI, a knowledgeable and friendly medical assistant for Indian users.
 Always respond in English. Speak like a helpful pharmacist — clear, warm, and direct.
 
 Never say "based on the provided data", "my database", or any phrase that reveals

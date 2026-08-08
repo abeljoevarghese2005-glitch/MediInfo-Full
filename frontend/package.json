@@ -1,5 +1,5 @@
 {
-  "name": "mediinfo-frontend",
+  "name": "niraamo-frontend",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -18,7 +18,7 @@
     "@capacitor/local-notifications": "^8.2.0",
     "@capacitor/preferences": "^8.0.1",
     "@capacitor/push-notifications": "^8.1.1",
-    "@stream-io/video-react-sdk": "^1.40.1",
+    "@stream-io/video-react-sdk": "^1.39.1",
     "@supabase/supabase-js": "^2.105.4",
     "axios": "^1.14.0",
     "i18next": "^26.3.1",
@@ -29,6 +29,7 @@
     "react-router-dom": "^7.13.2"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
     "@eslint/js": "^9.39.4",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",

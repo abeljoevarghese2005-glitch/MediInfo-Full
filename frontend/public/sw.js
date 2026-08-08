@@ -10,7 +10,7 @@ self.addEventListener('push', function(event) {
     icon: '/icon-192.png',
     badge: '/icon-192.png',
     vibrate: [200, 100, 200],
-    tag: data.tag || 'mediinfo-reminder',
+    tag: data.tag || 'niraamo-reminder',
     renotify: true,
     requireInteraction: true,
     actions: [
