@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { Capacitor } from '@capacitor/core'
 import { supabase } from '../lib/supabase'
 import { subscribeToPush } from '../hooks/usePushNotifications'
+import niraamoLogo from '../assets/niraamo-logo-final.png'
 
 function Login() {
   const [form, setForm] = useState({ phone: '', password: '' })
@@ -60,9 +61,7 @@ function Login() {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
       <div className="bg-white p-8 rounded-2xl shadow-sm w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="w-12 h-12 bg-cyan-500 rounded-xl flex items-center justify-center mx-auto mb-4">
-            <span className="text-white font-bold text-xl">M</span>
-          </div>
+          <img src={niraamoLogo} alt="Niraamo" className="w-16 h-16 rounded-xl mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-gray-800">Welcome back</h1>
           <p className="text-gray-500 text-sm mt-1">Login to your Niraamo account</p>
         </div>

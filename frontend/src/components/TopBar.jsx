@@ -2,6 +2,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useSidebar } from './SidebarContext'
 import { supabase } from '../lib/supabase'
+import niraamoLogo from '../assets/niraamo-logo-final.png'
 
 function TopBar() {
   const navigate = useNavigate()
@@ -24,9 +25,7 @@ function TopBar() {
         </svg>
       </button>
       <Link to="/home" className="flex items-center gap-2 lg:hidden">
-        <div className="w-7 h-7 bg-emerald-600 rounded-lg flex items-center justify-center">
-          <span className="text-white font-semibold text-xs">M</span>
-        </div>
+        <img src={niraamoLogo} alt="Niraamo" className="w-7 h-7 rounded-lg" />
         <span className="text-base font-semibold tracking-tight text-gray-900">Niraamo</span>
       </Link>
       <div className="hidden lg:block" />

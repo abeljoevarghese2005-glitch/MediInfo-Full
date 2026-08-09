@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useSidebar } from './SidebarContext'
+import niraamoLogo from '../assets/niraamo-logo-final.png'
 
 const navItems = [
   {
@@ -74,9 +75,7 @@ function SidebarContent({ onClose }) {
         onClick={onClose}
         className="flex items-center gap-2 mb-8 px-3"
       >
-        <div className="w-9 h-9 bg-emerald-600 rounded-xl flex items-center justify-center shadow-sm">
-          <span className="text-white font-semibold text-base">M</span>
-        </div>
+        <img src={niraamoLogo} alt="Niraamo" className="w-9 h-9 rounded-xl shadow-sm" />
         <span className="text-xl font-semibold text-gray-900 tracking-tight">Niraamo</span>
       </Link>
 
