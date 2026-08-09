@@ -210,7 +210,7 @@ function Landing() {
               </span>
             </span>
             <span className="mi-reveal-wrap">
-              <span className="mi-reveal-up animate-mi-reveal-up mi-delay-2">in Minutes</span>
+              <span className="mi-reveal-up animate-mi-reveal-up mi-delay-2">in Seconds</span>
             </span>
           </h1>
 
