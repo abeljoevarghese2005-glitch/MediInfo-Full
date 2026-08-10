@@ -11,6 +11,13 @@ const avatarColors = ['bg-cyan-500','bg-purple-500','bg-green-500','bg-orange-50
 const getColor = (name) => avatarColors[(name?.charCodeAt(0) || 0) % avatarColors.length]
 const getInitials = (name) => name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '??'
 
+// --- Home Visit display: mode badge meta (NEW) ---
+const MODE_BADGE = {
+  in_clinic: { label: 'In-clinic', icon: '🏥' },
+  video: { label: 'Video', icon: '🎥' },
+  home_visit: { label: 'Home visit', icon: '🏠' },
+}
+
 function DoctorLiveQueue() {
   const { t } = useTranslation()
   const navigate = useNavigate()
@@ -56,7 +63,7 @@ function DoctorLiveQueue() {
         .eq('appointment_date', today)
         // Video consultations have their own dedicated flow (Join Video
         // Consultation button), so they're excluded from the in-person
-        // live queue entirely. Everything else (in_clinic, and any
+        // live queue entirely. Everything else (in_clinic, home_visit, and any
         // appointment without a consultation_type set) behaves exactly
         // as before.
         .neq('consultation_type', 'video')
@@ -98,6 +105,25 @@ function DoctorLiveQueue() {
   const remaining = queue.filter(a => a.status === 'confirmed')
   const current = remaining[0] || null
   const waiting = remaining.slice(1)
+
+  // --- Home Visit display: mode badge component (NEW) ---
+  const ModeBadge = ({ type }) => {
+    const meta = MODE_BADGE[type] || MODE_BADGE.in_clinic
+    return (
+      <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-white/20 text-white">
+        {meta.icon} {meta.label}
+      </span>
+    )
+  }
+
+  const WaitingModeBadge = ({ type }) => {
+    const meta = MODE_BADGE[type] || MODE_BADGE.in_clinic
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500 shrink-0">
+        {meta.icon} {meta.label}
+      </span>
+    )
+  }
 
   return (
     <SidebarProvider>
@@ -173,12 +199,76 @@ function DoctorLiveQueue() {
                         <div className={`w-14 h-14 rounded-2xl ${getColor(current.patient_name)} bg-opacity-30 flex items-center justify-center text-white font-black text-xl border-2 border-white/30`}>
                           {getInitials(current.patient_name)}
                         </div>
-                        <div>
-                          <p className="text-xl font-black">{current.patient_name}</p>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-xl font-black">{current.patient_name}</p>
+                            <ModeBadge type={current.consultation_type} />
+                          </div>
                           <p className="text-sm opacity-75">{current.issue || t('doctorLiveQueue.issueFallback')}</p>
                           <p className="text-xs opacity-60 mt-0.5">{formatTime(current.appointment_time)}</p>
                         </div>
                       </div>
+
+                      {/* --- Home Visit details block (NEW) --- */}
+                      {current.consultation_type === 'home_visit' && current.home_visit_details && (
+                        <div className="mt-4 bg-white/10 border border-white/20 rounded-xl p-4 space-y-3 text-sm">
+                          <div className="flex items-start justify-between gap-3 flex-wrap">
+                            <div className="min-w-0">
+                              <p className="text-[11px] font-bold uppercase tracking-wide opacity-70 mb-0.5">Visit address</p>
+                              <p className="opacity-95 break-words">{current.home_visit_details.address}</p>
+                              {current.home_visit_details.landmark && (
+                                <p className="opacity-70 text-xs mt-0.5">Landmark: {current.home_visit_details.landmark}</p>
+                              )}
+                              <p className="opacity-70 text-xs mt-0.5">
+                                {current.home_visit_details.address_type}
+                                {current.home_visit_details.floor && ` · Floor: ${current.home_visit_details.floor}`}
+                                {current.home_visit_details.lift_available ? ' · Lift available' : ' · No lift'}
+                              </p>
+                            </div>
+                            {current.home_visit_details.maps_link && (
+                              <a href={current.home_visit_details.maps_link} target="_blank" rel="noopener noreferrer"
+                                className="shrink-0 inline-flex items-center gap-1.5 bg-white text-cyan-700 font-bold text-xs px-3 py-2 rounded-lg hover:bg-cyan-50 transition-colors">
+                                📍 Open in Maps
+                              </a>
+                            )}
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3 border-t border-white/10 pt-3">
+                            <div>
+                              <p className="text-[11px] font-bold uppercase tracking-wide opacity-70 mb-0.5">Patient being visited</p>
+                              <p className="opacity-95">{current.home_visit_details.patient_name}, {current.home_visit_details.patient_age}, {current.home_visit_details.patient_gender}</p>
+                              <p className="opacity-70 text-xs">{current.home_visit_details.relation === 'self' ? 'Account holder' : 'Family member'} · 📞 {current.home_visit_details.contact_number}</p>
+                            </div>
+                            <div>
+                              <p className="text-[11px] font-bold uppercase tracking-wide opacity-70 mb-0.5">Reason & mobility</p>
+                              <p className="opacity-95">{current.home_visit_details.chief_complaint}</p>
+                              <p className="opacity-70 text-xs">{current.home_visit_details.mobility_status}</p>
+                            </div>
+                          </div>
+
+                          {current.home_visit_details.on_site_requirements?.length > 0 && (
+                            <div className="border-t border-white/10 pt-3">
+                              <p className="text-[11px] font-bold uppercase tracking-wide opacity-70 mb-1.5">On-site requirements</p>
+                              <div className="flex flex-wrap gap-1.5">
+                                {current.home_visit_details.on_site_requirements.map(req => (
+                                  <span key={req} className="bg-white/15 text-xs px-2 py-1 rounded-full">{req}</span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="border-t border-white/10 pt-3 flex items-center justify-between flex-wrap gap-2">
+                            <p className="text-xs opacity-80">
+                              ₹{current.home_visit_details.consultation_fee} + ₹{current.home_visit_details.home_visit_surcharge} home visit = <span className="font-bold">₹{current.home_visit_details.total_fee}</span>
+                            </p>
+                            <span className="text-xs font-semibold bg-white/15 px-2 py-1 rounded-full">
+                              {current.home_visit_details.payment_mode === 'pay_now' ? '💳 Pay now' : '💵 Pay after visit'}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                      {/* --- end Home Visit details block --- */}
+
                         <div className="flex gap-2 mt-5">
                         <button
                           onClick={() => setPrescribeTarget(current)}
@@ -222,8 +312,19 @@ function DoctorLiveQueue() {
                             <div className="w-7 h-7 rounded-full bg-gray-100 text-gray-500 text-xs font-bold flex items-center justify-center shrink-0">{i + 2}</div>
                             <div className={`w-9 h-9 rounded-full ${getColor(p.patient_name)} flex items-center justify-center text-white font-bold text-sm shrink-0`}>{getInitials(p.patient_name)}</div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-gray-800 truncate">{p.patient_name}</p>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="text-sm font-semibold text-gray-800 truncate">{p.patient_name}</p>
+                                <WaitingModeBadge type={p.consultation_type} />
+                              </div>
                               <p className="text-xs text-gray-400 truncate">{p.issue || t('doctorLiveQueue.issueFallback')}</p>
+                              {/* Home Visit: compact address link (NEW) */}
+                              {p.consultation_type === 'home_visit' && p.home_visit_details?.maps_link && (
+                                <a href={p.home_visit_details.maps_link} target="_blank" rel="noopener noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="text-cyan-600 text-xs font-semibold hover:underline inline-flex items-center gap-1 mt-0.5">
+                                  📍 View address
+                                </a>
+                              )}
                             </div>
                             <p className="text-xs text-gray-400 shrink-0">{formatTime(p.appointment_time)}</p>
                           </div>
