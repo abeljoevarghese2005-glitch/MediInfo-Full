@@ -31,9 +31,10 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    phone = Column(String(15), unique=True, nullable=False)
+    phone = Column(String(15), unique=True, nullable=True)
     email = Column(String(255), unique=True)
-    password_hash = Column(Text, nullable=False)
+    password_hash = Column(Text, nullable=True)
+    auth_provider = Column(String(20), nullable=False, default="email")
     full_name = Column(String(255), nullable=False)
     role = Column(String(20), default="patient")
     specialization = Column(String(255))
