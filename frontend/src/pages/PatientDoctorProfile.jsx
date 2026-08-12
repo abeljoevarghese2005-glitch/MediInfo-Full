@@ -22,6 +22,18 @@ const MODE_META = {
   home_visit: { label: 'Home visit', icon: '🏠' },
 }
 
+// --- Home Visit Details: constants (NEW) ---
+const COMPLAINT_CHIPS = ['Fever', 'Injury', 'Post-surgery care', 'Elderly care', 'Chronic illness follow-up', 'Other']
+const MOBILITY_OPTIONS = ['Can walk to door', 'Needs assistance', 'Bedridden']
+const ONSITE_REQUIREMENTS = ['BP check', 'Blood sugar test', 'ECG', 'Wound dressing', 'Injection/IV', 'Physiotherapy']
+const HOME_VISIT_SURCHARGE = 200 // ₹ flat surcharge shown to patient
+
+// --- Home Visit Details: helper (NEW) ---
+function buildMapsLink(address, landmark) {
+  const query = [address, landmark].filter(Boolean).join(', ')
+  return query ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}` : ''
+}
+
 function generateSlots(start, end, duration = 15) {
   const slots = []
   const [sh, sm] = start.split(':').map(Number)
@@ -104,6 +116,50 @@ function PatientDoctorProfile() {
   const [booking, setBooking] = useState(false)
   const [bookSuccess, setBookSuccess] = useState('')
   const [bookError, setBookError] = useState('')
+
+  // --- Home Visit Details: state (NEW) ---
+  const [hvAddress, setHvAddress] = useState('')
+  const [hvLandmark, setHvLandmark] = useState('')
+  const [hvAddressType, setHvAddressType] = useState('Home')
+  const [hvFloor, setHvFloor] = useState('')
+  const [hvLiftAvailable, setHvLiftAvailable] = useState(false)
+
+  const [hvPatientName, setHvPatientName] = useState('')
+  const [hvPatientAge, setHvPatientAge] = useState('')
+  const [hvPatientGender, setHvPatientGender] = useState('')
+  const [hvRelation, setHvRelation] = useState('self')
+  const [hvContactNumber, setHvContactNumber] = useState('')
+
+  const [hvComplaint, setHvComplaint] = useState('')
+  const [hvComplaintOther, setHvComplaintOther] = useState('')
+  const [hvMobility, setHvMobility] = useState('')
+
+  const [hvRequirements, setHvRequirements] = useState([])
+
+  const [hvPaymentMode, setHvPaymentMode] = useState('pay_now')
+
+  const toggleRequirement = (req) => {
+    setHvRequirements(prev => prev.includes(req) ? prev.filter(r => r !== req) : [...prev, req])
+  }
+
+  const resetHomeVisitForm = () => {
+    setHvAddress(''); setHvLandmark(''); setHvAddressType('Home'); setHvFloor(''); setHvLiftAvailable(false)
+    setHvPatientName(''); setHvPatientAge(''); setHvPatientGender(''); setHvRelation('self'); setHvContactNumber('')
+    setHvComplaint(''); setHvComplaintOther(''); setHvMobility('')
+    setHvRequirements([]); setHvPaymentMode('pay_now')
+  }
+
+  const homeVisitValid = consultationType !== 'home_visit' || (
+    hvAddress.trim() &&
+    hvPatientName.trim() &&
+    hvPatientAge &&
+    hvPatientGender &&
+    hvContactNumber.trim() &&
+    hvComplaint &&
+    (hvComplaint !== 'Other' || hvComplaintOther.trim()) &&
+    hvMobility
+  )
+  // --- end Home Visit Details state ---
 
   // Next 7 days for day picker
   const today = new Date()
@@ -252,6 +308,10 @@ function PatientDoctorProfile() {
 
   const handleBook = async () => {
     if (!selectedDate || !selectedTime) { setBookError('Please select a date and time.'); return }
+    if (consultationType === 'home_visit' && !homeVisitValid) {
+      setBookError('Please fill in all required Home Visit details.')
+      return
+    }
     setBooking(true)
     setBookError('')
     try {
@@ -265,6 +325,29 @@ function PatientDoctorProfile() {
         .in('status', ['pending', 'confirmed', 'accepted'])
       if (existing?.length) { setBookError('You already have an appointment at this time.'); setBooking(false); return }
 
+      // --- Home Visit Details: build payload (NEW) ---
+      const homeVisitPayload = consultationType === 'home_visit' ? {
+        address: hvAddress,
+        landmark: hvLandmark,
+        address_type: hvAddressType,
+        floor: hvFloor,
+        lift_available: hvLiftAvailable,
+        maps_link: buildMapsLink(hvAddress, hvLandmark),
+        patient_name: hvPatientName,
+        patient_age: hvPatientAge,
+        patient_gender: hvPatientGender,
+        relation: hvRelation,
+        contact_number: hvContactNumber,
+        chief_complaint: hvComplaint === 'Other' ? hvComplaintOther : hvComplaint,
+        mobility_status: hvMobility,
+        on_site_requirements: hvRequirements,
+        consultation_fee: doctor.consultation_fee || 500,
+        home_visit_surcharge: HOME_VISIT_SURCHARGE,
+        total_fee: (doctor.consultation_fee || 500) + HOME_VISIT_SURCHARGE,
+        payment_mode: hvPaymentMode,
+      } : null
+      // --- end Home Visit Details payload ---
+
       const { error: bookErr } = await supabase.from('appointments').insert({
         patient_id: user.id,
         doctor_id: id,
@@ -273,12 +356,14 @@ function PatientDoctorProfile() {
         issue: issue || null,
         status: 'pending',
         consultation_type: consultationType,
+        home_visit_details: homeVisitPayload, // NEW
       })
       if (bookErr) throw bookErr
       setBookSuccess(`Appointment request sent to Dr. ${doctor.full_name}!`)
       setSelectedDate('')
       setSelectedTime('')
       setIssue('')
+      resetHomeVisitForm() // NEW
       setTimeout(() => setBookSuccess(''), 5000)
     } catch (e) { setBookError(e.message || 'Booking failed. Please try again.') }
     setBooking(false)
@@ -493,6 +578,172 @@ function PatientDoctorProfile() {
                 </div>
               )}
 
+              {/* --- Home Visit Details form (NEW) --- */}
+              {consultationType === 'home_visit' && selectedTime && (
+                <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4 mb-4 space-y-5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">🏠</span>
+                    <h3 className="text-sm font-black text-gray-800">Home Visit Details</h3>
+                  </div>
+
+                  {/* Visit address */}
+                  <div className="space-y-3">
+                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Visit address</p>
+                    <div>
+                      <label className="text-xs font-semibold text-gray-500 mb-1 block">Full address *</label>
+                      <textarea value={hvAddress} onChange={e => setHvAddress(e.target.value)} rows={2}
+                        placeholder="House/flat no., street, area, city, pincode"
+                        className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm resize-none bg-white focus:outline-none focus:ring-2 focus:ring-cyan-400" />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-gray-500 mb-1 block">Landmark (optional)</label>
+                      <input type="text" value={hvLandmark} onChange={e => setHvLandmark(e.target.value)}
+                        placeholder="Nearby landmark to help locate"
+                        className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-cyan-400" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-semibold text-gray-500 mb-1 block">Address type</label>
+                        <select value={hvAddressType} onChange={e => setHvAddressType(e.target.value)}
+                          className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-cyan-400">
+                          <option>Home</option><option>Hostel</option><option>PG</option><option>Other</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold text-gray-500 mb-1 block">Floor</label>
+                        <input type="text" value={hvFloor} onChange={e => setHvFloor(e.target.value)}
+                          placeholder="e.g. 2nd floor"
+                          className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-cyan-400" />
+                      </div>
+                    </div>
+                    <label className="flex items-center gap-2 text-sm text-gray-700">
+                      <input type="checkbox" checked={hvLiftAvailable} onChange={e => setHvLiftAvailable(e.target.checked)}
+                        className="accent-cyan-500 w-4 h-4" />
+                      Lift available
+                    </label>
+                    {hvAddress.trim() && (
+                      <a href={buildMapsLink(hvAddress, hvLandmark)} target="_blank" rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-teal-600 hover:text-teal-700 underline">
+                        📍 Preview on Google Maps
+                      </a>
+                    )}
+                  </div>
+
+                  {/* Patient being visited */}
+                  <div className="space-y-3">
+                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Patient being visited</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-semibold text-gray-500 mb-1 block">Patient name *</label>
+                        <input type="text" value={hvPatientName} onChange={e => setHvPatientName(e.target.value)}
+                          className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-cyan-400" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold text-gray-500 mb-1 block">Age *</label>
+                        <input type="number" min="0" value={hvPatientAge} onChange={e => setHvPatientAge(e.target.value)}
+                          className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-cyan-400" />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-semibold text-gray-500 mb-1 block">Gender *</label>
+                        <select value={hvPatientGender} onChange={e => setHvPatientGender(e.target.value)}
+                          className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-cyan-400">
+                          <option value="">Select</option><option>Male</option><option>Female</option><option>Other</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold text-gray-500 mb-1 block">Relation</label>
+                        <select value={hvRelation} onChange={e => setHvRelation(e.target.value)}
+                          className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-cyan-400">
+                          <option value="self">Self (account holder)</option>
+                          <option value="family">Family member</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-gray-500 mb-1 block">Contact number for visit *</label>
+                      <input type="tel" value={hvContactNumber} onChange={e => setHvContactNumber(e.target.value)}
+                        placeholder="Number reachable during visit"
+                        className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-cyan-400" />
+                    </div>
+                  </div>
+
+                  {/* Reason for visit */}
+                  <div className="space-y-3">
+                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Reason for visit</p>
+                    <div>
+                      <label className="text-xs font-semibold text-gray-500 mb-1.5 block">Chief complaint *</label>
+                      <div className="flex flex-wrap gap-2">
+                        {COMPLAINT_CHIPS.map(c => (
+                          <button key={c} type="button" onClick={() => setHvComplaint(c)}
+                            className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+                              hvComplaint === c ? `${GRADIENT_BTN} border-transparent shadow-sm` : 'bg-white text-gray-600 border-gray-200 hover:border-cyan-300'
+                            }`}>
+                            {c}
+                          </button>
+                        ))}
+                      </div>
+                      {hvComplaint === 'Other' && (
+                        <input type="text" value={hvComplaintOther} onChange={e => setHvComplaintOther(e.target.value)}
+                          placeholder="Describe the reason"
+                          className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-cyan-400 mt-2" />
+                      )}
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-gray-500 mb-1.5 block">Mobility status *</label>
+                      <div className="flex flex-wrap gap-2">
+                        {MOBILITY_OPTIONS.map(m => (
+                          <button key={m} type="button" onClick={() => setHvMobility(m)}
+                            className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+                              hvMobility === m ? `${GRADIENT_BTN} border-transparent shadow-sm` : 'bg-white text-gray-600 border-gray-200 hover:border-cyan-300'
+                            }`}>
+                            {m}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* On-site requirements */}
+                  <div className="space-y-2">
+                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">On-site requirements (optional)</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {ONSITE_REQUIREMENTS.map(req => (
+                        <label key={req} className="flex items-center gap-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg px-3 py-2 cursor-pointer">
+                          <input type="checkbox" checked={hvRequirements.includes(req)} onChange={() => toggleRequirement(req)}
+                            className="accent-cyan-500 w-4 h-4" />
+                          {req}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Fee confirmation */}
+                  <div className="space-y-2">
+                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Fee confirmation</p>
+                    <div className="bg-cyan-50 border border-cyan-100 rounded-xl p-3 text-sm text-gray-700">
+                      <div className="flex justify-between"><span>Consultation fee</span><span>₹{doctor.consultation_fee || 500}</span></div>
+                      <div className="flex justify-between"><span>Home visit charge</span><span>₹{HOME_VISIT_SURCHARGE}</span></div>
+                      <div className="flex justify-between font-bold border-t border-cyan-200 mt-1 pt-1">
+                        <span>Total</span><span>₹{(doctor.consultation_fee || 500) + HOME_VISIT_SURCHARGE}</span>
+                      </div>
+                    </div>
+                    <div className="flex bg-white rounded-xl p-1 border border-gray-200">
+                      <button type="button" onClick={() => setHvPaymentMode('pay_now')}
+                        className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all ${hvPaymentMode === 'pay_now' ? `${GRADIENT_BTN}` : 'text-gray-500'}`}>
+                        Pay now
+                      </button>
+                      <button type="button" onClick={() => setHvPaymentMode('pay_after')}
+                        className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all ${hvPaymentMode === 'pay_after' ? `${GRADIENT_BTN}` : 'text-gray-500'}`}>
+                        Pay after visit
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {/* --- end Home Visit Details form --- */}
+
               {/* Issue */}
               <textarea value={issue} onChange={e => setIssue(e.target.value)}
                 placeholder="Describe your issue (optional)"
@@ -501,13 +752,19 @@ function PatientDoctorProfile() {
 
               {bookError && <p className="text-red-500 text-sm mb-3">❌ {bookError}</p>}
 
-              <button onClick={handleBook} disabled={booking || !selectedTime}
+              <button onClick={handleBook} disabled={booking || !selectedTime || !homeVisitValid}
                 className={`w-full py-4 rounded-xl font-bold text-base transition-all ${
-                  selectedTime
+                  selectedTime && homeVisitValid
                     ? `${GRADIENT_BTN}`
                     : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                 } disabled:opacity-60`}>
-                {booking ? 'Booking…' : selectedTime ? `Book for ${selectedTime}` : 'Select a time slot'}
+                {booking
+                  ? 'Booking…'
+                  : !selectedTime
+                  ? 'Select a time slot'
+                  : !homeVisitValid
+                  ? 'Fill Home Visit details'
+                  : `Book for ${selectedTime}`}
               </button>
 
               <p className="text-xs text-gray-400 text-center mt-2">🛡 Free cancellation up to 2 hours before your appointment.</p>

@@ -2,6 +2,7 @@ import RoleSwitcher from './RoleSwitcher'
 import { useNavigate, Link } from 'react-router-dom'
 import { useSidebar } from './SidebarContext'
 import { supabase } from '../lib/supabase'
+import niraamoLogo from '../assets/niraamo-logo-final.png'
 
 function DoctorTopBar() {
   const navigate = useNavigate()
@@ -23,9 +24,7 @@ function DoctorTopBar() {
         </svg>
       </button>
       <div className="flex items-center gap-2 lg:hidden">
-        <div className="w-7 h-7 bg-cyan-500 rounded-lg flex items-center justify-center">
-          <span className="text-white font-black text-xs">M</span>
-        </div>
+        <img src={niraamoLogo} alt="Niraamo" className="w-7 h-7 rounded-lg" />
         <span className="text-base font-black text-gray-900">Niraamo</span>
       </div>
       <div className="hidden lg:block" />

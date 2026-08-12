@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { Heart, Brain, Bone, Baby, Stethoscope, Sparkles, Flower2, Ear } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import niraamoLogo from '../assets/niraamo-logo-final.png'
 
 const specialties = [
   { icon: Heart, name: 'Cardiologist', tint: 'bg-rose-100 text-rose-600' },
@@ -156,9 +157,7 @@ function Landing() {
       {/* ── Navbar ── */}
       <nav className="sticky top-0 z-50 bg-background/90 backdrop-blur border-b border-border px-6 py-4 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
-          <div className="w-9 h-9 bg-gradient-to-br from-mi-primary to-sky-400 rounded-xl flex items-center justify-center shadow-sm">
-            <span className="text-white font-black text-base font-display">M</span>
-          </div>
+          <img src={niraamoLogo} alt="Niraamo" className="w-9 h-9 rounded-xl shadow-sm" />
           <span className="text-xl font-black text-foreground tracking-tight">Niraamo</span>
         </Link>
         <div className="hidden md:flex items-center gap-6 text-sm font-medium text-muted-foreground">
@@ -211,7 +210,7 @@ function Landing() {
               </span>
             </span>
             <span className="mi-reveal-wrap">
-              <span className="mi-reveal-up animate-mi-reveal-up mi-delay-2">in Minutes</span>
+              <span className="mi-reveal-up animate-mi-reveal-up mi-delay-2">in Seconds</span>
             </span>
           </h1>
 
@@ -369,9 +368,7 @@ function Landing() {
       {/* ── Footer ── */}
       <footer className="bg-gray-900 text-gray-400 px-6 py-10 text-center text-sm">
         <div className="flex items-center justify-center gap-2 mb-4">
-          <div className="w-7 h-7 bg-mi-primary rounded-lg flex items-center justify-center">
-            <span className="text-white font-black text-xs font-display">M</span>
-          </div>
+          <img src={niraamoLogo} alt="Niraamo" className="w-7 h-7 rounded-lg" />
           <span className="text-white font-bold">Niraamo</span>
         </div>
         <p className="mb-2">AI-powered healthcare, made for India.</p>

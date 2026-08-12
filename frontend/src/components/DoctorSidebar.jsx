@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useSidebar } from './SidebarContext'
+import niraamoLogo from '../assets/niraamo-logo-final.png'
 
 const doctorNavItems = [
   {
@@ -56,9 +57,7 @@ function DoctorSidebarContent({ onClose }) {
         onClick={onClose}
         className="flex items-center gap-2.5 mb-8 px-2"
       >
-        <div className="w-9 h-9 bg-gradient-to-br from-cyan-400 to-cyan-600 rounded-xl flex items-center justify-center shadow-sm">
-          <span className="text-white font-black text-base">M</span>
-        </div>
+        <img src={niraamoLogo} alt="Niraamo" className="w-9 h-9 rounded-xl shadow-sm" />
         <span className="text-xl font-black text-gray-900 tracking-tight">Niraamo</span>
       </Link>
 

@@ -1,4 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom'
+import niraamoLogo from '../assets/niraamo-logo-final.png'
 
 function Navbar() {
   const navigate = useNavigate()
@@ -14,9 +15,7 @@ function Navbar() {
   return (
     <nav className="bg-white shadow-sm px-6 py-4 flex items-center justify-between">
       <Link to="/" className="flex items-center gap-2">
-        <div className="w-8 h-8 bg-cyan-500 rounded-lg flex items-center justify-center">
-          <span className="text-white font-bold text-sm">M</span>
-        </div>
+        <img src={niraamoLogo} alt="Niraamo" className="w-8 h-8 rounded-lg" />
         <span className="text-xl font-bold text-gray-800">Niraamo</span>
       </Link>
 

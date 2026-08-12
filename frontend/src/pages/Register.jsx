@@ -2,6 +2,7 @@ import GoogleAuthButton from '../components/GoogleAuthButton'
 import { useState, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import niraamoLogo from '../assets/niraamo-logo-final.png'
 
 const SPECIALIZATIONS = [
   'General Physician', 'Cardiologist', 'Dermatologist',
@@ -121,9 +122,7 @@ function Register() {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center py-10 px-4">
       <div className="bg-white p-8 rounded-2xl shadow-sm w-full max-w-md">
         <div className="text-center mb-6">
-          <div className="w-12 h-12 bg-cyan-500 rounded-xl flex items-center justify-center mx-auto mb-4">
-            <span className="text-white font-bold text-xl">M</span>
-          </div>
+          <img src={niraamoLogo} alt="Niraamo" className="w-16 h-16 rounded-xl mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-gray-800">Create account</h1>
           <p className="text-gray-500 text-sm mt-1">Join Niraamo today</p>
         </div>
