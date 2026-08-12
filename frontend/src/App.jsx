@@ -1,9 +1,13 @@
+import { Browser } from '@capacitor/browser'
+import { handleOAuthRedirect } from './lib/authCallback'
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { supabase, initSupabaseStorage } from './lib/supabase'
 import { App as CapApp } from '@capacitor/app'
 import './i18n'
 
+const AuthCallback = lazy(() => import('./pages/AuthCallback'))
+const CompleteProfile = lazy(() => import('./pages/CompleteProfile'))
 const PatientDoctorProfile = lazy(() => import('./pages/PatientDoctorProfile'))
 const Landing = lazy(() => import('./pages/Landing'))
 const Login = lazy(() => import('./pages/Login'))
@@ -106,14 +110,15 @@ supabase.auth.onAuthStateChange((event, session) => {
   } else if (session) {
     localStorage.setItem('token', session.access_token)
     if (!localStorage.getItem('user') && session.user) {
-      supabase
-        .from('users')
-        .select('*')
-        .eq('id', session.user.id)
-        .single()
-        .then(({ data }) => {
-          if (data) localStorage.setItem('user', JSON.stringify(data))
-        })
+      Promise.all([
+        supabase.from('users').select('*').eq('id', session.user.id).single(),
+        supabase.from('patient_profiles').select('id').eq('user_id', session.user.id).maybeSingle(),
+        supabase.from('doctor_profiles').select('id').eq('user_id', session.user.id).maybeSingle(),
+      ]).then(([{ data }, { data: pp }, { data: dp }]) => {
+        if (data) {
+          localStorage.setItem('user', JSON.stringify({ ...data, hasPatientProfile: !!pp, hasDoctorProfile: !!dp }))
+        }
+      })
     }
   }
 })
@@ -146,10 +151,30 @@ function BackButtonHandler() {
         localStorage.setItem('token', session.access_token)
       }
     }).then(h => { resumeHandle = h })
+    let urlOpenHandle = null
 
+    CapApp.addListener('appUrlOpen', async ({ url }) => {
+    if (url.includes('login-callback')) {
+    await Browser.close()
+    try {
+      const profile = await handleOAuthRedirect(url)
+      if (!profile.phone) {
+        navigate('/complete-profile')
+      } else if (profile.role === 'doctor') {
+        navigate('/doctor-dashboard')
+      } else {
+        navigate('/home')
+      }
+    } catch (err) {
+      console.error('Native OAuth callback failed:', err)
+      navigate('/login')
+    }
+  }
+}).then(h => { urlOpenHandle = h })
     return () => {
       if (backHandle) backHandle.remove()
       if (resumeHandle) resumeHandle.remove()
+      if (urlOpenHandle) urlOpenHandle.remove()
     }
   }, [navigate])
 
@@ -209,6 +234,8 @@ function App() {
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/auth-callback" element={<AuthCallback />} />
+            <Route path="/complete-profile" element={<ProtectedRoute><CompleteProfile /></ProtectedRoute>} />
             <Route path="/home" element={<PatientRoute><Home /></PatientRoute>} />
             <Route path="/search" element={<PatientRoute><SearchResults /></PatientRoute>} />
             <Route path="/medicine/:id" element={<PatientRoute><MedicineDetail /></PatientRoute>} />

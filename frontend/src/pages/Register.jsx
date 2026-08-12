@@ -1,3 +1,4 @@
+import GoogleAuthButton from '../components/GoogleAuthButton'
 import { useState, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
@@ -43,11 +44,8 @@ function Register() {
     setDocError(false)
 
     try {
-      // Use phone-based fake email for Supabase Auth
-      // FIXED - always use phone for auth, real email stored in profile only
       const email = `${form.phone.replace(/\s+/g, '')}@niraamo.app`
 
-      // Step 1: Create auth user in Supabase
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password: form.password,
@@ -57,7 +55,6 @@ function Register() {
 
       const userId = authData.user.id
 
-      // Step 2: Upload verification doc if doctor
       let docUrl = null
       if (role === 'doctor' && verificationDoc) {
         const fileExt = verificationDoc.name.split('.').pop()
@@ -73,21 +70,38 @@ function Register() {
         }
       }
 
-      // Step 3: Insert profile into users table
+      // Step 3: Insert identity row into users table
       const { error: profileError } = await supabase.from('users').insert({
         id: userId,
         full_name: form.full_name,
         phone: form.phone,
         email: form.email || null,
         role,
-        specialization: role === 'doctor' ? form.specialization : null,
-        years_of_experience: role === 'doctor' ? form.years_of_experience || null : null,
-        clinic_name: role === 'doctor' ? form.clinic_name || null : null,
-        medical_license: role === 'doctor' ? form.medical_license || null : null,
-        verification_doc_url: docUrl,
+        auth_provider: 'email',
+        is_phone_verified: false,
       })
 
       if (profileError) throw profileError
+
+      // Step 4: Insert into the correct role-specific profile table
+      if (role === 'doctor') {
+        const { error: doctorProfileError } = await supabase.from('doctor_profiles').insert({
+          user_id: userId,
+          specialization: form.specialization,
+          years_of_experience: form.years_of_experience || null,
+          experience_years: form.years_of_experience || null,
+          clinic_name: form.clinic_name || null,
+          medical_license: form.medical_license || null,
+          license_number: form.medical_license || null,
+          verification_doc_url: docUrl,
+        })
+        if (doctorProfileError) throw doctorProfileError
+      } else {
+        const { error: patientProfileError } = await supabase.from('patient_profiles').insert({
+          user_id: userId,
+        })
+        if (patientProfileError) throw patientProfileError
+      }
 
       navigate('/login')
     } catch (err) {
@@ -223,6 +237,16 @@ function Register() {
           >
             {loading ? 'Creating account...' : role === 'doctor' ? 'Register as Doctor' : 'Register'}
           </button>
+
+          <div className="flex items-center gap-3 my-2">
+            <div className="flex-1 h-px bg-gray-200" />
+            <span className="text-xs text-gray-400">OR</span>
+            <div className="flex-1 h-px bg-gray-200" />
+          </div>
+          <GoogleAuthButton
+            role={role}
+            label={role === 'doctor' ? 'Sign up as Doctor with Google' : 'Continue with Google'}
+          />
         </div>
 
         <p className="text-center text-sm text-gray-500 mt-6">

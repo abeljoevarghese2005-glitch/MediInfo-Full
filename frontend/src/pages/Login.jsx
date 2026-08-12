@@ -1,3 +1,4 @@
+import GoogleAuthButton from '../components/GoogleAuthButton'
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { Capacitor } from '@capacitor/core'
@@ -38,8 +39,13 @@ function Login() {
 
       if (profileError) throw profileError
 
+      const [{ data: pp }, { data: dp }] = await Promise.all([
+        supabase.from('patient_profiles').select('id').eq('user_id', data.user.id).maybeSingle(),
+        supabase.from('doctor_profiles').select('id').eq('user_id', data.user.id).maybeSingle(),
+      ])
+
       localStorage.setItem('token', data.session.access_token)
-      localStorage.setItem('user', JSON.stringify(profile))
+      localStorage.setItem('user', JSON.stringify({ ...profile, hasPatientProfile: !!pp, hasDoctorProfile: !!dp }))
 
       // Only register for native push on the installed app (not the plain website)
       if (Capacitor.isNativePlatform()) {
@@ -103,6 +109,13 @@ function Login() {
             {loading ? 'Logging in...' : 'Login'}
           </button>
         </form>
+
+        <div className="flex items-center gap-3 my-5">
+        <div className="flex-1 h-px bg-gray-200" />
+          <span className="text-xs text-gray-400">OR</span>
+        <div className="flex-1 h-px bg-gray-200" />
+        </div>
+        <GoogleAuthButton role="patient" />
         <p className="text-center text-sm text-gray-500 mt-6">
           Don't have an account?{' '}
           <Link to="/register" className="text-cyan-500 font-medium hover:underline">
