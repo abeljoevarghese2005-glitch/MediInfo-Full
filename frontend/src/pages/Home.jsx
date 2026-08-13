@@ -8,7 +8,22 @@ import LocationBar from '../components/LocationBar'
 import { supabase } from '../lib/supabase'
 import { translateSpecialization } from '../utils/specializations'
 
-const TIME_SLOTS = ['10:30', '13:00', '16:00', '09:00', '11:00', '14:00']
+const DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+
+function generateSlots(start, end, duration = 15) {
+  const slots = []
+  const [sh, sm] = start.split(':').map(Number)
+  const [eh, em] = end.split(':').map(Number)
+  let current = sh * 60 + sm
+  const endMin = eh * 60 + em
+  while (current + duration <= endMin) {
+    const h = Math.floor(current / 60)
+    const m = current % 60
+    slots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`)
+    current += duration
+  }
+  return slots
+}
 
 const avatarColors = [
   'bg-cyan-500', 'bg-purple-500', 'bg-green-500',
@@ -47,12 +62,84 @@ function BookingModal({ doctor, idx, onClose, onBooked }) {
   const user = JSON.parse(localStorage.getItem('user') || '{}')
   const today = new Date().toLocaleDateString('en-CA')
   const [date, setDate] = useState(today)
-  const [slot, setSlot] = useState(TIME_SLOTS[0])
+  const [slot, setSlot] = useState('')
+  const [availableSlots, setAvailableSlots] = useState([])
+  const [bookedSlots, setBookedSlots] = useState([])
+  const [slotsLoading, setSlotsLoading] = useState(false)
   const [issue, setIssue] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   const fee = doctor.consultation_fee || mockFee(idx)
+
+  const ROW_HEIGHT = 40
+  const GAP = 8
+  const VISIBLE_ROWS = 4
+  const slotGridMaxHeight = VISIBLE_ROWS * ROW_HEIGHT + (VISIBLE_ROWS - 1) * GAP
+
+  useEffect(() => {
+    if (date) {
+      fetchSlots(date)
+    } else {
+      setAvailableSlots([])
+      setBookedSlots([])
+    }
+  }, [date, doctor.id])
+
+  const fetchSlots = async (selectedDate) => {
+    setSlotsLoading(true)
+    setSlot('')
+    try {
+      const [year, month, day] = selectedDate.split('-').map(Number)
+      const dayName = DAYS[new Date(year, month - 1, day).getDay()]
+
+      const { data: avail } = await supabase
+        .from('doctor_availability')
+        .select('start_time, end_time, slot_duration')
+        .eq('doctor_id', doctor.id)
+        .eq('day_of_week', dayName)
+        .eq('is_available', true)
+        .single()
+
+      if (!avail) {
+        setAvailableSlots([])
+        setBookedSlots([])
+        setSlotsLoading(false)
+        return
+      }
+
+      const rawSlots = generateSlots(
+        avail.start_time.slice(0, 5),
+        avail.end_time.slice(0, 5),
+        avail.slot_duration || 15
+      )
+
+      if (selectedDate === today) {
+        const now = new Date()
+        setAvailableSlots(rawSlots.map(s => {
+          const [h, m] = s.split(':').map(Number)
+          const slotTime = new Date()
+          slotTime.setHours(h, m, 0, 0)
+          return { time: s, past: slotTime.getTime() <= now.getTime() }
+        }))
+      } else {
+        setAvailableSlots(rawSlots.map(s => ({ time: s, past: false })))
+      }
+
+      const { data: existing } = await supabase
+        .from('appointments')
+        .select('appointment_time')
+        .eq('doctor_id', doctor.id)
+        .eq('appointment_date', selectedDate)
+        .in('status', ['pending', 'confirmed', 'accepted'])
+
+      setBookedSlots(existing ? existing.map(a => a.appointment_time.slice(0, 5)) : [])
+    } catch {
+      setAvailableSlots([])
+      setBookedSlots([])
+    }
+    setSlotsLoading(false)
+  }
 
   const handleBook = async () => {
     if (!date || !slot) { setError(t('doctors.selectDateTimeError')); return }
@@ -77,8 +164,8 @@ function BookingModal({ doctor, idx, onClose, onBooked }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+    <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 px-4 pb-6 sm:pb-0">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-start justify-between mb-5">
           <div className="flex items-center gap-3">
             <div className={`w-12 h-12 ${getColor(doctor.full_name)} rounded-full flex items-center justify-center text-white font-bold text-sm`}>
@@ -105,16 +192,43 @@ function BookingModal({ doctor, idx, onClose, onBooked }) {
 
         <div className="mb-4">
           <label className="text-xs font-medium text-gray-500 mb-2 block">{t('doctors.selectTimeSlot')}</label>
-          <div className="flex flex-wrap gap-2">
-            {TIME_SLOTS.map(s => (
-              <button key={s} onClick={() => setSlot(s)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                  slot === s ? 'bg-emerald-600 text-white hover:bg-emerald-500' : 'border border-gray-200 text-gray-600 hover:border-emerald-400 hover:text-emerald-600 hover:bg-emerald-50'
-                }`}>
-                {formatSlot(s)}
-              </button>
-            ))}
-          </div>
+          {!date ? (
+            <p className="text-gray-400 text-xs">{t('doctors.selectDateFirst')}</p>
+          ) : slotsLoading ? (
+            <p className="text-gray-400 text-xs">{t('doctors.loadingSlots')}</p>
+          ) : availableSlots.length === 0 ? (
+            <p className="text-red-400 text-xs">{t('doctors.noAvailability')}</p>
+          ) : (
+            <>
+              <div className="overflow-y-auto pr-1" style={{ maxHeight: `${slotGridMaxHeight}px` }}>
+                <div className="grid grid-cols-4 gap-2">
+                  {availableSlots.map(({ time, past }) => {
+                    const isBooked = bookedSlots.includes(time)
+                    const isSelected = slot === time
+                    const isDisabled = isBooked || past
+                    return (
+                      <button
+                        key={time}
+                        disabled={isDisabled}
+                        onClick={() => !isDisabled && setSlot(time)}
+                        className={`py-2 rounded-lg text-xs font-medium transition-all ${
+                          isDisabled
+                            ? 'bg-gray-100 text-gray-300 cursor-not-allowed line-through'
+                            : isSelected
+                            ? 'bg-emerald-600 text-white hover:bg-emerald-500'
+                            : 'bg-gray-50 text-gray-700 hover:bg-emerald-50 hover:text-emerald-700'
+                        }`}>
+                        {time}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+              {availableSlots.length > 16 && (
+                <p className="text-xs text-gray-400 mt-1 text-center">{t('doctors.scrollMore')}</p>
+              )}
+            </>
+          )}
         </div>
 
         <div className="mb-5">
@@ -130,7 +244,7 @@ function BookingModal({ doctor, idx, onClose, onBooked }) {
           <button onClick={onClose} className="py-3 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50">
             {t('common.cancel')}
           </button>
-          <button onClick={handleBook} disabled={loading}
+          <button onClick={handleBook} disabled={loading || !slot}
             className="py-3 rounded-xl bg-emerald-700 text-white text-sm font-bold tracking-tight transition-colors hover:bg-emerald-500 disabled:opacity-60 flex items-center justify-center gap-2">
             {loading ? t('doctors.booking') : t('home.bookFee', { fee })}
           </button>
@@ -158,9 +272,6 @@ function DoctorCard({ doctor, idx, onBook, distanceMap }) {
             <p className="text-emerald-600 text-xs font-medium">{translateSpecialization(t, doctor.specialization)}</p>
           </div>
         </div>
-        <div className="flex items-center gap-1 text-green-600 text-xs font-medium">
-          ★ {mockRating(idx)}
-        </div>
       </div>
 
       <div className="flex items-center gap-3 text-xs text-gray-500 mb-3">
@@ -173,8 +284,7 @@ function DoctorCard({ doctor, idx, onBook, distanceMap }) {
         <span className="font-semibold text-gray-700">₹{doctor.consultation_fee ?? mockFee(idx)}</span>
       </div>
 
-      <div className="flex items-center justify-between">
-        <span className="text-xs text-gray-500">{mockSlot(t, idx)}</span>
+      <div className="flex items-center justify-end">
         <button
           onClick={(e) => { e.stopPropagation(); onBook(doctor, idx) }}
           className="bg-emerald-700 text-white text-xs font-bold tracking-tight px-4 py-2 rounded-xl transition-colors hover:bg-emerald-500"
@@ -231,35 +341,58 @@ function Home() {
 
   const fetchDoctors = async () => {
     setLoadingDoctors(true)
-    const { data, error } = await supabase
-      .from('users')
-      .select('id, full_name, specialization, years_of_experience, consultation_fee, phone')
-      .eq('role', 'doctor')
+    const { data: profiles, error } = await supabase
+      .from('doctor_profiles')
+      .select('user_id, specialization, consultation_fee, years_of_experience, users!doctor_profiles_user_id_fkey(id, full_name, phone)')
       .limit(4)
-    setDoctors(error ? [] : (data || []))
+
+    if (error || !profiles) {
+      setDoctors([])
+      setLoadingDoctors(false)
+      return
+    }
+
+    const mapped = profiles.map(p => ({
+      id: p.user_id,
+      full_name: p.users?.full_name,
+      phone: p.users?.phone,
+      specialization: p.specialization,
+      consultation_fee: p.consultation_fee,
+      years_of_experience: p.years_of_experience,
+    }))
+    setDoctors(mapped)
     setLoadingDoctors(false)
   }
 
   const fetchPrevious = async () => {
     const { data, error } = await supabase
       .from('appointments')
-      .select('id, doctor_id, appointment_date, appointment_time, users!appointments_doctor_id_fkey(full_name, specialization)')
+      .select('id, doctor_id, appointment_date, appointment_time, users!appointments_doctor_id_fkey(full_name)')
       .eq('patient_id', user.id)
       .order('created_at', { ascending: false })
     if (error || !data) return
+
     const seen = new Set()
     const prev = []
     for (const appt of data) {
       if (!seen.has(appt.doctor_id)) {
         seen.add(appt.doctor_id)
-        prev.push({
-          ...appt,
-          doctor_name: appt.users?.full_name,
-          specialization: appt.users?.specialization,
-        })
+        prev.push({ ...appt, doctor_name: appt.users?.full_name })
       }
     }
-    setPreviousDoctors(prev.slice(0, 2))
+    const trimmed = prev.slice(0, 2)
+
+    const doctorIds = trimmed.map(a => a.doctor_id).filter(Boolean)
+    let specializationById = {}
+    if (doctorIds.length > 0) {
+      const { data: dp } = await supabase
+        .from('doctor_profiles')
+        .select('user_id, specialization')
+        .in('user_id', doctorIds)
+      specializationById = Object.fromEntries((dp || []).map(p => [p.user_id, p.specialization]))
+    }
+
+    setPreviousDoctors(trimmed.map(a => ({ ...a, specialization: specializationById[a.doctor_id] })))
   }
 
   useEffect(() => {
@@ -267,12 +400,11 @@ function Home() {
       .channel('home-doctor-profiles')
       .on('postgres_changes', {
         event: 'UPDATE', schema: 'public', table: 'users',
-        filter: `role=eq.doctor`,
       }, (payload) => {
         setDoctors(prev => prev.map(d =>
-          d.id === payload.new.id ? { ...d, ...payload.new } : d
+          d.id === payload.new.id ? { ...d, full_name: payload.new.full_name, phone: payload.new.phone } : d
         ))
-        setSelectedDoctor(prev => (prev && prev.id === payload.new.id) ? { ...prev, ...payload.new } : prev)
+        setSelectedDoctor(prev => (prev && prev.id === payload.new.id) ? { ...prev, full_name: payload.new.full_name, phone: payload.new.phone } : prev)
       })
       .subscribe()
 

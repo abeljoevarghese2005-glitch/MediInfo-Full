@@ -249,18 +249,30 @@ function MyAppointments() {
       .select(`
         id, doctor_id, patient_id, appointment_date, appointment_time,
         status, issue, created_at, cancellation_reason, consultation_type, duration_minutes,
-        users!appointments_doctor_id_fkey(full_name, specialization)
+        users!appointments_doctor_id_fkey(full_name)
       `)
       .eq('patient_id', user.id)
       .order('appointment_date', { ascending: false })
 
     if (error || !data) { setLoading(false); return }
 
+    const doctorIds = [...new Set(data.map(a => a.doctor_id).filter(Boolean))]
+    let specializationById = {}
+    if (doctorIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('doctor_profiles')
+        .select('user_id, specialization')
+        .in('user_id', doctorIds)
+      specializationById = Object.fromEntries(
+        (profiles || []).map(p => [p.user_id, p.specialization])
+      )
+    }
+
     const normalized = data.map(a => ({
       ...a,
       doctor_name: a.users?.full_name,
-      specialization: a.users?.specialization,
-    }))
+      specialization: specializationById[a.doctor_id],
+    })) 
 
     if (prevAppointments.current.length > 0) {
       normalized.forEach(newAppt => {

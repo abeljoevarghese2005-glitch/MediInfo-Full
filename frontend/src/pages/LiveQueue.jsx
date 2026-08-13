@@ -153,7 +153,7 @@ function LiveQueue() {
       const today = getTodayIST()
       const { data, error } = await supabase
         .from('appointments')
-        .select('*, users!appointments_doctor_id_fkey(full_name, specialization, clinic_name)')
+        .select('*, users!appointments_doctor_id_fkey(full_name)')
         .eq('patient_id', user.id)
         .eq('status', 'confirmed')
         .gte('appointment_date', today)
@@ -161,11 +161,20 @@ function LiveQueue() {
         .order('appointment_time', { ascending: true })
 
       if (!error && data?.length) {
+        let doctorProfile = null
+        if (data[0].doctor_id) {
+          const { data: profile } = await supabase
+            .from('doctor_profiles')
+            .select('specialization, clinic_name')
+            .eq('user_id', data[0].doctor_id)
+            .maybeSingle()
+          doctorProfile = profile
+        }
         const appt = {
           ...data[0],
           doctor_name: data[0].users?.full_name,
-          specialization: data[0].users?.specialization,
-          clinic_name: data[0].users?.clinic_name,
+          specialization: doctorProfile?.specialization,
+          clinic_name: doctorProfile?.clinic_name,
         }
         setAppointment(appt)
         await fetchQueueData(appt)

@@ -51,20 +51,34 @@ function MyPrescriptions() {
     if (appointmentIds.length > 0) {
       const { data: appts } = await supabase
         .from('appointments')
-        .select('id, appointment_date, appointment_time, doctor_id, users!appointments_doctor_id_fkey(full_name, specialization)')
+        .select('id, appointment_date, appointment_time, doctor_id, users!appointments_doctor_id_fkey(full_name)')
         .in('id', appointmentIds)
 
       if (appts) {
-        appts.forEach(a => { appointmentsMap[a.id] = a })
+        const doctorIds = [...new Set(appts.map(a => a.doctor_id).filter(Boolean))]
+        let specializationById = {}
+        if (doctorIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from('doctor_profiles')
+            .select('user_id, specialization')
+            .in('user_id', doctorIds)
+          specializationById = Object.fromEntries(
+            (profiles || []).map(p => [p.user_id, p.specialization])
+          )
+        }
+        appts.forEach(a => {
+          appointmentsMap[a.id] = { ...a, specialization: specializationById[a.doctor_id] }
+        })
       }
     }
+    
 
     const normalized = prescriptionData.map(p => {
       const appt = appointmentsMap[p.appointment_id]
       return {
         ...p,
         doctor_name: appt?.users?.full_name,
-        specialization: appt?.users?.specialization,
+        specialization: appt?.specialization,
         appointment_date: appt?.appointment_date,
         appointment_time: appt?.appointment_time,
       }

@@ -110,9 +110,9 @@ function WalkInModal({ doctorId, onClose, onSuccess }) {
     setLoadingSlots(true)
     try {
       const { data, error: fetchError } = await supabase
-        .from('users')
+        .from('doctor_profiles')
         .select('availability')
-        .eq('id', doctorId)
+        .eq('user_id', doctorId)
         .single()
 
       if (fetchError) throw fetchError
