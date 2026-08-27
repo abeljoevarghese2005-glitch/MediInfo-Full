@@ -185,6 +185,7 @@ function PolicyGate({ children }) {
   const [accepted, setAccepted] = useState(() => {
     return localStorage.getItem(POLICY_ACCEPTED_KEY) === 'true'
   })
+  const [hasConsented, setHasConsented] = useState(false)
 
   const handleAccept = () => {
     localStorage.setItem(POLICY_ACCEPTED_KEY, 'true')
@@ -196,7 +197,7 @@ function PolicyGate({ children }) {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <div style={{ flex: 1, overflowY: 'auto' }}>
-        <PolicyPage />
+        <PolicyPage onConsentChange={setHasConsented} />
       </div>
       <div
         style={{
@@ -211,7 +212,8 @@ function PolicyGate({ children }) {
       >
         <button
           onClick={handleAccept}
-          className="bg-emerald-700 hover:bg-emerald-500 font-bold tracking-tight text-white px-8 py-3 rounded-lg"
+          disabled={!hasConsented}
+          className="bg-emerald-700 hover:bg-emerald-500 font-bold tracking-tight text-white px-8 py-3 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-emerald-700"
         >
           Accept & Continue
         </button>
