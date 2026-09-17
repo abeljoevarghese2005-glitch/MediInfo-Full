@@ -139,9 +139,15 @@ function DoctorPrescriptions() {
                             </div>
                           )}
 
-                          <p className="text-[10px] text-gray-300">
-                            Written on {new Date(p.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                          </p>
+                          <div className="flex items-center justify-between">
+  <p className="text-[10px] text-gray-300">
+    Written on {new Date(p.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+  </p>
+  <a href={`/prescription/${p.id}`} target="_blank" rel="noopener noreferrer"
+    className="text-xs font-semibold text-cyan-600 hover:text-cyan-700 border border-cyan-200 px-3 py-1.5 rounded-lg hover:bg-cyan-50 transition-colors">
+    View / Print
+  </a>
+</div>
                         </div>
                       )}
                     </div>

@@ -199,9 +199,15 @@ function MyPrescriptions() {
                           </div>
                         )}
 
-                        <p className="text-[10px] text-gray-300 font-normal">
-                          Prescribed on {new Date(p.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                        </p>
+                        <div className="flex items-center justify-between">
+  <p className="text-[10px] text-gray-300 font-normal">
+    Prescribed on {new Date(p.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+  </p>
+  <a href={`/prescription/${p.id}`} target="_blank" rel="noopener noreferrer"
+    className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 border border-emerald-200 px-3 py-1.5 rounded-lg hover:bg-emerald-50 transition-colors">
+    View / Print
+  </a>
+</div>
                       </div>
                     )}
                   </div>
