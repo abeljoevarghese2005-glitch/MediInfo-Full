@@ -15,45 +15,49 @@ function PrescriptionPrint() {
   }, [id])
 
   const fetchPrescription = async () => {
-    setLoading(true)
-    setError('')
-    try {
-      const { data, error: fetchError } = await supabase
-        .from('prescriptions')
-        .select(`
-          *,
-          appointments (
-            appointment_date, appointment_time, issue, source,
-            walkin_name, walkin_age, walkin_phone
-          ),
-          doctor:users!prescriptions_doctor_id_fkey (
-            id, full_name, specialization, clinic_name, license_number,
-            qualifications, experience_years, phone, email
-          ),
-          patient:users!prescriptions_patient_id_fkey (
-            id, full_name, phone, email
-          )
-        `)
-        .eq('id', id)
-        .single()
+  setLoading(true)
+  setError('')
+  try {
+    const { data: presc, error: prescError } = await supabase
+      .from('prescriptions')
+      .select('*, appointments(appointment_date, appointment_time, issue, source, walkin_name, walkin_age, walkin_phone)')
+      .eq('id', id)
+      .single()
 
-      if (fetchError) throw fetchError
-      if (!data) throw new Error('Prescription not found')
+    if (prescError) throw prescError
+    if (!presc) throw new Error('Prescription not found')
 
-      // Access control: only the doctor who wrote it or the patient it
-      // was written for can view it. Everyone else is bounced.
-      const isDoctorOwner = data.doctor_id === user.id
-      const isPatientOwner = data.patient_id === user.id
-      if (!isDoctorOwner && !isPatientOwner) {
-        throw new Error('You are not authorized to view this prescription')
-      }
-
-      setPrescription(data)
-    } catch (err) {
-      setError(err.message || 'Failed to load prescription')
+    // Access control: only the doctor who wrote it or the patient it
+    // was written for can view it. Everyone else is bounced.
+    const isDoctorOwner = presc.doctor_id === user.id
+    const isPatientOwner = presc.patient_id === user.id
+    if (!isDoctorOwner && !isPatientOwner) {
+      throw new Error('You are not authorized to view this prescription')
     }
-    setLoading(false)
+
+    // Fetch doctor and patient separately — avoids depending on
+    // Supabase FK constraint names, which vary/aren't always set up
+    // for PostgREST's embedded-join syntax.
+    const idsToFetch = [presc.doctor_id, presc.patient_id].filter(Boolean)
+    let usersById = {}
+    if (idsToFetch.length > 0) {
+      const { data: users } = await supabase
+        .from('users')
+        .select('id, full_name, specialization, clinic_name, license_number, qualifications, experience_years, phone, email')
+        .in('id', idsToFetch)
+      usersById = Object.fromEntries((users || []).map(u => [u.id, u]))
+    }
+
+    setPrescription({
+      ...presc,
+      doctor: usersById[presc.doctor_id] || {},
+      patient: presc.patient_id ? (usersById[presc.patient_id] || null) : null,
+    })
+  } catch (err) {
+    setError(err.message || 'Failed to load prescription')
   }
+  setLoading(false)
+}
 
   const handlePrint = () => window.print()
 
