@@ -32,6 +32,7 @@ const VideoCall = lazy(() => import('./pages/VideoCall'))
 const PolicyPage = lazy(() => import('./pages/PolicyPage'))
 const HOME_ROUTES = ['/home', '/doctor-dashboard']
 const POLICY_ACCEPTED_KEY = 'policyAccepted'
+const PaymentResult = lazy(() => import('./pages/PaymentResult'))
 
 const Loading = () => (
   <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
@@ -245,6 +246,7 @@ function App() {
             <Route path="/reminders" element={<PatientRoute><Reminders /></PatientRoute>} />
             <Route path="/doctors" element={<PatientRoute><Doctors /></PatientRoute>} />
             <Route path="/my-appointments" element={<PatientRoute><MyAppointments /></PatientRoute>} />
+            <Route path="/payment-result" element={<PatientRoute><PaymentResult /></PatientRoute>} />
             <Route path="/my-prescriptions" element={<PatientRoute><MyPrescriptions /></PatientRoute>} />
             <Route path="/live-queue" element={<PatientRoute><LiveQueue /></PatientRoute>} />
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
