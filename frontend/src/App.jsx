@@ -28,6 +28,7 @@ const DoctorLiveQueue = lazy(() => import('./pages/DoctorLiveQueue'))
 const DoctorProfile = lazy(() => import('./pages/DoctorProfile'))
 const DoctorPrescriptions = lazy(() => import('./pages/DoctorPrescriptions'))
 const DoctorReviews = lazy(() => import('./pages/DoctorReviews'))
+const PrescriptionPrint = lazy(() => import('./pages/PrescriptionPrint'))
 const VideoCall = lazy(() => import('./pages/VideoCall'))
 const PolicyPage = lazy(() => import('./pages/PolicyPage'))
 const HOME_ROUTES = ['/home', '/doctor-dashboard']
@@ -257,6 +258,7 @@ function App() {
             <Route path="/doctor-prescriptions" element={<DoctorRoute><DoctorPrescriptions /></DoctorRoute>} />
             <Route path="/doctor/:id" element={<PatientRoute><PatientDoctorProfile /></PatientRoute>} />
             <Route path="/doctor-reviews" element={<DoctorRoute><DoctorReviews /></DoctorRoute>} />
+            <Route path="/prescription/:id" element={<ProtectedRoute><PrescriptionPrint /></ProtectedRoute>} />
             <Route path="/video-call" element={<ProtectedRoute><VideoCall /></ProtectedRoute>} />
             <Route path="/policy" element={<PolicyPage />} />
           </Routes>

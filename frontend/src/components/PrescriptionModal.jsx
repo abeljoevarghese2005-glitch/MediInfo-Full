@@ -60,6 +60,9 @@ function PrescriptionModal({ appointment, onClose, onSaved }) {
         medicines: validMeds,
         notes: notes.trim() || null,
       }
+
+      let savedId = existingPrescription?.id || null
+
       if (existingPrescription) {
         const { error: updateError } = await supabase
           .from('prescriptions')
@@ -67,11 +70,23 @@ function PrescriptionModal({ appointment, onClose, onSaved }) {
           .eq('id', existingPrescription.id)
         if (updateError) throw updateError
       } else {
-        const { error: insertError } = await supabase
+        // ✅ NEW: select() + single() so we get the new row's id back,
+        // needed to open the printable prescription view right after saving.
+        const { data: inserted, error: insertError } = await supabase
           .from('prescriptions')
           .insert(payload)
+          .select()
+          .single()
         if (insertError) throw insertError
+        savedId = inserted.id
       }
+
+      // ✅ NEW: open the printable Rx view in a new tab so the doctor
+      // doesn't lose their place in the appointments/prescriptions list.
+      if (savedId) {
+        window.open(`/prescription/${savedId}`, '_blank')
+      }
+
       onSaved(`Prescription saved for ${appointment.patient_name}`)
       onClose()
     } catch (err) {
