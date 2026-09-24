@@ -250,27 +250,30 @@ function Doctors() {
   }, [])
 
   const handleBook = async () => {
-    if (!selectedDate || !selectedTime) { setError(t('doctors.selectDateTimeError')); return }
-    if (bookedSlots.includes(selectedTime)) { setError(t('doctors.slotBookedError')); return }
-    setPaying(true)
-    setError('')
-    try {
-      const { data: existing } = await supabase
-        .from('appointments')
-        .select('id')
-        .eq('doctor_id', selectedDoctor.id)
-        .eq('patient_id', user.id)
-        .eq('appointment_date', selectedDate)
-        .eq('appointment_time', selectedTime)
-        .in('status', ['pending', 'confirmed', 'accepted'])
+  if (!selectedDate || !selectedTime) { setError(t('doctors.selectDateTimeError')); return }
+  if (bookedSlots.includes(selectedTime)) { setError(t('doctors.slotBookedError')); return }
+  setPaying(true)
+  setError('')
+  try {
+    const { data: existing } = await supabase
+      .from('appointments')
+      .select('id')
+      .eq('doctor_id', selectedDoctor.id)
+      .eq('patient_id', user.id)
+      .eq('appointment_date', selectedDate)
+      .eq('appointment_time', selectedTime)
+      .in('status', ['pending', 'confirmed', 'accepted'])
 
-      if (existing && existing.length > 0) {
-        setError(t('doctors.duplicateApptError'))
-        setPaying(false)
-        return
-      }
+    if (existing && existing.length > 0) {
+      setError(t('doctors.duplicateApptError'))
+      setPaying(false)
+      return
+    }
 
-      const { error: bookError } = await supabase.from('appointments').insert({
+    // Step 1: create the appointment as before
+    const { data: newAppt, error: bookError } = await supabase
+      .from('appointments')
+      .insert({
         patient_id: user.id,
         doctor_id: selectedDoctor.id,
         appointment_date: selectedDate,
@@ -278,18 +281,53 @@ function Doctors() {
         issue: issue || null,
         status: 'pending',
       })
-      if (bookError) throw bookError
-      setSuccess(t('doctors.requestSent', { name: selectedDoctor.full_name }))
-      setSelectedDoctor(null)
-      setSelectedDate('')
-      setSelectedTime('')
-      setIssue('')
-      setTimeout(() => setSuccess(''), 6000)
-    } catch (err) {
-      setError(err.message || t('doctors.bookFailError'))
+      .select('id')
+      .single()
+
+    if (bookError) throw bookError
+
+    // Step 2: call create-payu-payment with the new appointment_id
+    const { data: { session } } = await supabase.auth.getSession()
+    const token = session?.access_token || ''
+
+    const res = await fetch(
+      'https://xfuzwuraowthaxqnfolzg.supabase.co/functions/v1/create-payu-payment',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ appointment_id: newAppt.id }),
+      }
+    )
+
+    if (!res.ok) {
+      const errBody = await res.json().catch(() => ({}))
+      throw new Error(errBody.error || 'Failed to initiate payment')
     }
+
+    const { action_url, fields } = await res.json()
+
+    // Step 3: auto-submit a hidden form to redirect to PayU's hosted checkout
+    const form = document.createElement('form')
+    form.method = 'POST'
+    form.action = action_url
+    Object.entries(fields).forEach(([key, value]) => {
+      const input = document.createElement('input')
+      input.type = 'hidden'
+      input.name = key
+      input.value = value
+      form.appendChild(input)
+    })
+    document.body.appendChild(form)
+    form.submit()
+
+  } catch (err) {
+    setError(err.message || t('doctors.bookFailError'))
     setPaying(false)
   }
+}
 
   const ROW_HEIGHT = 40
   const GAP = 8
