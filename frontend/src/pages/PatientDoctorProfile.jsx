@@ -307,48 +307,51 @@ function PatientDoctorProfile() {
   }
 
   const handleBook = async () => {
-    if (!selectedDate || !selectedTime) { setBookError('Please select a date and time.'); return }
-    if (consultationType === 'home_visit' && !homeVisitValid) {
-      setBookError('Please fill in all required Home Visit details.')
-      return
-    }
-    setBooking(true)
-    setBookError('')
-    try {
-      const { data: existing } = await supabase
-        .from('appointments')
-        .select('id')
-        .eq('doctor_id', id)
-        .eq('patient_id', user.id)
-        .eq('appointment_date', selectedDate)
-        .eq('appointment_time', selectedTime)
-        .in('status', ['pending', 'confirmed', 'accepted'])
-      if (existing?.length) { setBookError('You already have an appointment at this time.'); setBooking(false); return }
+  if (!selectedDate || !selectedTime) { setBookError('Please select a date and time.'); return }
+  if (consultationType === 'home_visit' && !homeVisitValid) {
+    setBookError('Please fill in all required Home Visit details.')
+    return
+  }
+  setBooking(true)
+  setBookError('')
+  try {
+    const { data: existing } = await supabase
+      .from('appointments')
+      .select('id')
+      .eq('doctor_id', id)
+      .eq('patient_id', user.id)
+      .eq('appointment_date', selectedDate)
+      .eq('appointment_time', selectedTime)
+      .in('status', ['pending', 'confirmed', 'accepted'])
+    if (existing?.length) { setBookError('You already have an appointment at this time.'); setBooking(false); return }
 
-      // --- Home Visit Details: build payload (NEW) ---
-      const homeVisitPayload = consultationType === 'home_visit' ? {
-        address: hvAddress,
-        landmark: hvLandmark,
-        address_type: hvAddressType,
-        floor: hvFloor,
-        lift_available: hvLiftAvailable,
-        maps_link: buildMapsLink(hvAddress, hvLandmark),
-        patient_name: hvPatientName,
-        patient_age: hvPatientAge,
-        patient_gender: hvPatientGender,
-        relation: hvRelation,
-        contact_number: hvContactNumber,
-        chief_complaint: hvComplaint === 'Other' ? hvComplaintOther : hvComplaint,
-        mobility_status: hvMobility,
-        on_site_requirements: hvRequirements,
-        consultation_fee: doctor.consultation_fee || 500,
-        home_visit_surcharge: HOME_VISIT_SURCHARGE,
-        total_fee: (doctor.consultation_fee || 500) + HOME_VISIT_SURCHARGE,
-        payment_mode: hvPaymentMode,
-      } : null
-      // --- end Home Visit Details payload ---
+    // --- Home Visit Details: build payload ---
+    const homeVisitPayload = consultationType === 'home_visit' ? {
+      address: hvAddress,
+      landmark: hvLandmark,
+      address_type: hvAddressType,
+      floor: hvFloor,
+      lift_available: hvLiftAvailable,
+      maps_link: buildMapsLink(hvAddress, hvLandmark),
+      patient_name: hvPatientName,
+      patient_age: hvPatientAge,
+      patient_gender: hvPatientGender,
+      relation: hvRelation,
+      contact_number: hvContactNumber,
+      chief_complaint: hvComplaint === 'Other' ? hvComplaintOther : hvComplaint,
+      mobility_status: hvMobility,
+      on_site_requirements: hvRequirements,
+      consultation_fee: doctor.consultation_fee || 500,
+      home_visit_surcharge: HOME_VISIT_SURCHARGE,
+      total_fee: (doctor.consultation_fee || 500) + HOME_VISIT_SURCHARGE,
+      payment_mode: hvPaymentMode,
+    } : null
+    // --- end Home Visit Details payload ---
 
-      const { error: bookErr } = await supabase.from('appointments').insert({
+    // CHANGED: .select('id').single() so we get the new appointment's id back
+    const { data: newAppt, error: bookErr } = await supabase
+      .from('appointments')
+      .insert({
         patient_id: user.id,
         doctor_id: id,
         appointment_date: selectedDate,
@@ -356,18 +359,69 @@ function PatientDoctorProfile() {
         issue: issue || null,
         status: 'pending',
         consultation_type: consultationType,
-        home_visit_details: homeVisitPayload, // NEW
+        home_visit_details: homeVisitPayload,
       })
-      if (bookErr) throw bookErr
-      setBookSuccess(`Appointment request sent to Dr. ${doctor.full_name}!`)
+      .select('id')
+      .single()
+    if (bookErr) throw bookErr
+
+    // --- NEW: Home Visit "pay after" bypass — skip payment entirely ---
+    const skipPayment = consultationType === 'home_visit' && hvPaymentMode === 'pay_after'
+
+    if (skipPayment) {
+      setBookSuccess(`Appointment request sent to Dr. ${doctor.full_name}! You'll pay after the visit.`)
       setSelectedDate('')
       setSelectedTime('')
       setIssue('')
-      resetHomeVisitForm() // NEW
+      resetHomeVisitForm()
       setTimeout(() => setBookSuccess(''), 5000)
-    } catch (e) { setBookError(e.message || 'Booking failed. Please try again.') }
+      setBooking(false)
+      return
+    }
+
+    // --- NEW: call create-payu-payment (same pattern as Doctors.jsx) ---
+    const { data: { session } } = await supabase.auth.getSession()
+    const token = session?.access_token || ''
+
+    const res = await fetch(
+      'https://xfuzwuraowhaxqnfolzg.supabase.co/functions/v1/create-payu-payment',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ appointment_id: newAppt.id }),
+      }
+    )
+
+    if (!res.ok) {
+      const errBody = await res.json().catch(() => ({}))
+      throw new Error(errBody.error || 'Failed to initiate payment')
+    }
+
+    const { action_url, fields } = await res.json()
+
+    // --- NEW: auto-submit hidden form to PayU hosted checkout ---
+    const form = document.createElement('form')
+    form.method = 'POST'
+    form.action = action_url
+    Object.entries(fields).forEach(([key, value]) => {
+      const input = document.createElement('input')
+      input.type = 'hidden'
+      input.name = key
+      input.value = value
+      form.appendChild(input)
+    })
+    document.body.appendChild(form)
+    form.submit()
+    // no setBooking(false) here — page is navigating to PayU
+
+  } catch (e) {
+    setBookError(e.message || 'Booking failed. Please try again.')
     setBooking(false)
   }
+}
 
   const handleSubmitReview = async () => {
     if (!myRating) { setReviewError('Please select a star rating.'); return }

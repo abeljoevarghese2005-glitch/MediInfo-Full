@@ -291,7 +291,7 @@ function Doctors() {
     const token = session?.access_token || ''
 
     const res = await fetch(
-      'https://xfuzwuraowthaxqnfolzg.supabase.co/functions/v1/create-payu-payment',
+      'https://xfuzwuraowhaxqnfolzg.supabase.co/functions/v1/create-payu-payment',
       {
         method: 'POST',
         headers: {
