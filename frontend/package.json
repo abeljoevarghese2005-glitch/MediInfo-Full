@@ -19,6 +19,8 @@
     "@capacitor/local-notifications": "^8.2.0",
     "@capacitor/preferences": "^8.0.1",
     "@capacitor/push-notifications": "^8.1.1",
+    "@sentry/capacitor": "^4.4.0",
+    "@sentry/react": "^10.69.0",
     "@stream-io/video-react-sdk": "^1.39.1",
     "@supabase/supabase-js": "^2.105.4",
     "axios": "^1.14.0",

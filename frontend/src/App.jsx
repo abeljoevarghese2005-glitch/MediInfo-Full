@@ -30,7 +30,7 @@ const DoctorPrescriptions = lazy(() => import('./pages/DoctorPrescriptions'))
 const DoctorReviews = lazy(() => import('./pages/DoctorReviews'))
 const PrescriptionPrint = lazy(() => import('./pages/PrescriptionPrint'))
 const VideoCall = lazy(() => import('./pages/VideoCall'))
-const PolicyPage = lazy(() => import('./pages/PolicyPage'))
+ 
 const HOME_ROUTES = ['/home', '/doctor-dashboard']
 const POLICY_ACCEPTED_KEY = 'policyAccepted'
 
@@ -258,7 +258,7 @@ function App() {
             <Route path="/doctor-reviews" element={<DoctorRoute><DoctorReviews /></DoctorRoute>} />
             <Route path="/prescription/:id" element={<ProtectedRoute><PrescriptionPrint /></ProtectedRoute>} />
             <Route path="/video-call" element={<ProtectedRoute><VideoCall /></ProtectedRoute>} />
-            <Route path="/policy" element={<PolicyPage />} />
+             
           </Routes>
         </PolicyGate>
       </Suspense>
