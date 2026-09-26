@@ -71,7 +71,8 @@ const EMPTY_FORM = {
   full_name: '', phone: '', email: '', specialization: '',
   consultation_fee: 500, experience_years: 0, clinic_name: '',
   license_number: '', time_per_patient: 15,
-    offers_in_clinic: true, offers_video: false, offers_home_visit: false,
+  offers_in_clinic: true, offers_video: false, offers_home_visit: false,
+  video_fee: null,
   home_visit_fee: null,
 }
 
@@ -234,6 +235,7 @@ function DoctorProfile() {
         offers_in_clinic: normalized.offers_in_clinic !== false,
         offers_video: !!normalized.offers_video,
         offers_home_visit: !!normalized.offers_home_visit,
+        video_fee: normalized.video_fee ?? null,
         home_visit_fee: normalized.home_visit_fee ?? null,
       })
       setBioForm({
@@ -547,6 +549,26 @@ function DoctorProfile() {
                               <span className="text-sm font-semibold text-gray-700 flex items-center gap-2">{icon} {label}</span>
                               <ToggleSwitch on={value} disabled={!editing} onClick={() => toggleConsultMode(key)} />
                             </div>
+                            {key === 'offers_video' && value && (
+                              <div className="mt-2 pl-1">
+                                <Field
+                                  icon="🎥"
+                                  label="Video Consultation Fee (₹)"
+                                  field="video_fee"
+                                  type="number"
+                                  value={profile?.video_fee}
+                                  prefix="₹"
+                                  editing={editing}
+                                  form={form}
+                                  setForm={setForm}
+                                />
+                                {editing && !form.video_fee && (
+                                  <p className="text-xs text-amber-600 mt-1">
+                                    Patients won't see the Video option until you set a fee.
+                                  </p>
+                                )}
+                              </div>
+                            )}
                             {key === 'offers_home_visit' && value && (
                               <div className="mt-2 pl-1">
                                 <Field

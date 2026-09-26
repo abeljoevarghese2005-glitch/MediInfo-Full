@@ -193,13 +193,13 @@ function PatientDoctorProfile() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [doctor])
 
-  const getAvailableModes = (d) => {
-  const modes = []
-  if (d?.offers_in_clinic !== false) modes.push('in_clinic')
-  if (d?.offers_video) modes.push('video')
-  if (d?.offers_home_visit && d?.home_visit_fee) modes.push('home_visit')
-  return modes
-}
+    const getAvailableModes = (d) => {
+    const modes = []
+    if (d?.offers_in_clinic !== false) modes.push('in_clinic')
+    if (d?.offers_video && d?.video_fee) modes.push('video')
+    if (d?.offers_home_visit && d?.home_visit_fee) modes.push('home_visit')
+    return modes
+  }
 
   const fetchDoctor = async () => {
     setLoading(true)
@@ -557,10 +557,14 @@ function PatientDoctorProfile() {
             {/* Book Appointment */}
             <div className="bg-white rounded-2xl p-5 shadow-sm mb-4">
               <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Book Appointment</p>
-              <p className="text-2xl font-black text-gray-900 mb-4">
-                ₹{consultationType === 'home_visit' ? doctor.home_visit_fee : (doctor.consultation_fee || 500)}{' '}
+                            <p className="text-2xl font-black text-gray-900 mb-4">
+                ₹{consultationType === 'home_visit' ? doctor.home_visit_fee
+                  : consultationType === 'video' ? doctor.video_fee
+                  : (doctor.consultation_fee || 500)}{' '}
                 <span className="text-sm font-normal text-gray-400">
-                  {consultationType === 'home_visit' ? 'home visit' : 'consultation'}
+                  {consultationType === 'home_visit' ? 'home visit'
+                    : consultationType === 'video' ? 'video consultation'
+                    : 'consultation'}
                 </span>
               </p>
               {bookSuccess && (
