@@ -987,4 +987,3 @@ function PatientDoctorProfile() {
 }
 
 export default PatientDoctorProfile
-.
