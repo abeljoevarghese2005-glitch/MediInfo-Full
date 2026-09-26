@@ -572,6 +572,7 @@ function DoctorProfile() {
                       })}
                     </div>
                   </div>
+                  </div>
 
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                   <h2 className="text-base font-black text-gray-800 mb-1">Weekly availability & slots</h2>
