@@ -71,7 +71,8 @@ const EMPTY_FORM = {
   full_name: '', phone: '', email: '', specialization: '',
   consultation_fee: 500, experience_years: 0, clinic_name: '',
   license_number: '', time_per_patient: 15,
-  offers_in_clinic: true, offers_video: false, offers_home_visit: false,
+    offers_in_clinic: true, offers_video: false, offers_home_visit: false,
+  home_visit_fee: null,
 }
 
 const EMPTY_BIO_FORM = {
@@ -233,6 +234,7 @@ function DoctorProfile() {
         offers_in_clinic: normalized.offers_in_clinic !== false,
         offers_video: !!normalized.offers_video,
         offers_home_visit: !!normalized.offers_home_visit,
+        home_visit_fee: normalized.home_visit_fee ?? null,
       })
       setBioForm({
         description: normalized.description || '',
@@ -533,22 +535,43 @@ function DoctorProfile() {
                     </div>
                   </div>
 
-                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                     <h2 className="text-base font-black text-gray-800 mb-1">Consultation modes</h2>
                     <p className="text-xs text-gray-400 mb-4">Choose how patients can consult you. These are shown on your public profile.</p>
                     <div className="space-y-3">
                       {CONSULTATION_MODES.map(({ key, label, icon }) => {
                         const value = editing ? form[key] : (key === 'offers_in_clinic' ? profile?.[key] !== false : !!profile?.[key])
                         return (
-                          <div key={key} className="flex items-center justify-between bg-gray-50 border border-gray-100 rounded-xl px-4 py-3">
-                            <span className="text-sm font-semibold text-gray-700 flex items-center gap-2">{icon} {label}</span>
-                            <ToggleSwitch on={value} disabled={!editing} onClick={() => toggleConsultMode(key)} />
+                          <div key={key}>
+                            <div className="flex items-center justify-between bg-gray-50 border border-gray-100 rounded-xl px-4 py-3">
+                              <span className="text-sm font-semibold text-gray-700 flex items-center gap-2">{icon} {label}</span>
+                              <ToggleSwitch on={value} disabled={!editing} onClick={() => toggleConsultMode(key)} />
+                            </div>
+                            {key === 'offers_home_visit' && value && (
+                              <div className="mt-2 pl-1">
+                                <Field
+                                  icon="🏠"
+                                  label="Home Visit Fee (₹)"
+                                  field="home_visit_fee"
+                                  type="number"
+                                  value={profile?.home_visit_fee}
+                                  prefix="₹"
+                                  editing={editing}
+                                  form={form}
+                                  setForm={setForm}
+                                />
+                                {editing && !form.home_visit_fee && (
+                                  <p className="text-xs text-amber-600 mt-1">
+                                    Patients won't see the Home Visit option until you set a fee.
+                                  </p>
+                                )}
+                              </div>
+                            )}
                           </div>
                         )
                       })}
                     </div>
                   </div>
-                </div>
 
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                   <h2 className="text-base font-black text-gray-800 mb-1">Weekly availability & slots</h2>
