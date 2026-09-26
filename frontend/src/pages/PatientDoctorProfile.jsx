@@ -544,7 +544,7 @@ function PatientDoctorProfile() {
                   ⏱ ~{stats.avgWait} min wait
                 </span>
                 <span className="flex items-center gap-1 bg-cyan-50 text-teal-700 text-xs font-semibold px-3 py-1.5 rounded-full border border-cyan-100">
-                  ₹ ₹{doctor.consultation_fee || 500} fee
+                  ₹{doctor.consultation_fee || 500} fee
                 </span>
                 {availableToday && (
                   <span className="flex items-center gap-1 bg-green-50 text-green-700 text-xs font-semibold px-3 py-1.5 rounded-full border border-green-100">
@@ -558,9 +558,11 @@ function PatientDoctorProfile() {
             <div className="bg-white rounded-2xl p-5 shadow-sm mb-4">
               <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Book Appointment</p>
               <p className="text-2xl font-black text-gray-900 mb-4">
-                ₹{doctor.consultation_fee || 500} <span className="text-sm font-normal text-gray-400">consultation</span>
+                ₹{consultationType === 'home_visit' ? doctor.home_visit_fee : (doctor.consultation_fee || 500)}{' '}
+                <span className="text-sm font-normal text-gray-400">
+                  {consultationType === 'home_visit' ? 'home visit' : 'consultation'}
+                </span>
               </p>
-
               {bookSuccess && (
                 <div className="bg-amber-50 border border-amber-200 text-amber-700 px-4 py-3 rounded-xl mb-4 text-sm flex items-center justify-between gap-2">
                   <span>⏳ {bookSuccess}</span>
