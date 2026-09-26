@@ -26,7 +26,6 @@ const MODE_META = {
 const COMPLAINT_CHIPS = ['Fever', 'Injury', 'Post-surgery care', 'Elderly care', 'Chronic illness follow-up', 'Other']
 const MOBILITY_OPTIONS = ['Can walk to door', 'Needs assistance', 'Bedridden']
 const ONSITE_REQUIREMENTS = ['BP check', 'Blood sugar test', 'ECG', 'Wound dressing', 'Injection/IV', 'Physiotherapy']
-const HOME_VISIT_SURCHARGE = 200 // ₹ flat surcharge shown to patient
 
 // --- Home Visit Details: helper (NEW) ---
 function buildMapsLink(address, landmark) {
@@ -149,7 +148,8 @@ function PatientDoctorProfile() {
     setHvRequirements([]); setHvPaymentMode('pay_now')
   }
 
-  const homeVisitValid = consultationType !== 'home_visit' || (
+    const homeVisitValid = consultationType !== 'home_visit' || (
+    !!doctor?.home_visit_fee &&
     hvAddress.trim() &&
     hvPatientName.trim() &&
     hvPatientAge &&
@@ -194,12 +194,12 @@ function PatientDoctorProfile() {
   }, [doctor])
 
   const getAvailableModes = (d) => {
-    const modes = []
-    if (d?.offers_in_clinic !== false) modes.push('in_clinic')
-    if (d?.offers_video) modes.push('video')
-    if (d?.offers_home_visit) modes.push('home_visit')
-    return modes
-  }
+  const modes = []
+  if (d?.offers_in_clinic !== false) modes.push('in_clinic')
+  if (d?.offers_video) modes.push('video')
+  if (d?.offers_home_visit && d?.home_visit_fee) modes.push('home_visit')
+  return modes
+}
 
   const fetchDoctor = async () => {
     setLoading(true)
@@ -341,9 +341,8 @@ function PatientDoctorProfile() {
       chief_complaint: hvComplaint === 'Other' ? hvComplaintOther : hvComplaint,
       mobility_status: hvMobility,
       on_site_requirements: hvRequirements,
-      consultation_fee: doctor.consultation_fee || 500,
-      home_visit_surcharge: HOME_VISIT_SURCHARGE,
-      total_fee: (doctor.consultation_fee || 500) + HOME_VISIT_SURCHARGE,
+      home_visit_fee: doctor.home_visit_fee,
+      total_fee: doctor.home_visit_fee,
       payment_mode: hvPaymentMode,
     } : null
     // --- end Home Visit Details payload ---
@@ -774,13 +773,11 @@ function PatientDoctorProfile() {
                   </div>
 
                   {/* Fee confirmation */}
-                  <div className="space-y-2">
+                    <div className="space-y-2">
                     <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Fee confirmation</p>
                     <div className="bg-cyan-50 border border-cyan-100 rounded-xl p-3 text-sm text-gray-700">
-                      <div className="flex justify-between"><span>Consultation fee</span><span>₹{doctor.consultation_fee || 500}</span></div>
-                      <div className="flex justify-between"><span>Home visit charge</span><span>₹{HOME_VISIT_SURCHARGE}</span></div>
-                      <div className="flex justify-between font-bold border-t border-cyan-200 mt-1 pt-1">
-                        <span>Total</span><span>₹{(doctor.consultation_fee || 500) + HOME_VISIT_SURCHARGE}</span>
+                      <div className="flex justify-between font-bold">
+                        <span>Home visit fee</span><span>₹{doctor.home_visit_fee}</span>
                       </div>
                     </div>
                     <div className="flex bg-white rounded-xl p-1 border border-gray-200">
