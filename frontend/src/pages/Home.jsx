@@ -70,7 +70,23 @@ function BookingModal({ doctor, idx, onClose, onBooked }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const fee = doctor.consultation_fee || mockFee(idx)
+    // Always read the fee from users, the same source create-payu-payment charges from,
+  // never from the card's data (which can be null and fall back to a mock price).
+  const [fee, setFee] = useState(null)
+
+  useEffect(() => {
+    let cancelled = false
+    const loadFee = async () => {
+      const { data } = await supabase
+        .from('users')
+        .select('consultation_fee')
+        .eq('id', doctor.id)
+        .single()
+      if (!cancelled) setFee(data?.consultation_fee ?? null)
+    }
+    loadFee()
+    return () => { cancelled = true }
+  }, [doctor.id])
 
   const ROW_HEIGHT = 40
   const GAP = 8
@@ -141,22 +157,62 @@ function BookingModal({ doctor, idx, onClose, onBooked }) {
     setSlotsLoading(false)
   }
 
-  const handleBook = async () => {
+    const handleBook = async () => {
     if (!date || !slot) { setError(t('doctors.selectDateTimeError')); return }
+    if (fee == null) { setError('This doctor has not set a consultation fee yet.'); return }
     setLoading(true)
     setError('')
     try {
-      const { error: bookError } = await supabase.from('appointments').insert({
-        patient_id: user.id,
-        doctor_id: doctor.id,
-        appointment_date: date,
-        appointment_time: slot,
-        issue: issue || null,
-        status: 'pending',
-      })
+      const { data: newAppt, error: bookError } = await supabase
+        .from('appointments')
+        .insert({
+          patient_id: user.id,
+          doctor_id: doctor.id,
+          appointment_date: date,
+          appointment_time: slot,
+          issue: issue || null,
+          status: 'pending',
+          consultation_type: 'in_clinic',
+        })
+        .select('id')
+        .single()
       if (bookError) throw bookError
-      onBooked(t('doctors.requestSent', { name: doctor.full_name }))
-      onClose()
+
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token || ''
+
+      const res = await fetch(
+        'https://xfuzwuraowhaxqnfolzg.supabase.co/functions/v1/create-payu-payment',
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ appointment_id: newAppt.id }),
+        }
+      )
+
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}))
+        throw new Error(errBody.error || 'Failed to initiate payment')
+      }
+
+      const { action_url, fields } = await res.json()
+
+      const form = document.createElement('form')
+      form.method = 'POST'
+      form.action = action_url
+      Object.entries(fields).forEach(([key, value]) => {
+        const input = document.createElement('input')
+        input.type = 'hidden'
+        input.name = key
+        input.value = value
+        form.appendChild(input)
+      })
+      document.body.appendChild(form)
+      form.submit()
+      // no setLoading(false): the page is navigating to PayU
     } catch (err) {
       setError(err.message || t('doctors.bookFailError'))
       setLoading(false)
@@ -181,7 +237,7 @@ function BookingModal({ doctor, idx, onClose, onBooked }) {
 
         <div className="bg-green-50 rounded-xl px-4 py-3 mb-4 flex items-center justify-between">
           <span className="text-sm text-gray-600 font-medium">{t('home.consultationFee')}</span>
-          <span className="text-xl font-bold text-emerald-700 tracking-tight">₹{fee}</span>
+          <span className="text-xl font-bold text-emerald-700 tracking-tight">{fee != null ? `₹${fee}` : '…'}</span>
         </div>
 
         <div className="mb-4">
@@ -244,9 +300,9 @@ function BookingModal({ doctor, idx, onClose, onBooked }) {
           <button onClick={onClose} className="py-3 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50">
             {t('common.cancel')}
           </button>
-          <button onClick={handleBook} disabled={loading || !slot}
+          <button onClick={handleBook} disabled={loading || !slot || fee == null}
             className="py-3 rounded-xl bg-emerald-700 text-white text-sm font-bold tracking-tight transition-colors hover:bg-emerald-500 disabled:opacity-60 flex items-center justify-center gap-2">
-            {loading ? t('doctors.booking') : t('home.bookFee', { fee })}
+            {loading ? t('doctors.booking') : fee != null ? t('home.bookFee', { fee }) : '…'}
           </button>
         </div>
       </div>
@@ -254,7 +310,7 @@ function BookingModal({ doctor, idx, onClose, onBooked }) {
   )
 }
 
-function DoctorCard({ doctor, idx, onBook, distanceMap }) {
+function DoctorCard({ doctor, idx, onBook, distanceMap, feeMap }) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   return (
@@ -281,7 +337,7 @@ function DoctorCard({ doctor, idx, onBook, distanceMap }) {
             ? <span className="text-emerald-700 font-medium">{Number(distanceMap[doctor.id]).toFixed(1)} km</span>
             : <span className="text-gray-300">— km</span>}
         </span>
-        <span className="font-semibold text-gray-700">₹{doctor.consultation_fee ?? mockFee(idx)}</span>
+        <span className="font-semibold text-gray-700">{feeMap[doctor.id] != null ? `₹${feeMap[doctor.id]}` : '—'}</span>
       </div>
 
       <div className="flex items-center justify-end">
@@ -309,11 +365,23 @@ function Home() {
   const [distanceMap, setDistanceMap] = useState({})
   const [nearbyLoading, setNearbyLoading] = useState(false)
   const [query, setQuery] = useState('')
+  const [feeMap, setFeeMap] = useState({})
 
   useEffect(() => {
     fetchDoctors()
     fetchPrevious()
   }, [])
+
+  // Real in-clinic fees from users, the same source create-payu-payment charges from
+  useEffect(() => {
+    const ids = doctors.map(d => d.id).filter(Boolean)
+    if (ids.length === 0) return
+    supabase.from('users').select('id, consultation_fee').in('id', ids).then(({ data }) => {
+      if (data) {
+        setFeeMap(prev => ({ ...prev, ...Object.fromEntries(data.map(u => [u.id, u.consultation_fee])) }))
+      }
+    })
+  }, [doctors])
 
   const handleLocationReady = useCallback(async (loc) => {
     if (!loc) return
@@ -507,7 +575,8 @@ function Home() {
                   {doctors.map((doc, idx) => (
                     <DoctorCard key={doc.id} doctor={doc} idx={idx}
                       onBook={(d, i) => { setSelectedDoctor(d); setSelectedIdx(i) }}
-                      distanceMap={distanceMap} />
+                      distanceMap={distanceMap}
+                      feeMap={feeMap} />
                   ))}
                 </div>
               )}
