@@ -5,6 +5,7 @@ import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from
 import { supabase, initSupabaseStorage } from './lib/supabase'
 import { App as CapApp } from '@capacitor/app'
 import './i18n'
+import VoiceAssistant from './components/VoiceAssistant'
 
 const AuthCallback = lazy(() => import('./pages/AuthCallback'))
 const CompleteProfile = lazy(() => import('./pages/CompleteProfile'))
@@ -229,11 +230,12 @@ function App() {
   }, [])
 
   return (
-    <BrowserRouter>
-      <Suspense fallback={<Loading />}>
-        <PolicyGate>
-          <BackButtonHandler />
-          <Routes>
+  <BrowserRouter>
+    <Suspense fallback={<Loading />}>
+      <VoiceAssistant />
+      <PolicyGate>
+        <BackButtonHandler />
+        <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />

@@ -168,6 +168,11 @@ function DayRow({ day, d, editing, tpp, toggleDay, updateRange, addRange, remove
 
 function DoctorProfile() {
   const navigate = useNavigate()
+  const spec = translateSpecialization(t, doctor.specialization)
+  const years = doctor.years_of_experience || 5
+  const fee = doctor.consultation_fee ?? mockFee(idx)
+  const dist = distanceMap[doctor.id] != null ? `, ${Number(distanceMap[doctor.id]).toFixed(1)} kilometres away` : ''
+  const cardLabel = `Dr. ${doctor.full_name}, ${spec}, ${years} years experience, fee ${fee} rupees${dist}`
   const { t, i18n } = useTranslation()
   const user = JSON.parse(localStorage.getItem('user') || '{}')
   const [activeTab, setActiveTab] = useState('profile')

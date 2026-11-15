@@ -164,7 +164,10 @@ function BookingModal({ doctor, idx, onClose, onBooked }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 px-4 pb-6 sm:pb-0">
+    <div
+      data-voice-announce={`Booking window for Dr. ${doctor.full_name}. Say today or tomorrow to pick a date, then first slot or a time, then confirm.`}
+      className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 px-4 pb-6 sm:pb-0"
+    >
       <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-start justify-between mb-5">
           <div className="flex items-center gap-3">
@@ -176,7 +179,7 @@ function BookingModal({ doctor, idx, onClose, onBooked }) {
               <p className="text-emerald-600 text-sm font-medium">{translateSpecialization(t, doctor.specialization)}</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg">✕</button>
+          <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600 text-lg">✕</button>
         </div>
 
         <div className="bg-green-50 rounded-xl px-4 py-3 mb-4 flex items-center justify-between">
@@ -186,7 +189,7 @@ function BookingModal({ doctor, idx, onClose, onBooked }) {
 
         <div className="mb-4">
           <label className="text-xs font-medium text-gray-500 mb-1 block">{t('doctors.selectDate')}</label>
-          <input type="date" min={today} value={date} onChange={e => setDate(e.target.value)}
+          <input type="date" aria-label="Select appointment date" min={today} value={date} onChange={e => setDate(e.target.value)}
             className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-400 hover:border-emerald-300 hover:bg-emerald-50/40" />
         </div>
 
@@ -209,6 +212,9 @@ function BookingModal({ doctor, idx, onClose, onBooked }) {
                     return (
                       <button
                         key={time}
+                        data-voice="slot"
+                        data-time={time}
+                        aria-label={`${time}${isSelected ? ', selected' : ''}`}
                         disabled={isDisabled}
                         onClick={() => !isDisabled && setSlot(time)}
                         className={`py-2 rounded-lg text-xs font-medium transition-all ${
@@ -233,18 +239,18 @@ function BookingModal({ doctor, idx, onClose, onBooked }) {
 
         <div className="mb-5">
           <label className="text-xs font-medium text-gray-500 mb-1 block">{t('doctors.describeIssue')}</label>
-          <textarea value={issue} onChange={e => setIssue(e.target.value)}
+          <textarea aria-label="Describe your health issue" value={issue} onChange={e => setIssue(e.target.value)}
             placeholder={t('home.issuePlaceholder')} rows={2}
             className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm resize-none transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-400 hover:border-emerald-300 hover:bg-emerald-50/40" />
         </div>
 
-        {error && <div className="bg-red-50 text-red-600 px-3 py-2 rounded-lg text-sm mb-3">{error}</div>}
+        {error && <div data-voice-announce={error} className="bg-red-50 text-red-600 px-3 py-2 rounded-lg text-sm mb-3">{error}</div>}
 
         <div className="grid grid-cols-2 gap-3">
           <button onClick={onClose} className="py-3 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50">
             {t('common.cancel')}
           </button>
-          <button onClick={handleBook} disabled={loading || !slot}
+          <button data-voice="confirm" onClick={handleBook} disabled={loading || !slot}
             className="py-3 rounded-xl bg-emerald-700 text-white text-sm font-bold tracking-tight transition-colors hover:bg-emerald-500 disabled:opacity-60 flex items-center justify-center gap-2">
             {loading ? t('doctors.booking') : t('home.bookFee', { fee })}
           </button>
@@ -257,9 +263,17 @@ function BookingModal({ doctor, idx, onClose, onBooked }) {
 function DoctorCard({ doctor, idx, onBook, distanceMap }) {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const spec = translateSpecialization(t, doctor.specialization)
+  const years = doctor.years_of_experience || 5
+  const fee = doctor.consultation_fee ?? mockFee(idx)
+  const dist = distanceMap[doctor.id] != null ? `, ${Number(distanceMap[doctor.id]).toFixed(1)} kilometres away` : ''
+  const cardLabel = `Dr. ${doctor.full_name}, ${spec}, ${years} years experience, fee ${fee} rupees${dist}`
   return (
     <div
       onClick={() => navigate(`/doctor/${doctor.id}`)}
+      role="group"
+      aria-label={cardLabel}
+      data-voice-card
       className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
     >
       <div className="flex items-start justify-between mb-3">
@@ -287,6 +301,7 @@ function DoctorCard({ doctor, idx, onBook, distanceMap }) {
       <div className="flex items-center justify-end">
         <button
           onClick={(e) => { e.stopPropagation(); onBook(doctor, idx) }}
+          aria-label={`Book appointment with ${cardLabel}`}
           className="bg-emerald-700 text-white text-xs font-bold tracking-tight px-4 py-2 rounded-xl transition-colors hover:bg-emerald-500"
         >
           {t('home.bookNow')}
@@ -450,6 +465,7 @@ function Home() {
                 </svg>
                 <input
                   type="text"
+                  aria-label="Search doctors, appointments or prescriptions"
                   value={query}
                   onChange={e => setQuery(e.target.value)}
                   placeholder="Find doctors / track appointments / view prescriptions"
@@ -463,7 +479,7 @@ function Home() {
           <div className="flex-1 px-4 sm:px-8 pb-8 max-w-5xl w-full">
 
             {success && (
-              <div className="bg-amber-50 border border-amber-200 text-amber-700 px-4 py-3 rounded-xl mb-6 text-sm flex items-center gap-2 max-w-2xl">
+              <div data-voice-announce={success} className="bg-amber-50 border border-amber-200 text-amber-700 px-4 py-3 rounded-xl mb-6 text-sm flex items-center gap-2 max-w-2xl">
                 ⏳ {success}
                 <button onClick={() => navigate('/my-appointments')} className="ml-auto text-amber-600 underline font-medium">
                   {t('home.viewAppointments')}
@@ -538,7 +554,7 @@ function Home() {
                           <p className="text-emerald-600 text-xs font-medium">{translateSpecialization(t, appt.specialization)}</p>
                         </div>
                       </div>
-                      <button onClick={(e) => {
+                      <button aria-label={`Rebook Dr. ${appt.doctor_name}`} onClick={(e) => {
                           e.stopPropagation()
                           setSelectedDoctor({
                             id: appt.doctor_id,

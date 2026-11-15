@@ -313,7 +313,7 @@ function Doctors() {
             <LocationBar onLocationReady={handleLocationReady} />
 
             {success && (
-              <div className="bg-amber-50 border border-amber-200 text-amber-700 px-4 py-3 rounded-xl mb-4 text-sm flex items-center gap-2">
+              <div data-voice-announce={success} className="bg-amber-50 border border-amber-200 text-amber-700 px-4 py-3 rounded-xl mb-4 text-sm flex items-center gap-2">
                 ⏳ {success}
                 <button onClick={() => navigate('/my-appointments')} className="ml-auto text-amber-600 underline font-medium">
                   {t('doctors.viewAppointments')}
@@ -350,6 +350,9 @@ function Doctors() {
                 {doctors.map(doctor => (
                   <div
                     key={doctor.id}
+                    role="group"
+                    data-voice-card
+                    aria-label={`Dr. ${doctor.full_name}, ${translateSpecialization(t, doctor.specialization)}, fee ${doctor.consultation_fee || 500} rupees${doctor.distance_km != null ? `, ${Number(doctor.distance_km).toFixed(1)} kilometres away` : ''}`}
                     className="bg-white rounded-2xl shadow-sm p-5 cursor-pointer hover:shadow-md transition-shadow"
                     onClick={() => navigate(`/doctor/${doctor.id}`)}
                   >
@@ -370,6 +373,7 @@ function Doctors() {
                       <div className="text-right shrink-0">
                         <p className="text-emerald-700 font-bold text-sm tracking-tight">₹{doctor.consultation_fee || 500}</p>
                         <button
+                          aria-label={`Book appointment with Dr. ${doctor.full_name}, ${translateSpecialization(t, doctor.specialization)}, fee ${doctor.consultation_fee || 500} rupees`}
                           onClick={(e) => {
                             e.stopPropagation()
                             setSelectedDoctor(doctor)
@@ -393,11 +397,14 @@ function Doctors() {
 
       {/* Booking Modal */}
       {selectedDoctor && (
-        <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 px-4 pb-6 sm:pb-0">
+        <div
+          data-voice-announce={`Booking window for Dr. ${selectedDoctor.full_name}. Say today or tomorrow to pick a date, then first slot or a time, then confirm.`}
+          className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 px-4 pb-6 sm:pb-0"
+        >
           <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-semibold tracking-tight text-gray-800 text-lg">{t('doctors.bookAppointment')}</h2>
-              <button onClick={() => setSelectedDoctor(null)} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+              <button onClick={() => setSelectedDoctor(null)} aria-label="Close" className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
             </div>
 
             <div className="flex items-center gap-3 bg-green-50 rounded-xl p-3 mb-4">
@@ -416,7 +423,7 @@ function Doctors() {
 
             <div className="mb-4">
               <label className="text-xs font-medium text-gray-500 mb-1 block">{t('doctors.selectDate')}</label>
-              <input type="date" min={today} value={selectedDate}
+              <input type="date" aria-label="Select appointment date" min={today} value={selectedDate}
                 onChange={e => setSelectedDate(e.target.value)}
                 className="w-full border border-gray-200 rounded-xl px-4 py-3 text-gray-800 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-400 hover:border-emerald-300 hover:bg-emerald-50/40" />
             </div>
@@ -440,6 +447,9 @@ function Doctors() {
                         return (
                           <button
                             key={time}
+                            data-voice="slot"
+                            data-time={time}
+                            aria-label={`${time}${isSelected ? ', selected' : ''}`}
                             disabled={isDisabled}
                             onClick={() => !isDisabled && setSelectedTime(time)}
                             className={`py-2 rounded-lg text-xs font-medium transition-all ${
@@ -464,14 +474,14 @@ function Doctors() {
 
             <div className="mb-4">
               <label className="text-xs font-medium text-gray-500 mb-1 block">{t('doctors.describeIssue')}</label>
-              <textarea value={issue} onChange={e => setIssue(e.target.value)}
+              <textarea aria-label="Describe your health issue" value={issue} onChange={e => setIssue(e.target.value)}
                 placeholder={t('doctors.issuePlaceholder')} rows={2}
                 className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm resize-none transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-400 hover:border-emerald-300 hover:bg-emerald-50/40" />
             </div>
 
-            {error && <div className="bg-red-50 text-red-600 px-3 py-2 rounded-lg text-sm mb-4">❌ {error}</div>}
+            {error && <div data-voice-announce={error} className="bg-red-50 text-red-600 px-3 py-2 rounded-lg text-sm mb-4">❌ {error}</div>}
 
-            <button onClick={handleBook} disabled={paying || !selectedTime}
+            <button data-voice="confirm" onClick={handleBook} disabled={paying || !selectedTime}
               className="w-full bg-emerald-700 text-white py-3 rounded-xl font-bold tracking-tight transition-colors hover:bg-emerald-500 disabled:opacity-60 flex items-center justify-center gap-2">
               {paying ? t('doctors.booking') : t('doctors.requestAppointment', { fee: selectedDoctor.consultation_fee ?? 500 })}
             </button>

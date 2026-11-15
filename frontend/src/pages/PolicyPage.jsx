@@ -90,6 +90,7 @@ export default function PolicyPage({ onConsentChange }) {
         <label className="flex items-start gap-3 mt-6 px-1 cursor-pointer">
           <input
             type="checkbox"
+            aria-label="I agree to the Privacy Policy, Terms of Service and Refund Policy"
             checked={hasConsented}
             onChange={handleConsentToggle}
             className="mt-1 h-5 w-5 shrink-0 rounded border-gray-300 text-emerald-700 focus:ring-emerald-600"
